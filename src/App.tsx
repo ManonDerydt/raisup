@@ -77,7 +77,6 @@ function App() {
           <Route index element={<B2BDashboard />} />
           <Route path="portfolio" element={<div>Portfolio page coming soon</div>} />
           <Route path="funding-synthesis" element={<div>Funding synthesis page coming soon</div>} />
-          <Route path="dilution-simulator" element={<div>Dilution simulator page coming soon</div>} />
           <Route path="reports" element={<div>Reports page coming soon</div>} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

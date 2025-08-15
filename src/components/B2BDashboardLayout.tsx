@@ -126,46 +126,16 @@ const B2BDashboardLayout: React.FC = () => {
       description: 'Gestion et suivi des projets'
     },
     { 
-      name: 'Calendrier & Échéances', 
-      icon: Calendar, 
-      href: '/dashboard/b2b/calendar',
-      description: 'Deadlines et événements'
-    },
-    { 
       name: 'Synthèse d\'aides', 
       icon: FileText, 
       href: '/dashboard/b2b/funding-synthesis',
       description: 'Aides et subventions'
     },
     { 
-      name: 'Analyse & Performance', 
-      icon: BarChart3, 
-      href: '/dashboard/b2b/analytics',
-      description: 'Benchmarks et métriques'
-    },
-    { 
       name: 'Rapports Stratégiques', 
       icon: PieChart, 
       href: '/dashboard/b2b/reports',
       description: 'Reporting et exports'
-    },
-    { 
-      name: 'Veille & Opportunités', 
-      icon: Eye, 
-      href: '/dashboard/b2b/opportunities',
-      description: 'Appels à projets et veille'
-    },
-    { 
-      name: 'Équipe & Accès', 
-      icon: UserPlus, 
-      href: '/dashboard/b2b/team',
-      description: 'Gestion utilisateurs et droits'
-    },
-    { 
-      name: 'Animation & Coordination', 
-      icon: MessageSquare, 
-      href: '/dashboard/b2b/coordination',
-      description: 'Notes équipe et workflows'
     },
     { 
       name: 'Paramètres', 
