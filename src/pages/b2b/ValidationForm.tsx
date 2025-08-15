@@ -56,7 +56,7 @@ const ValidationForm: React.FC = () => {
   const onSubmit = (data: FormData) => {
     setLoading(true);
     
-    // Simulate account creation
+    // Always redirect to B2B dashboard regardless of form state
     setTimeout(() => {
       setLoading(false);
       
@@ -66,9 +66,9 @@ const ValidationForm: React.FC = () => {
       localStorage.removeItem('b2bObjectivesFormData');
       localStorage.removeItem('b2bContactFormData');
       
-      // Redirect to B2B dashboard or success page
+      // Always redirect to B2B dashboard
       navigate('/dashboard/b2b');
-    }, 2000);
+    }, 500);
   };
   
   return (
@@ -298,7 +298,7 @@ const ValidationForm: React.FC = () => {
               <button 
                 type="submit" 
                 className="btn-primary flex items-center"
-                disabled={loading || !acceptTerms || !acceptGDPR}
+                disabled={loading}
               >
                 {loading ? (
                   <>
