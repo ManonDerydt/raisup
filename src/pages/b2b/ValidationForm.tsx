@@ -20,10 +20,8 @@ const ValidationForm: React.FC = () => {
   const { 
     register, 
     handleSubmit, 
-    watch,
     formState: { errors, isValid },
   } = useForm<FormData>({
-    mode: 'onChange',
     defaultValues: {
       acceptTerms: false,
       acceptGDPR: false,
@@ -31,10 +29,6 @@ const ValidationForm: React.FC = () => {
       confirmPassword: '',
     }
   });
-  
-  const password = watch('password');
-  const acceptTerms = watch('acceptTerms');
-  const acceptGDPR = watch('acceptGDPR');
   
   // Load saved form data to show summary
   const [formSummary, setFormSummary] = useState<any>({});
@@ -56,7 +50,7 @@ const ValidationForm: React.FC = () => {
   const onSubmit = (data: FormData) => {
     setLoading(true);
     
-    // Always redirect to B2B dashboard regardless of form state
+    // Always redirect to B2B dashboard - no validation required
     setTimeout(() => {
       setLoading(false);
       
@@ -66,9 +60,9 @@ const ValidationForm: React.FC = () => {
       localStorage.removeItem('b2bObjectivesFormData');
       localStorage.removeItem('b2bContactFormData');
       
-      // Always redirect to B2B dashboard
+      // Guaranteed redirect to B2B dashboard
       navigate('/dashboard/b2b');
-    }, 500);
+    }, 100);
   };
   
   return (
@@ -139,147 +133,14 @@ const ValidationForm: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-6">
             {/* Sécurité du compte */}
-            <div>
-              <h2 className="text-lg font-semibold mb-4 dark:text-white">Sécurité du compte</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="password" className="form-label">Mot de passe</label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      className={clsx('input-field', errors.password && 'border-red-500')}
-                      placeholder="••••••••"
-                      {...register('password', { 
-                        required: 'Ce champ est requis',
-                        minLength: {
-                          value: 8,
-                          message: 'Le mot de passe doit contenir au moins 8 caractères'
-                        },
-                        pattern: {
-                          value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                          message: 'Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre'
-                        }
-                      })}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
-                    >
-                      {showPassword ? '🙈' : '👁️'}
-                    </button>
-                  </div>
-                  {errors.password && <p className="form-error">{errors.password.message}</p>}
-                </div>
-                
-                <div>
-                  <label htmlFor="confirmPassword" className="form-label">Confirmer le mot de passe</label>
-                  <div className="relative">
-                    <input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      className={clsx('input-field', errors.confirmPassword && 'border-red-500')}
-                      placeholder="••••••••"
-                      {...register('confirmPassword', { 
-                        required: 'Ce champ est requis',
-                        validate: value => value === password || 'Les mots de passe ne correspondent pas'
-                      })}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
-                    >
-                      {showConfirmPassword ? '🙈' : '👁️'}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && <p className="form-error">{errors.confirmPassword.message}</p>}
-                </div>
-              </div>
-            </div>
-            
-            {/* Acceptation des conditions */}
-            <div className="space-y-4">
-              <div className="flex items-start">
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  {...register('acceptTerms', { required: 'Vous devez accepter les conditions' })}
-                />
-                <div
-                  className={clsx(
-                    "w-5 h-5 rounded border flex items-center justify-center mr-3 cursor-pointer mt-0.5",
-                    acceptTerms
-                      ? 'border-secondary-lighter bg-secondary-light'
-                      : 'border-gray-300 dark:border-gray-600'
-                  )}
-                  onClick={() => {
-                    const event = {
-                      target: { value: !acceptTerms, name: 'acceptTerms' }
-                    } as any;
-                    register('acceptTerms').onChange(event);
-                  }}
-                >
-                  {acceptTerms && (
-                    <Check className="h-3 w-3 text-primary dark:text-purple-400" />
-                  )}
-                </div>
-                <label className="text-sm cursor-pointer dark:text-gray-300">
-                  J'accepte les{' '}
-                  <a href="/terms" className="text-primary dark:text-purple-400 font-medium hover:underline">
-                    conditions générales d'utilisation
-                  </a>
-                  {' '}de FundAI
-                </label>
-              </div>
-              {errors.acceptTerms && <p className="form-error">{errors.acceptTerms.message}</p>}
-              
-              <div className="flex items-start">
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  {...register('acceptGDPR', { required: 'Vous devez accepter le traitement des données' })}
-                />
-                <div
-                  className={clsx(
-                    "w-5 h-5 rounded border flex items-center justify-center mr-3 cursor-pointer mt-0.5",
-                    acceptGDPR
-                      ? 'border-secondary-lighter bg-secondary-light'
-                      : 'border-gray-300 dark:border-gray-600'
-                  )}
-                  onClick={() => {
-                    const event = {
-                      target: { value: !acceptGDPR, name: 'acceptGDPR' }
-                    } as any;
-                    register('acceptGDPR').onChange(event);
-                  }}
-                >
-                  {acceptGDPR && (
-                    <Check className="h-3 w-3 text-primary dark:text-purple-400" />
-                  )}
-                </div>
-                <label className="text-sm cursor-pointer dark:text-gray-300">
-                  J'accepte le traitement de mes données personnelles conformément à la{' '}
-                  <a href="/privacy" className="text-primary dark:text-purple-400 font-medium hover:underline">
-                    politique de confidentialité
-                  </a>
-                  {' '}et au RGPD
-                </label>
-              </div>
-              {errors.acceptGDPR && <p className="form-error">{errors.acceptGDPR.message}</p>}
-            </div>
-            
-            {/* Informations importantes */}
             <div className="bg-secondary-light dark:bg-purple-900/20 p-4 rounded-xl">
               <div className="flex items-start">
                 <CheckCircle className="h-5 w-5 text-primary dark:text-purple-400 mr-2 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-primary dark:text-purple-400 mb-1">Prochaines étapes</h3>
+                  <h3 className="font-medium text-primary dark:text-purple-400 mb-1">Création de votre espace</h3>
                   <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Après la création de votre compte, vous recevrez un email de confirmation. 
-                    Notre équipe vous contactera sous 48h pour finaliser la configuration de votre espace 
-                    et vous présenter les fonctionnalités avancées.
+                    Votre espace structure sera créé avec les informations fournies. 
+                    Vous pourrez compléter et modifier ces informations depuis votre dashboard.
                   </p>
                 </div>
               </div>
@@ -298,7 +159,6 @@ const ValidationForm: React.FC = () => {
               <button 
                 type="submit" 
                 className="btn-primary flex items-center"
-                disabled={loading}
               >
                 {loading ? (
                   <>
