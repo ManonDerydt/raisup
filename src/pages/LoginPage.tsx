@@ -31,8 +31,12 @@ const LoginPage: React.FC = () => {
     // Simulate authentication
     setTimeout(() => {
       setLoading(false);
-      // For demo purposes, allow any login
-      navigate('/dashboard');
+      // Redirect based on selected segment
+      if (segment === 'B2B') {
+        navigate('/dashboard/b2b');
+      } else {
+        navigate('/dashboard');
+      }
     }, 1000);
   };
 
