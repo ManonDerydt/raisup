@@ -1,34 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { Check, Shield, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Shield, ArrowLeft, CheckCircle, ArrowRight } from 'lucide-react';
 import clsx from 'clsx';
-
-type FormData = {
-  acceptTerms: boolean;
-  acceptGDPR: boolean;
-  password: string;
-  confirmPassword: string;
-};
 
 const ValidationForm: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors, isValid },
-  } = useForm<FormData>({
-    defaultValues: {
-      acceptTerms: false,
-      acceptGDPR: false,
-      password: '',
-      confirmPassword: '',
-    }
-  });
   
   // Load saved form data to show summary
   const [formSummary, setFormSummary] = useState<any>({});
@@ -47,7 +24,7 @@ const ValidationForm: React.FC = () => {
     });
   }, []);
   
-  const onSubmit = (data: FormData) => {
+  const handleCreateAccount = () => {
     setLoading(true);
     
     // Always redirect to B2B dashboard - no validation required
@@ -62,7 +39,7 @@ const ValidationForm: React.FC = () => {
       
       // Guaranteed redirect to B2B dashboard
       navigate('/dashboard/b2b');
-    }, 100);
+    }, 500);
   };
   
   return (
@@ -130,51 +107,47 @@ const ValidationForm: React.FC = () => {
           </div>
         </div>
         
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-6">
-            {/* Sécurité du compte */}
-            <div className="bg-secondary-light dark:bg-purple-900/20 p-4 rounded-xl">
-              <div className="flex items-start">
-                <CheckCircle className="h-5 w-5 text-primary dark:text-purple-400 mr-2 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium text-primary dark:text-purple-400 mb-1">Création de votre espace</h3>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Votre espace structure sera créé avec les informations fournies. 
-                    Vous pourrez compléter et modifier ces informations depuis votre dashboard.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="pt-6 border-t border-gray-100 dark:border-gray-700 flex justify-between">
-              <button 
-                type="button"
-                onClick={() => navigate('/register/b2b/contact')}
-                className="btn-secondary flex items-center"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour
-              </button>
-              
-              <button 
-                type="submit" 
-                className="btn-primary flex items-center"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                    Création en cours...
-                  </>
-                ) : (
-                  <>
-                    Créer mon espace
-                    <CheckCircle className="ml-2 h-5 w-5" />
-                  </>
-                )}
-              </button>
+        {/* Confirmation */}
+        <div className="bg-secondary-light dark:bg-purple-900/20 p-4 rounded-xl">
+          <div className="flex items-start">
+            <CheckCircle className="h-5 w-5 text-primary dark:text-purple-400 mr-2 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-primary dark:text-purple-400 mb-1">Création de votre espace</h3>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                Votre espace structure sera créé avec les informations fournies. 
+                Vous pourrez compléter et modifier ces informations depuis votre dashboard.
+              </p>
             </div>
           </div>
-        </form>
+        </div>
+        
+        <div className="pt-6 border-t border-gray-100 dark:border-gray-700 flex justify-between">
+          <button 
+            type="button"
+            onClick={() => navigate('/register/b2b/contact')}
+            className="btn-secondary flex items-center"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </button>
+          
+          <button 
+            onClick={handleCreateAccount}
+            className="btn-primary flex items-center"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                Création en cours...
+              </>
+            ) : (
+              <>
+                Créer mon espace
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
