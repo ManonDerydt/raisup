@@ -677,9 +677,9 @@ const FundingSynthesisPage: React.FC = () => {
                   )}
                 >
                   <option value="">Toutes les échéances</option>
-                  <option value="soon">< 30 jours</option>
+                  <option value="soon">&lt; 30 jours</option>
                   <option value="medium">30-90 jours</option>
-                  <option value="later">> 90 jours</option>
+                  <option value="later">&gt; 90 jours</option>
                 </select>
               </div>
               
