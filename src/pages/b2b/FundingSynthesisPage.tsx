@@ -661,9 +661,9 @@ const FundingSynthesisPage: React.FC = () => {
                   )}
                 >
                   <option value="">Tous les montants</option>
-                  <option value="small">< 100K€</option>
-                  <option value="medium">100K€ - 500K€</option>
-                  <option value="large">> 500K€</option>
+                  <option value="small">{"< 100K€"}</option>
+                  <option value="medium">{"100K€ - 500K€"}</option>
+                  <option value="large">{"> 500K€"}</option>
                 </select>
                 
                 <select
