@@ -298,7 +298,7 @@ const ValidationForm: React.FC = () => {
               <button 
                 type="submit" 
                 className="btn-primary flex items-center"
-                disabled={!isValid || loading}
+                disabled={loading}
               >
                 {loading ? (
                   <>
