@@ -1,44 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  Plus, 
-  FileText, 
-  BarChart3, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  ExternalLink,
-  Eye,
-  Zap,
-  Download,
-  TrendingUp,
-  Users,
-  DollarSign,
-  Target,
-  Calendar,
-  Building2,
-  PieChart,
-  Activity,
-  ArrowUpRight,
-  ArrowDownRight,
-  Filter,
-  MoreHorizontal,
-  MessageSquare,
-  UserPlus,
-  Briefcase,
-  Bell,
-  ChevronRight,
-  Search,
-  Globe,
-  Rocket,
-  Shield,
-  Award,
-  Lightbulb,
-  Trending,
-  Database,
-  Settings,
-  Mail,
-  Phone
-} from 'lucide-react';
+import { Plus, FileText, BarChart3, AlertTriangle, CheckCircle, Clock, ExternalLink, Eye, Zap, Download, TrendingUp, Users, DollarSign, Target, Calendar, Building2, PieChart, Activity, ArrowUpRight, ArrowDownRight, Filter, MoreHorizontal, MessageSquare, UserPlus, Briefcase, Bell, ChevronRight, Search, Globe, Rocket, Shield, Award, Lightbulb, TrendingUp as Trending, Database, Settings, Mail, Phone } from 'lucide-react';
 import clsx from 'clsx';
 
 const B2BDashboard: React.FC = () => {
