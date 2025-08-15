@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import LogoWhite from '../../dist/assets/raisup_logo_white.png';
+import { Sparkles, ArrowRight, Menu, X } from 'lucide-react';
 import clsx from 'clsx';
+
 const HomePage: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
