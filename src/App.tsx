@@ -20,6 +20,8 @@ import AnalysisPage from './pages/AnalysisPage';
 import SettingsPage from './pages/SettingsPage';
 import PricingPage from './pages/PricingPage';
 import HowItWorksPage from './pages/HowItWorksPage';
+import ProfileSelectionPage from './pages/ProfileSelectionPage';
+import B2BRegistrationPage from './pages/B2BRegistrationPage';
 import PitchDeckGenerator from "./pages/pitch_generator.tsx";
 
 function App() {
@@ -28,6 +30,8 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<ProfileSelectionPage />} />
+        <Route path="/register/b2b" element={<B2BRegistrationPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/onboarding" element={<OnboardingLayout />}>

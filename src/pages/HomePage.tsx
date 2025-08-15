@@ -110,7 +110,7 @@ const HomePage: React.FC = () => {
     </div> */}
     <div className="flex flex-col sm:flex-row gap-4">
       <Link 
-        to="/onboarding/entrepreneur" 
+        to="/register" 
         className="btn-primary flex items-center justify-center"
       >
         Démarrer mon dossier

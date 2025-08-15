@@ -261,7 +261,7 @@ const LoginPage: React.FC = () => {
                   darkMode ? "text-purple-400" : "text-primary"
                 )}
               >
-                Créer un compte
+                Créer mon compte
               </Link>
             </p>
           </div>
