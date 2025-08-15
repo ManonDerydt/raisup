@@ -23,7 +23,12 @@ import {
   MessageSquare,
   AlertTriangle,
   Eye,
-  UserPlus
+  UserPlus,
+  Shield,
+  Target,
+  Globe,
+  PieChart,
+  Activity
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -53,7 +58,7 @@ const B2BDashboardLayout: React.FC = () => {
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
   };
   
-  // Mock notifications for B2B with different types
+  // Enhanced notifications for B2B with different types and priorities
   const notifications = [
     {
       id: 1,
@@ -61,57 +66,113 @@ const B2BDashboardLayout: React.FC = () => {
       message: 'L\'aide pour MediScan expire dans 15 jours.',
       time: '2 heures',
       unread: true,
-      type: 'warning',
-      priority: 'high'
+      type: 'deadline',
+      priority: 'high',
+      category: 'Échéances'
     },
     {
       id: 2,
-      title: 'Nouveau diagnostic IA disponible',
-      message: 'GreenTech SAS a mis à jour ses données financières.',
-      time: '5 heures',
+      title: 'Startup à risque détectée',
+      message: 'PropTech Innovations: runway critique (< 3 mois).',
+      time: '3 heures',
       unread: true,
-      type: 'info',
-      priority: 'medium'
+      type: 'risk',
+      priority: 'high',
+      category: 'Alertes'
     },
     {
       id: 3,
-      title: 'Startup à risque détectée',
-      message: 'EduAI Platform: runway critique (< 3 mois).',
-      time: '8 heures',
+      title: 'Nouvel appel à projets',
+      message: 'France 2030 - Santé Numérique ouvert jusqu\'au 30 juin.',
+      time: '5 heures',
       unread: true,
-      type: 'alert',
-      priority: 'high'
+      type: 'opportunity',
+      priority: 'medium',
+      category: 'Opportunités'
     },
     {
       id: 4,
+      title: 'Diagnostic IA terminé',
+      message: 'GreenTech Solutions: nouveau diagnostic disponible.',
+      time: '8 heures',
+      unread: true,
+      type: 'info',
+      priority: 'medium',
+      category: 'Diagnostics'
+    },
+    {
+      id: 5,
       title: 'Rapport mensuel généré',
       message: 'Le rapport de performance de votre portefeuille est prêt.',
       time: '1 jour',
       unread: false,
       type: 'success',
-      priority: 'low'
-    },
-    {
-      id: 5,
-      title: 'Nouvel appel à projets',
-      message: 'France 2030 - Santé Numérique ouvert jusqu\'au 30 juin.',
-      time: '2 jours',
-      unread: false,
-      type: 'opportunity',
-      priority: 'medium'
+      priority: 'low',
+      category: 'Rapports'
     }
   ];
   
   const mainNavItems = [
-    { name: 'Vue d\'ensemble', icon: LayoutDashboard, href: '/dashboard/b2b' },
-    { name: 'Portefeuille Startups', icon: Briefcase, href: '/dashboard/b2b/portfolio' },
-    { name: 'Synthèse d\'aides', icon: FileText, href: '/dashboard/b2b/funding-synthesis' },
-    { name: 'Simulateur Dilution', icon: Calculator, href: '/dashboard/b2b/dilution-simulator' },
-    { name: 'Rapports Stratégiques', icon: BarChart3, href: '/dashboard/b2b/reports' },
-    { name: 'Calendrier & Échéances', icon: Calendar, href: '/dashboard/b2b/calendar' },
-    { name: 'Équipe & Accès', icon: UserPlus, href: '/dashboard/b2b/team' },
-    { name: 'Veille & Opportunités', icon: Eye, href: '/dashboard/b2b/opportunities' },
-    { name: 'Paramètres', icon: Settings, href: '/dashboard/b2b/settings' }
+    { 
+      name: 'Vue d\'ensemble', 
+      icon: LayoutDashboard, 
+      href: '/dashboard/b2b',
+      description: 'KPIs et synthèse globale'
+    },
+    { 
+      name: 'Portefeuille Startups', 
+      icon: Briefcase, 
+      href: '/dashboard/b2b/portfolio',
+      description: 'Gestion et suivi des projets'
+    },
+    { 
+      name: 'Calendrier & Échéances', 
+      icon: Calendar, 
+      href: '/dashboard/b2b/calendar',
+      description: 'Deadlines et événements'
+    },
+    { 
+      name: 'Synthèse d\'aides', 
+      icon: FileText, 
+      href: '/dashboard/b2b/funding-synthesis',
+      description: 'Aides et subventions'
+    },
+    { 
+      name: 'Analyse & Performance', 
+      icon: BarChart3, 
+      href: '/dashboard/b2b/analytics',
+      description: 'Benchmarks et métriques'
+    },
+    { 
+      name: 'Rapports Stratégiques', 
+      icon: PieChart, 
+      href: '/dashboard/b2b/reports',
+      description: 'Reporting et exports'
+    },
+    { 
+      name: 'Veille & Opportunités', 
+      icon: Eye, 
+      href: '/dashboard/b2b/opportunities',
+      description: 'Appels à projets et veille'
+    },
+    { 
+      name: 'Équipe & Accès', 
+      icon: UserPlus, 
+      href: '/dashboard/b2b/team',
+      description: 'Gestion utilisateurs et droits'
+    },
+    { 
+      name: 'Animation & Coordination', 
+      icon: MessageSquare, 
+      href: '/dashboard/b2b/coordination',
+      description: 'Notes équipe et workflows'
+    },
+    { 
+      name: 'Paramètres', 
+      icon: Settings, 
+      href: '/dashboard/b2b/settings',
+      description: 'Configuration structure'
+    }
   ];
   
   const handleLogout = () => {
@@ -120,14 +181,14 @@ const B2BDashboardLayout: React.FC = () => {
   
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'warning':
+      case 'deadline':
+        return <Calendar className="h-4 w-4" />;
+      case 'risk':
         return <AlertTriangle className="h-4 w-4" />;
-      case 'alert':
-        return <AlertTriangle className="h-4 w-4" />;
-      case 'success':
-        return <BarChart3 className="h-4 w-4" />;
       case 'opportunity':
         return <TrendingUp className="h-4 w-4" />;
+      case 'success':
+        return <BarChart3 className="h-4 w-4" />;
       default:
         return <Bell className="h-4 w-4" />;
     }
@@ -139,18 +200,21 @@ const B2BDashboardLayout: React.FC = () => {
     }
     
     switch (type) {
-      case 'warning':
+      case 'deadline':
         return darkMode ? "bg-amber-900/20 border-amber-800/30" : "bg-amber-50 border-amber-200";
-      case 'alert':
+      case 'risk':
         return darkMode ? "bg-red-900/20 border-red-800/30" : "bg-red-50 border-red-200";
-      case 'success':
-        return darkMode ? "bg-green-900/20 border-green-800/30" : "bg-green-50 border-green-200";
       case 'opportunity':
         return darkMode ? "bg-blue-900/20 border-blue-800/30" : "bg-blue-50 border-blue-200";
+      case 'success':
+        return darkMode ? "bg-green-900/20 border-green-800/30" : "bg-green-50 border-green-200";
       default:
         return darkMode ? "bg-purple-900/20 border-purple-800/30" : "bg-secondary-light/30 border-secondary-lighter";
     }
   };
+  
+  // Count high priority notifications
+  const highPriorityCount = notifications.filter(n => n.priority === 'high' && n.unread).length;
   
   return (
     <div className={clsx(
@@ -159,7 +223,7 @@ const B2BDashboardLayout: React.FC = () => {
     )}>
       {/* Left sidebar navigation */}
       <div className={clsx(
-        "hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 lg:z-50 lg:border-r lg:pb-4",
+        "hidden lg:flex lg:flex-col lg:w-80 lg:fixed lg:inset-y-0 lg:z-50 lg:border-r lg:pb-4",
         darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
       )}>
         <div className="flex items-center gap-x-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -179,13 +243,13 @@ const B2BDashboardLayout: React.FC = () => {
         </div>
         
         <div className="flex flex-col flex-1 overflow-y-auto">
-          <nav className="flex-1 px-4 py-6 space-y-1">
+          <nav className="flex-1 px-4 py-6 space-y-2">
             {mainNavItems.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
                 className={clsx(
-                  "flex items-center gap-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                  "flex items-start gap-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors group",
                   location.pathname === item.href
                     ? darkMode 
                       ? "bg-gray-700 text-purple-400" 
@@ -195,8 +259,18 @@ const B2BDashboardLayout: React.FC = () => {
                       : "text-gray-700 hover:bg-gray-100 hover:text-primary"
                 )}
               >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {item.name}
+                <item.icon className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-medium">{item.name}</div>
+                  <div className={clsx(
+                    "text-xs mt-0.5",
+                    location.pathname === item.href
+                      ? darkMode ? "text-purple-300" : "text-primary/70"
+                      : darkMode ? "text-gray-400" : "text-gray-500"
+                  )}>
+                    {item.description}
+                  </div>
+                </div>
               </Link>
             ))}
           </nav>
@@ -303,7 +377,17 @@ const B2BDashboardLayout: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <item.icon className="h-5 w-5" />
-                  {item.name}
+                  <div>
+                    <div>{item.name}</div>
+                    <div className={clsx(
+                      "text-xs",
+                      location.pathname === item.href
+                        ? darkMode ? "text-purple-300" : "text-primary/70"
+                        : darkMode ? "text-gray-400" : "text-gray-500"
+                    )}>
+                      {item.description}
+                    </div>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -349,7 +433,7 @@ const B2BDashboardLayout: React.FC = () => {
       )}
       
       {/* Main content */}
-      <div className="lg:pl-72 flex flex-col flex-1">
+      <div className="lg:pl-80 flex flex-col flex-1">
         {/* Top navigation */}
         <header className={clsx(
           "sticky top-0 z-30 flex h-16 items-center gap-x-4 border-b px-4 shadow-sm sm:px-6",
@@ -388,7 +472,7 @@ const B2BDashboardLayout: React.FC = () => {
                         ? "bg-gray-700 text-white placeholder:text-gray-400 ring-gray-600 focus:ring-purple-500" 
                         : "bg-white text-gray-900 placeholder:text-gray-400 ring-gray-300 focus:ring-primary"
                     )}
-                    placeholder="Rechercher une startup, un projet..."
+                    placeholder="Rechercher une startup, un projet, une aide..."
                     type="search"
                   />
                 </div>
@@ -448,9 +532,9 @@ const B2BDashboardLayout: React.FC = () => {
                   {notifications.some(n => n.unread) && (
                     <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
                   )}
-                  {notifications.filter(n => n.priority === 'high' && n.unread).length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {notifications.filter(n => n.priority === 'high' && n.unread).length}
+                  {highPriorityCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                      {highPriorityCount}
                     </span>
                   )}
                 </button>
@@ -469,7 +553,7 @@ const B2BDashboardLayout: React.FC = () => {
                           "text-xs px-2 py-1 rounded-full",
                           darkMode ? "bg-red-900/30 text-red-300" : "bg-red-100 text-red-700"
                         )}>
-                          {notifications.filter(n => n.priority === 'high' && n.unread).length} urgentes
+                          {highPriorityCount} urgentes
                         </span>
                         <button 
                           className={clsx(
@@ -499,7 +583,7 @@ const B2BDashboardLayout: React.FC = () => {
                               "absolute left-2 top-4 block h-2 w-2 rounded-full",
                               notification.priority === 'high'
                                 ? "bg-red-500"
-                                : notification.type === 'warning'
+                                : notification.type === 'deadline'
                                   ? "bg-amber-500"
                                   : notification.type === 'opportunity'
                                     ? "bg-blue-500"
@@ -509,26 +593,34 @@ const B2BDashboardLayout: React.FC = () => {
                           <div className="ml-2 flex items-start">
                             <div className={clsx(
                               "rounded-full p-1 mr-2 flex-shrink-0",
-                              notification.type === 'warning'
+                              notification.type === 'deadline'
                                 ? darkMode ? "bg-amber-900/30 text-amber-400" : "bg-amber-100 text-amber-600"
-                                : notification.type === 'alert'
+                                : notification.type === 'risk'
                                   ? darkMode ? "bg-red-900/30 text-red-400" : "bg-red-100 text-red-600"
-                                  : notification.type === 'success'
-                                    ? darkMode ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-600"
-                                    : notification.type === 'opportunity'
-                                      ? darkMode ? "bg-blue-900/30 text-blue-400" : "bg-blue-100 text-blue-600"
+                                  : notification.type === 'opportunity'
+                                    ? darkMode ? "bg-blue-900/30 text-blue-400" : "bg-blue-100 text-blue-600"
+                                    : notification.type === 'success'
+                                      ? darkMode ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-600"
                                       : darkMode ? "bg-purple-900/30 text-purple-400" : "bg-secondary-light text-primary"
                             )}>
                               {getNotificationIcon(notification.type)}
                             </div>
                             <div className="flex-1">
                               <div className="flex justify-between items-start">
-                                <p className={clsx(
-                                  "text-sm font-medium",
-                                  darkMode ? "text-white" : "text-gray-900"
-                                )}>
-                                  {notification.title}
-                                </p>
+                                <div>
+                                  <p className={clsx(
+                                    "text-sm font-medium",
+                                    darkMode ? "text-white" : "text-gray-900"
+                                  )}>
+                                    {notification.title}
+                                  </p>
+                                  <span className={clsx(
+                                    "text-xs px-2 py-1 rounded-full",
+                                    darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"
+                                  )}>
+                                    {notification.category}
+                                  </span>
+                                </div>
                                 {notification.priority === 'high' && (
                                   <span className={clsx(
                                     "text-xs px-2 py-1 rounded-full ml-2",

@@ -26,7 +26,18 @@ import {
   UserPlus,
   Briefcase,
   Bell,
-  ChevronRight
+  ChevronRight,
+  Search,
+  Globe,
+  Rocket,
+  Shield,
+  Award,
+  Lightbulb,
+  Trending,
+  Database,
+  Settings,
+  Mail,
+  Phone
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -34,6 +45,7 @@ const B2BDashboard: React.FC = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [activeWidget, setActiveWidget] = useState('overview');
   
   // Check if dark mode is enabled
   React.useEffect(() => {
@@ -41,156 +53,397 @@ const B2BDashboard: React.FC = () => {
     setDarkMode(isDarkMode);
   }, []);
   
-  // Mock data for B2B dashboard
+  // Enhanced portfolio data for B2B structure
   const portfolioData = {
-    totalStartups: 24,
-    activeStartups: 18,
-    totalFundingRequested: 18500000,
-    totalFundingRaised: 12300000,
-    dilutivePercentage: 65,
-    nonDilutivePercentage: 35,
-    activeAlerts: 7,
-    highPriorityAlerts: 3,
-    recentDiagnostics: 18,
-    successRate: 78,
-    averageTimeToFunding: 4.2,
-    portfolioGrowth: 15.3
+    totalStartups: 47,
+    activeStartups: 32,
+    onboardedStartups: 28,
+    pipelineStartups: 19,
+    totalFundingRequested: 28500000,
+    totalFundingRaised: 18700000,
+    successfulExits: 8,
+    activeAlerts: 12,
+    highPriorityAlerts: 5,
+    recentDiagnostics: 34,
+    successRate: 82,
+    averageTimeToFunding: 3.8,
+    portfolioGrowth: 23.5,
+    teamEngagement: 94,
+    platformUsage: 87,
+    monthlyDiagnostics: 156
   };
   
+  // Enhanced KPIs for structure management
   const kpis = [
     {
-      name: 'Taux de succès',
+      name: 'Taux de succès global',
       value: `${portfolioData.successRate}%`,
-      change: 5.2,
+      change: 7.2,
       trend: 'up',
-      description: 'Startups ayant levé avec succès'
+      description: 'Startups ayant levé avec succès',
+      category: 'Performance'
     },
     {
       name: 'Temps moyen levée',
       value: `${portfolioData.averageTimeToFunding} mois`,
-      change: -0.8,
+      change: -1.2,
       trend: 'up',
-      description: 'Durée moyenne jusqu\'à la levée'
+      description: 'Durée moyenne jusqu\'à la levée',
+      category: 'Efficacité'
     },
     {
       name: 'Croissance portefeuille',
       value: `+${portfolioData.portfolioGrowth}%`,
-      change: 3.1,
+      change: 5.8,
       trend: 'up',
-      description: 'Évolution sur 12 mois'
+      description: 'Évolution sur 12 mois',
+      category: 'Développement'
     },
     {
-      name: 'Engagement plateforme',
-      value: '89%',
-      change: 12.5,
+      name: 'Engagement équipe',
+      value: `${portfolioData.teamEngagement}%`,
+      change: 8.3,
       trend: 'up',
-      description: 'Taux d\'utilisation mensuel'
+      description: 'Utilisation plateforme équipe',
+      category: 'Adoption'
+    },
+    {
+      name: 'Diagnostics IA/mois',
+      value: `${portfolioData.monthlyDiagnostics}`,
+      change: 15.7,
+      trend: 'up',
+      description: 'Analyses automatisées',
+      category: 'IA'
+    },
+    {
+      name: 'Pipeline conversion',
+      value: '68%',
+      change: 4.1,
+      trend: 'up',
+      description: 'Pipeline → Accompagnement',
+      category: 'Conversion'
     }
   ];
   
+  // Enhanced startup data with more B2B relevant fields
   const startups = [
     {
       id: 1,
       name: 'MediScan SAS',
       sector: 'Healthtech',
       status: 'Levée en cours',
+      stage: 'Seed',
       lastDiagnostic: '2025-01-10',
       alerts: [
-        { type: 'warning', message: 'Aide BPI expire dans 15j', priority: 'high' }
+        { type: 'deadline', message: 'Aide BPI expire dans 15j', priority: 'high' },
+        { type: 'opportunity', message: 'Appel France 2030 compatible', priority: 'medium' }
       ],
       fundingRequested: 750000,
       fundingRaised: 0,
       responsible: 'Marie Dupont',
-      stage: 'Seed',
+      internalCoach: 'Sophie Martin',
       runway: 8,
       lastActivity: '2025-01-12',
-      riskLevel: 'medium'
+      riskLevel: 'medium',
+      onboardingStatus: 'Complete',
+      teamSize: 5,
+      location: 'Paris',
+      foundationDate: '2022-06-15',
+      nextMilestone: 'Pitch investisseurs - 25 jan',
+      kpis: {
+        revenue: 45000,
+        users: 1200,
+        growth: 15
+      }
     },
     {
       id: 2,
       name: 'GreenTech Solutions',
       sector: 'Greentech',
       status: 'En accompagnement',
+      stage: 'Série A',
       lastDiagnostic: '2025-01-08',
-      alerts: [],
+      alerts: [
+        { type: 'info', message: 'Diagnostic à jour', priority: 'low' }
+      ],
       fundingRequested: 1200000,
       fundingRaised: 300000,
       responsible: 'Thomas Martin',
-      stage: 'Série A',
+      internalCoach: 'Pierre Dubois',
       runway: 14,
       lastActivity: '2025-01-11',
-      riskLevel: 'low'
+      riskLevel: 'low',
+      onboardingStatus: 'Complete',
+      teamSize: 12,
+      location: 'Lyon',
+      foundationDate: '2021-03-10',
+      nextMilestone: 'Due diligence - 5 fév',
+      kpis: {
+        revenue: 180000,
+        users: 5600,
+        growth: 28
+      }
     },
     {
       id: 3,
       name: 'EduAI Platform',
       sector: 'Edtech',
       status: 'Levée terminée',
+      stage: 'Pré-seed',
       lastDiagnostic: '2024-12-15',
       alerts: [
-        { type: 'info', message: 'Diagnostic à mettre à jour', priority: 'medium' }
+        { type: 'success', message: 'Levée finalisée avec succès', priority: 'low' }
       ],
       fundingRequested: 500000,
       fundingRaised: 500000,
       responsible: 'Sophie Leroy',
-      stage: 'Pré-seed',
+      internalCoach: 'Marie Dubois',
       runway: 18,
       lastActivity: '2024-12-20',
-      riskLevel: 'low'
+      riskLevel: 'low',
+      onboardingStatus: 'Complete',
+      teamSize: 8,
+      location: 'Bordeaux',
+      foundationDate: '2023-01-20',
+      nextMilestone: 'Suivi post-levée - 15 fév',
+      kpis: {
+        revenue: 25000,
+        users: 890,
+        growth: 45
+      }
     },
     {
       id: 4,
       name: 'FinanceBot',
       sector: 'Fintech',
       status: 'En attente',
+      stage: 'Série A',
       lastDiagnostic: '2025-01-05',
-      alerts: [],
+      alerts: [
+        { type: 'warning', message: 'Inactif depuis 10 jours', priority: 'medium' }
+      ],
       fundingRequested: 2000000,
       fundingRaised: 0,
       responsible: 'Pierre Dubois',
-      stage: 'Série A',
+      internalCoach: 'Jean Martin',
       runway: 6,
       lastActivity: '2025-01-09',
-      riskLevel: 'medium'
+      riskLevel: 'medium',
+      onboardingStatus: 'In Progress',
+      teamSize: 15,
+      location: 'Lille',
+      foundationDate: '2020-09-12',
+      nextMilestone: 'Relance équipe - 20 jan',
+      kpis: {
+        revenue: 320000,
+        users: 8900,
+        growth: 12
+      }
     },
     {
       id: 5,
       name: 'PropTech Innovations',
       sector: 'Proptech',
       status: 'Levée en cours',
+      stage: 'Seed',
       lastDiagnostic: '2025-01-12',
       alerts: [
-        { type: 'alert', message: 'Runway critique < 3 mois', priority: 'high' },
-        { type: 'warning', message: 'Échéance due diligence', priority: 'high' }
+        { type: 'risk', message: 'Runway critique < 3 mois', priority: 'high' },
+        { type: 'deadline', message: 'Échéance due diligence', priority: 'high' }
       ],
       fundingRequested: 850000,
       fundingRaised: 0,
       responsible: 'Julie Bernard',
-      stage: 'Seed',
+      internalCoach: 'Thomas Martin',
       runway: 2,
       lastActivity: '2025-01-12',
-      riskLevel: 'high'
+      riskLevel: 'high',
+      onboardingStatus: 'Complete',
+      teamSize: 6,
+      location: 'Nantes',
+      foundationDate: '2023-04-08',
+      nextMilestone: 'Urgence financement - 30 jan',
+      kpis: {
+        revenue: 12000,
+        users: 340,
+        growth: 8
+      }
     },
     {
       id: 6,
       name: 'AI Logistics',
       sector: 'Logtech',
       status: 'En accompagnement',
+      stage: 'Seed',
       lastDiagnostic: '2025-01-07',
       alerts: [],
       fundingRequested: 1500000,
       fundingRaised: 450000,
       responsible: 'Marc Rousseau',
-      stage: 'Seed',
+      internalCoach: 'Sophie Martin',
       runway: 12,
       lastActivity: '2025-01-10',
-      riskLevel: 'low'
+      riskLevel: 'low',
+      onboardingStatus: 'Complete',
+      teamSize: 9,
+      location: 'Toulouse',
+      foundationDate: '2022-11-03',
+      nextMilestone: 'Série A prep - 15 mars',
+      kpis: {
+        revenue: 95000,
+        users: 2100,
+        growth: 22
+      }
     }
   ];
   
+  // Recent activities for structure management
+  const recentActivities = [
+    {
+      id: 1,
+      type: 'diagnostic',
+      action: 'Diagnostic IA généré',
+      startup: 'GreenTech Solutions',
+      user: 'Pierre Dubois',
+      time: '2 heures',
+      icon: Zap,
+      category: 'IA'
+    },
+    {
+      id: 2,
+      type: 'alert',
+      action: 'Alerte runway critique',
+      startup: 'PropTech Innovations',
+      user: 'Système',
+      time: '4 heures',
+      icon: AlertTriangle,
+      category: 'Risque'
+    },
+    {
+      id: 3,
+      type: 'report',
+      action: 'Rapport téléchargé',
+      startup: 'MediScan SAS',
+      user: 'Marie Dupont',
+      time: '5 heures',
+      icon: Download,
+      category: 'Export'
+    },
+    {
+      id: 4,
+      type: 'onboarding',
+      action: 'Nouvelle startup ajoutée',
+      startup: 'AI Logistics',
+      user: 'Sophie Martin',
+      time: '1 jour',
+      icon: Plus,
+      category: 'Onboarding'
+    },
+    {
+      id: 5,
+      type: 'update',
+      action: 'Fiche projet mise à jour',
+      startup: 'FinanceBot',
+      user: 'Jean Martin',
+      time: '1 jour',
+      icon: FileText,
+      category: 'Mise à jour'
+    },
+    {
+      id: 6,
+      type: 'meeting',
+      action: 'Rendez-vous planifié',
+      startup: 'EduAI Platform',
+      user: 'Marie Dubois',
+      time: '2 jours',
+      icon: Calendar,
+      category: 'Suivi'
+    }
+  ];
+  
+  // Upcoming deadlines and events
+  const upcomingDeadlines = [
+    {
+      id: 1,
+      title: 'Aide BPI France - MediScan',
+      date: '2025-01-30',
+      type: 'deadline',
+      priority: 'high',
+      startup: 'MediScan SAS',
+      description: 'Dépôt dossier aide innovation'
+    },
+    {
+      id: 2,
+      title: 'Due diligence PropTech',
+      date: '2025-02-05',
+      type: 'milestone',
+      priority: 'high',
+      startup: 'PropTech Innovations',
+      description: 'Finalisation documents investisseurs'
+    },
+    {
+      id: 3,
+      title: 'Board mensuel',
+      date: '2025-02-15',
+      type: 'meeting',
+      priority: 'medium',
+      startup: 'Structure',
+      description: 'Conseil d\'administration mensuel'
+    },
+    {
+      id: 4,
+      title: 'France 2030 - Santé',
+      date: '2025-06-30',
+      type: 'opportunity',
+      priority: 'medium',
+      startup: 'Toutes',
+      description: 'Appel à projets santé numérique'
+    }
+  ];
+  
+  // Team performance data
+  const teamPerformance = [
+    {
+      name: 'Sophie Martin',
+      role: 'Senior Coach',
+      startupsManaged: 8,
+      diagnosticsLaunched: 23,
+      successRate: 87,
+      lastActivity: '2025-01-12'
+    },
+    {
+      name: 'Pierre Dubois',
+      role: 'Investment Manager',
+      startupsManaged: 6,
+      diagnosticsLaunched: 18,
+      successRate: 92,
+      lastActivity: '2025-01-12'
+    },
+    {
+      name: 'Marie Dubois',
+      role: 'Business Coach',
+      startupsManaged: 7,
+      diagnosticsLaunched: 21,
+      successRate: 79,
+      lastActivity: '2025-01-11'
+    },
+    {
+      name: 'Thomas Martin',
+      role: 'Tech Advisor',
+      startupsManaged: 5,
+      diagnosticsLaunched: 15,
+      successRate: 85,
+      lastActivity: '2025-01-10'
+    }
+  ];
+  
+  // Format currency
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
       return `${(amount / 1000000).toFixed(1)}M€`;
+    }
+    if (amount >= 1000) {
+      return `${(amount / 1000).toFixed(0)}K€`;
     }
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
@@ -240,6 +493,7 @@ const B2BDashboard: React.FC = () => {
     if (selectedFilter === 'active') return startup.status === 'Levée en cours' || startup.status === 'En accompagnement';
     if (selectedFilter === 'alerts') return startup.alerts.length > 0;
     if (selectedFilter === 'risk') return startup.riskLevel === 'high';
+    if (selectedFilter === 'pipeline') return startup.onboardingStatus === 'In Progress';
     return true;
   });
   
@@ -248,33 +502,67 @@ const B2BDashboard: React.FC = () => {
       "py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto",
       darkMode ? "text-white" : "text-gray-900"
     )}>
-      {/* Welcome banner */}
+      {/* Welcome banner with structure info */}
       <div className={clsx(
         "rounded-xl shadow-sm p-6 mb-8",
         darkMode ? "bg-gray-800" : "bg-white"
       )}>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className={clsx(
-              "text-2xl font-bold",
-              darkMode ? "text-white" : "text-gray-900"
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start">
+            <div className={clsx(
+              "rounded-full p-3 mr-4",
+              darkMode ? "bg-purple-900/30" : "bg-secondary-light"
             )}>
-              Dashboard Structure - Tech Incubator Paris
-            </h1>
-            <p className={clsx(
-              "mt-1",
-              darkMode ? "text-gray-300" : "text-gray-600"
-            )}>
-              Pilotez votre portefeuille de startups et optimisez vos accompagnements.
-            </p>
+              <Building2 className={clsx(
+                "h-8 w-8",
+                darkMode ? "text-purple-400" : "text-primary"
+              )} />
+            </div>
+            <div>
+              <h1 className={clsx(
+                "text-2xl font-bold",
+                darkMode ? "text-white" : "text-gray-900"
+              )}>
+                Tech Incubator Paris
+              </h1>
+              <p className={clsx(
+                "mt-1",
+                darkMode ? "text-gray-300" : "text-gray-600"
+              )}>
+                Dashboard de pilotage - Vue d'ensemble de votre activité d'accompagnement
+              </p>
+              <div className="flex items-center mt-2 space-x-4 text-sm">
+                <span className={clsx(
+                  "flex items-center",
+                  darkMode ? "text-gray-400" : "text-gray-500"
+                )}>
+                  <Users className="h-4 w-4 mr-1" />
+                  {portfolioData.totalStartups} startups
+                </span>
+                <span className={clsx(
+                  "flex items-center",
+                  darkMode ? "text-gray-400" : "text-gray-500"
+                )}>
+                  <Target className="h-4 w-4 mr-1" />
+                  {portfolioData.successRate}% succès
+                </span>
+                <span className={clsx(
+                  "flex items-center",
+                  darkMode ? "text-gray-400" : "text-gray-500"
+                )}>
+                  <DollarSign className="h-4 w-4 mr-1" />
+                  {formatCurrency(portfolioData.totalFundingRaised)} levés
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+          <div className="mt-4 lg:mt-0 flex flex-col sm:flex-row gap-3">
             <button className={clsx(
               "btn-secondary flex items-center justify-center",
               darkMode ? "bg-gray-700 text-white hover:bg-gray-600" : ""
             )}>
               <FileText className="h-5 w-5 mr-2" />
-              Synthèse d'aides
+              Rapport stratégique
             </button>
             <button className={clsx(
               "btn-primary flex items-center justify-center",
@@ -287,268 +575,210 @@ const B2BDashboard: React.FC = () => {
         </div>
       </div>
       
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className={clsx(
-          "rounded-xl shadow-sm p-6",
-          darkMode ? "bg-gray-800" : "bg-white"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className={clsx(
-                "rounded-full p-2 mr-3",
-                darkMode ? "bg-purple-900/30" : "bg-secondary-light"
+      {/* Enhanced KPI Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+        {kpis.map((kpi, index) => (
+          <div key={index} className={clsx(
+            "rounded-xl shadow-sm p-4",
+            darkMode ? "bg-gray-800" : "bg-white"
+          )}>
+            <div className="flex justify-between items-start mb-2">
+              <span className={clsx(
+                "text-xs font-medium uppercase tracking-wider",
+                darkMode ? "text-gray-400" : "text-gray-500"
               )}>
-                <Building2 className={clsx(
-                  "h-5 w-5",
+                {kpi.category}
+              </span>
+              <div className={clsx(
+                "flex items-center text-xs font-medium",
+                kpi.trend === 'up' 
+                  ? kpi.name.includes('Temps') ? 'text-green-500' : 'text-green-500'
+                  : 'text-red-500'
+              )}>
+                {kpi.trend === 'up' ? (
+                  <ArrowUpRight className="h-3 w-3 mr-1" />
+                ) : (
+                  <ArrowDownRight className="h-3 w-3 mr-1" />
+                )}
+                {Math.abs(kpi.change)}%
+              </div>
+            </div>
+            <p className={clsx(
+              "text-lg font-bold mb-1",
+              darkMode ? "text-white" : "text-gray-900"
+            )}>
+              {kpi.value}
+            </p>
+            <p className={clsx(
+              "text-xs",
+              darkMode ? "text-gray-400" : "text-gray-500"
+            )}>
+              {kpi.description}
+            </p>
+          </div>
+        ))}
+      </div>
+      
+      {/* Main dashboard grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Portfolio overview - takes 3 columns */}
+        <div className="lg:col-span-3 space-y-8">
+          {/* Portfolio summary cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className={clsx(
+              "rounded-xl shadow-sm p-4",
+              darkMode ? "bg-gray-800" : "bg-white"
+            )}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={clsx(
+                    "text-sm",
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  )}>
+                    Portefeuille total
+                  </p>
+                  <p className={clsx(
+                    "text-2xl font-bold",
+                    darkMode ? "text-white" : "text-gray-900"
+                  )}>
+                    {portfolioData.totalStartups}
+                  </p>
+                  <p className={clsx(
+                    "text-xs",
+                    darkMode ? "text-gray-500" : "text-gray-400"
+                  )}>
+                    {portfolioData.activeStartups} actives
+                  </p>
+                </div>
+                <Briefcase className={clsx(
+                  "h-8 w-8",
                   darkMode ? "text-purple-400" : "text-primary"
                 )} />
               </div>
-              <div>
-                <p className={clsx(
-                  "text-sm",
-                  darkMode ? "text-gray-400" : "text-gray-500"
-                )}>
-                  Startups suivies
-                </p>
-                <p className={clsx(
-                  "text-2xl font-bold",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  {portfolioData.totalStartups}
-                </p>
-                <p className={clsx(
-                  "text-xs",
-                  darkMode ? "text-gray-500" : "text-gray-400"
-                )}>
-                  {portfolioData.activeStartups} actives
-                </p>
-              </div>
             </div>
-          </div>
-        </div>
-        
-        <div className={clsx(
-          "rounded-xl shadow-sm p-6",
-          darkMode ? "bg-gray-800" : "bg-white"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className={clsx(
-                "rounded-full p-2 mr-3",
-                darkMode ? "bg-green-900/30" : "bg-green-100"
-              )}>
-                <DollarSign className={clsx(
-                  "h-5 w-5",
+            
+            <div className={clsx(
+              "rounded-xl shadow-sm p-4",
+              darkMode ? "bg-gray-800" : "bg-white"
+            )}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={clsx(
+                    "text-sm",
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  )}>
+                    Onboardées
+                  </p>
+                  <p className={clsx(
+                    "text-2xl font-bold",
+                    darkMode ? "text-white" : "text-gray-900"
+                  )}>
+                    {portfolioData.onboardedStartups}
+                  </p>
+                  <p className={clsx(
+                    "text-xs",
+                    darkMode ? "text-gray-500" : "text-gray-400"
+                  )}>
+                    vs {portfolioData.pipelineStartups} pipeline
+                  </p>
+                </div>
+                <UserPlus className={clsx(
+                  "h-8 w-8",
                   darkMode ? "text-green-400" : "text-green-600"
                 )} />
               </div>
-              <div>
-                <p className={clsx(
-                  "text-sm",
-                  darkMode ? "text-gray-400" : "text-gray-500"
-                )}>
-                  Montant levé
-                </p>
-                <p className={clsx(
-                  "text-2xl font-bold",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  {formatCurrency(portfolioData.totalFundingRaised)}
-                </p>
-                <p className={clsx(
-                  "text-xs",
-                  darkMode ? "text-gray-500" : "text-gray-400"
-                )}>
-                  sur {formatCurrency(portfolioData.totalFundingRequested)} recherchés
-                </p>
-              </div>
             </div>
-            <div className="flex items-center text-green-500">
-              <ArrowUpRight className="h-4 w-4 mr-1" />
-              <span className="text-sm font-medium">+23%</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className={clsx(
-          "rounded-xl shadow-sm p-6",
-          darkMode ? "bg-gray-800" : "bg-white"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className={clsx(
-                "rounded-full p-2 mr-3",
-                darkMode ? "bg-blue-900/30" : "bg-blue-100"
-              )}>
-                <Target className={clsx(
-                  "h-5 w-5",
-                  darkMode ? "text-blue-400" : "text-blue-600"
+            
+            <div className={clsx(
+              "rounded-xl shadow-sm p-4",
+              darkMode ? "bg-gray-800" : "bg-white"
+            )}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={clsx(
+                    "text-sm",
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  )}>
+                    Montant levé
+                  </p>
+                  <p className={clsx(
+                    "text-2xl font-bold",
+                    darkMode ? "text-white" : "text-gray-900"
+                  )}>
+                    {formatCurrency(portfolioData.totalFundingRaised)}
+                  </p>
+                  <p className={clsx(
+                    "text-xs",
+                    darkMode ? "text-gray-500" : "text-gray-400"
+                  )}>
+                    sur {formatCurrency(portfolioData.totalFundingRequested)}
+                  </p>
+                </div>
+                <DollarSign className={clsx(
+                  "h-8 w-8",
+                  darkMode ? "text-green-400" : "text-green-600"
                 )} />
               </div>
-              <div>
-                <p className={clsx(
-                  "text-sm",
-                  darkMode ? "text-gray-400" : "text-gray-500"
-                )}>
-                  Taux de succès
-                </p>
-                <p className={clsx(
-                  "text-2xl font-bold",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  {portfolioData.successRate}%
-                </p>
-                <p className={clsx(
-                  "text-xs",
-                  darkMode ? "text-gray-500" : "text-gray-400"
-                )}>
-                  Levées réussies
-                </p>
-              </div>
             </div>
-            <div className="flex items-center text-green-500">
-              <ArrowUpRight className="h-4 w-4 mr-1" />
-              <span className="text-sm font-medium">+5.2%</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className={clsx(
-          "rounded-xl shadow-sm p-6",
-          darkMode ? "bg-gray-800" : "bg-white"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className={clsx(
-                "rounded-full p-2 mr-3",
-                portfolioData.activeAlerts > 5 
-                  ? darkMode ? "bg-red-900/30" : "bg-red-100"
-                  : darkMode ? "bg-amber-900/30" : "bg-amber-100"
-              )}>
+            
+            <div className={clsx(
+              "rounded-xl shadow-sm p-4",
+              darkMode ? "bg-gray-800" : "bg-white"
+            )}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={clsx(
+                    "text-sm",
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  )}>
+                    Alertes actives
+                  </p>
+                  <p className={clsx(
+                    "text-2xl font-bold",
+                    portfolioData.highPriorityAlerts > 0 
+                      ? darkMode ? "text-red-400" : "text-red-600"
+                      : darkMode ? "text-white" : "text-gray-900"
+                  )}>
+                    {portfolioData.activeAlerts}
+                  </p>
+                  <p className={clsx(
+                    "text-xs",
+                    darkMode ? "text-gray-500" : "text-gray-400"
+                  )}>
+                    {portfolioData.highPriorityAlerts} prioritaires
+                  </p>
+                </div>
                 <AlertTriangle className={clsx(
-                  "h-5 w-5",
-                  portfolioData.activeAlerts > 5 
+                  "h-8 w-8",
+                  portfolioData.highPriorityAlerts > 0 
                     ? darkMode ? "text-red-400" : "text-red-600"
                     : darkMode ? "text-amber-400" : "text-amber-600"
                 )} />
               </div>
-              <div>
-                <p className={clsx(
-                  "text-sm",
-                  darkMode ? "text-gray-400" : "text-gray-500"
-                )}>
-                  Alertes actives
-                </p>
-                <p className={clsx(
-                  "text-2xl font-bold",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  {portfolioData.activeAlerts}
-                </p>
-                <p className={clsx(
-                  "text-xs",
-                  darkMode ? "text-gray-500" : "text-gray-400"
-                )}>
-                  {portfolioData.highPriorityAlerts} prioritaires
-                </p>
-              </div>
             </div>
           </div>
-        </div>
-      </div>
-      
-      {/* Performance KPIs */}
-      <div className={clsx(
-        "rounded-xl shadow-sm p-6 mb-8",
-        darkMode ? "bg-gray-800" : "bg-white"
-      )}>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className={clsx(
-            "text-lg font-semibold",
-            darkMode ? "text-white" : "text-gray-900"
-          )}>
-            Indicateurs de performance
-          </h2>
-          <div className="flex items-center gap-2">
-            <select 
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className={clsx(
-                "text-sm border rounded-lg px-3 py-1",
-                darkMode 
-                  ? "bg-gray-700 border-gray-600 text-white" 
-                  : "bg-white border-gray-300 text-gray-900"
-              )}
-            >
-              <option value="week">7 derniers jours</option>
-              <option value="month">30 derniers jours</option>
-              <option value="quarter">3 derniers mois</option>
-              <option value="year">12 derniers mois</option>
-            </select>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {kpis.map((kpi, index) => (
-            <div key={index} className={clsx(
-              "p-4 rounded-lg border",
-              darkMode ? "bg-gray-700/50 border-gray-600" : "bg-gray-50 border-gray-200"
-            )}>
-              <div className="flex justify-between items-start mb-2">
-                <span className={clsx(
-                  "text-sm font-medium",
-                  darkMode ? "text-gray-300" : "text-gray-700"
-                )}>
-                  {kpi.name}
-                </span>
-                <div className={clsx(
-                  "flex items-center text-xs font-medium",
-                  kpi.trend === 'up' 
-                    ? kpi.name.includes('Temps') ? 'text-green-500' : 'text-green-500'
-                    : 'text-red-500'
-                )}>
-                  {kpi.trend === 'up' ? (
-                    <ArrowUpRight className="h-3 w-3 mr-1" />
-                  ) : (
-                    <ArrowDownRight className="h-3 w-3 mr-1" />
-                  )}
-                  {Math.abs(kpi.change)}%
-                </div>
-              </div>
-              <p className={clsx(
-                "text-xl font-bold mb-1",
-                darkMode ? "text-white" : "text-gray-900"
-              )}>
-                {kpi.value}
-              </p>
-              <p className={clsx(
-                "text-xs",
-                darkMode ? "text-gray-400" : "text-gray-500"
-              )}>
-                {kpi.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Main content grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Startups table - takes 3 columns */}
-        <div className="lg:col-span-3">
+          
+          {/* Startups table with enhanced features */}
           <div className={clsx(
             "rounded-xl shadow-sm overflow-hidden",
             darkMode ? "bg-gray-800" : "bg-white"
           )}>
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <h2 className={clsx(
-                  "text-lg font-semibold",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  Portefeuille de startups
-                </h2>
+                <div>
+                  <h2 className={clsx(
+                    "text-lg font-semibold",
+                    darkMode ? "text-white" : "text-gray-900"
+                  )}>
+                    Portefeuille de startups
+                  </h2>
+                  <p className={clsx(
+                    "text-sm",
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  )}>
+                    Gestion et suivi de vos projets accompagnés
+                  </p>
+                </div>
                 <div className="flex items-center gap-2">
                   <select 
                     value={selectedFilter}
@@ -564,6 +794,7 @@ const B2BDashboard: React.FC = () => {
                     <option value="active">Actives ({startups.filter(s => s.status === 'Levée en cours' || s.status === 'En accompagnement').length})</option>
                     <option value="alerts">Avec alertes ({startups.filter(s => s.alerts.length > 0).length})</option>
                     <option value="risk">À risque ({startups.filter(s => s.riskLevel === 'high').length})</option>
+                    <option value="pipeline">Pipeline ({startups.filter(s => s.onboardingStatus === 'In Progress').length})</option>
                   </select>
                   <button className={clsx(
                     "btn-primary text-sm px-3 py-1 flex items-center",
@@ -598,19 +829,19 @@ const B2BDashboard: React.FC = () => {
                       "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
                       darkMode ? "text-gray-300" : "text-gray-500"
                     )}>
-                      Diagnostic & Alertes
+                      Coach & Diagnostic
                     </th>
                     <th scope="col" className={clsx(
                       "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
                       darkMode ? "text-gray-300" : "text-gray-500"
                     )}>
-                      Financement
+                      Financement & KPIs
                     </th>
                     <th scope="col" className={clsx(
                       "px-6 py-3 text-left text-xs font-medium uppercase tracking-wider",
                       darkMode ? "text-gray-300" : "text-gray-500"
                     )}>
-                      Responsable
+                      Alertes & Échéances
                     </th>
                     <th scope="col" className={clsx(
                       "px-6 py-3 text-right text-xs font-medium uppercase tracking-wider",
@@ -632,7 +863,7 @@ const B2BDashboard: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <div className={clsx(
-                            "w-2 h-2 rounded-full mr-3",
+                            "w-3 h-3 rounded-full mr-3",
                             getRiskColor(startup.riskLevel)
                           )} />
                           <div>
@@ -646,13 +877,19 @@ const B2BDashboard: React.FC = () => {
                               "text-xs",
                               darkMode ? "text-gray-400" : "text-gray-500"
                             )}>
-                              {startup.stage} • Runway: {startup.runway} mois
+                              {startup.stage} • {startup.teamSize} pers. • {startup.location}
+                            </div>
+                            <div className={clsx(
+                              "text-xs mt-1",
+                              darkMode ? "text-gray-500" : "text-gray-400"
+                            )}>
+                              Runway: {startup.runway} mois
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           <span className={clsx(
                             "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
                             darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-800"
@@ -667,45 +904,40 @@ const B2BDashboard: React.FC = () => {
                               {startup.status}
                             </span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="space-y-2">
                           <div className={clsx(
                             "text-xs",
-                            darkMode ? "text-gray-300" : "text-gray-700"
+                            startup.onboardingStatus === 'Complete' 
+                              ? darkMode ? "text-green-400" : "text-green-600"
+                              : darkMode ? "text-amber-400" : "text-amber-600"
                           )}>
-                            Dernier: {formatDate(startup.lastDiagnostic)}
+                            {startup.onboardingStatus === 'Complete' ? '✓ Onboardé' : '⏳ En cours'}
                           </div>
-                          {startup.alerts.length > 0 && (
-                            <div className="space-y-1">
-                              {startup.alerts.slice(0, 2).map((alert, index) => (
-                                <div key={index} className={clsx(
-                                  "text-xs px-2 py-1 rounded-full inline-flex items-center",
-                                  alert.priority === 'high'
-                                    ? darkMode ? "bg-red-900/30 text-red-300" : "bg-red-100 text-red-800"
-                                    : alert.type === 'warning'
-                                      ? darkMode ? "bg-amber-900/30 text-amber-300" : "bg-amber-100 text-amber-800"
-                                      : darkMode ? "bg-blue-900/30 text-blue-300" : "bg-blue-100 text-blue-800"
-                                )}>
-                                  <AlertTriangle className="h-3 w-3 mr-1" />
-                                  {alert.message}
-                                </div>
-                              ))}
-                              {startup.alerts.length > 2 && (
-                                <div className={clsx(
-                                  "text-xs",
-                                  darkMode ? "text-gray-400" : "text-gray-500"
-                                )}>
-                                  +{startup.alerts.length - 2} autres
-                                </div>
-                              )}
-                            </div>
-                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="space-y-1">
+                          <div className={clsx(
+                            "text-xs font-medium",
+                            darkMode ? "text-gray-300" : "text-gray-700"
+                          )}>
+                            Coach: {startup.internalCoach}
+                          </div>
+                          <div className={clsx(
+                            "text-xs",
+                            darkMode ? "text-gray-400" : "text-gray-500"
+                          )}>
+                            Diagnostic: {formatDate(startup.lastDiagnostic)}
+                          </div>
+                          <div className={clsx(
+                            "text-xs",
+                            darkMode ? "text-gray-500" : "text-gray-400"
+                          )}>
+                            Activité: {formatDate(startup.lastActivity)}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-2">
                           <div className={clsx(
                             "text-sm font-medium",
                             darkMode ? "text-white" : "text-gray-900"
@@ -723,37 +955,59 @@ const B2BDashboard: React.FC = () => {
                           <div className="w-full bg-gray-200 dark:bg-gray-600 h-1 rounded-full">
                             <div 
                               className="bg-primary dark:bg-purple-600 h-1 rounded-full"
-                              style={{ width: `${(startup.fundingRaised / startup.fundingRequested) * 100}%` }}
+                              style={{ width: `${Math.min((startup.fundingRaised / startup.fundingRequested) * 100, 100)}%` }}
                             />
+                          </div>
+                          <div className={clsx(
+                            "text-xs",
+                            darkMode ? "text-gray-400" : "text-gray-500"
+                          )}>
+                            CA: {formatCurrency(startup.kpis.revenue)} • {startup.kpis.users} users • +{startup.kpis.growth}%
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center">
+                        <div className="space-y-1">
+                          {startup.alerts.length > 0 ? (
+                            <div className="space-y-1">
+                              {startup.alerts.slice(0, 2).map((alert, index) => (
+                                <div key={index} className={clsx(
+                                  "text-xs px-2 py-1 rounded-full inline-flex items-center",
+                                  alert.priority === 'high'
+                                    ? darkMode ? "bg-red-900/30 text-red-300" : "bg-red-100 text-red-800"
+                                    : alert.type === 'deadline'
+                                      ? darkMode ? "bg-amber-900/30 text-amber-300" : "bg-amber-100 text-amber-800"
+                                      : alert.type === 'opportunity'
+                                        ? darkMode ? "bg-blue-900/30 text-blue-300" : "bg-blue-100 text-blue-800"
+                                        : darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-800"
+                                )}>
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  {alert.message}
+                                </div>
+                              ))}
+                              {startup.alerts.length > 2 && (
+                                <div className={clsx(
+                                  "text-xs",
+                                  darkMode ? "text-gray-400" : "text-gray-500"
+                                )}>
+                                  +{startup.alerts.length - 2} autres
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className={clsx(
+                              "text-xs px-2 py-1 rounded-full inline-flex items-center",
+                              darkMode ? "bg-green-900/30 text-green-300" : "bg-green-100 text-green-800"
+                            )}>
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Aucune alerte
+                            </div>
+                          )}
                           <div className={clsx(
-                            "w-8 h-8 rounded-full flex items-center justify-center mr-2",
-                            darkMode ? "bg-gray-700" : "bg-gray-100"
+                            "text-xs",
+                            darkMode ? "text-gray-400" : "text-gray-500"
                           )}>
-                            <span className={clsx(
-                              "text-xs font-medium",
-                              darkMode ? "text-gray-300" : "text-gray-700"
-                            )}>
-                              {startup.responsible.split(' ').map(n => n[0]).join('')}
-                            </span>
-                          </div>
-                          <div>
-                            <div className={clsx(
-                              "text-sm",
-                              darkMode ? "text-gray-300" : "text-gray-700"
-                            )}>
-                              {startup.responsible}
-                            </div>
-                            <div className={clsx(
-                              "text-xs",
-                              darkMode ? "text-gray-500" : "text-gray-400"
-                            )}>
-                              Activité: {formatDate(startup.lastActivity)}
-                            </div>
+                            Prochaine étape: {startup.nextMilestone}
                           </div>
                         </div>
                       </td>
@@ -917,7 +1171,7 @@ const B2BDashboard: React.FC = () => {
             </div>
           </div>
           
-          {/* Active Alerts */}
+          {/* Upcoming Deadlines */}
           <div className={clsx(
             "rounded-xl shadow-sm p-6",
             darkMode ? "bg-gray-800" : "bg-white"
@@ -927,85 +1181,179 @@ const B2BDashboard: React.FC = () => {
                 "text-lg font-semibold",
                 darkMode ? "text-white" : "text-gray-900"
               )}>
-                Alertes prioritaires
+                Échéances prioritaires
               </h3>
               <div className="flex items-center">
                 <span className={clsx(
                   "text-sm mr-2",
                   darkMode ? "text-gray-400" : "text-gray-500"
                 )}>
-                  {portfolioData.highPriorityAlerts} urgentes
+                  {upcomingDeadlines.filter(d => d.priority === 'high').length} urgentes
                 </span>
                 <div className={clsx(
                   "w-2 h-2 rounded-full",
-                  portfolioData.highPriorityAlerts > 0 ? "bg-red-500" : "bg-green-500"
+                  upcomingDeadlines.filter(d => d.priority === 'high').length > 0 ? "bg-red-500" : "bg-green-500"
                 )} />
               </div>
             </div>
             
             <div className="space-y-3">
-              {startups
-                .filter(s => s.alerts.some(a => a.priority === 'high'))
-                .slice(0, 3)
-                .map((startup) => (
-                  <div key={startup.id} className={clsx(
-                    "p-3 rounded-lg border-l-4 transition-colors cursor-pointer",
-                    startup.riskLevel === 'high'
+              {upcomingDeadlines.slice(0, 4).map((deadline) => (
+                <div key={deadline.id} className={clsx(
+                  "p-3 rounded-lg border-l-4 transition-colors cursor-pointer",
+                  deadline.priority === 'high'
+                    ? darkMode 
+                      ? "border-red-500 bg-red-900/10 hover:bg-red-900/20" 
+                      : "border-red-400 bg-red-50 hover:bg-red-100"
+                    : deadline.type === 'opportunity'
                       ? darkMode 
-                        ? "border-red-500 bg-red-900/10 hover:bg-red-900/20" 
-                        : "border-red-400 bg-red-50 hover:bg-red-100"
+                        ? "border-blue-500 bg-blue-900/10 hover:bg-blue-900/20" 
+                        : "border-blue-400 bg-blue-50 hover:bg-blue-100"
                       : darkMode 
                         ? "border-amber-500 bg-amber-900/10 hover:bg-amber-900/20" 
                         : "border-amber-400 bg-amber-50 hover:bg-amber-100"
-                  )}>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className={clsx(
-                          "text-sm font-medium",
-                          darkMode ? "text-white" : "text-gray-900"
-                        )}>
-                          {startup.name}
-                        </p>
-                        {startup.alerts.filter(a => a.priority === 'high').map((alert, index) => (
-                          <p key={index} className={clsx(
-                            "text-xs mt-1",
-                            alert.priority === 'high'
-                              ? darkMode ? "text-red-300" : "text-red-700"
-                              : darkMode ? "text-amber-300" : "text-amber-700"
-                          )}>
-                            {alert.message}
-                          </p>
-                        ))}
-                      </div>
-                      <span className={clsx(
-                        "text-xs px-2 py-1 rounded-full",
-                        startup.riskLevel === 'high'
-                          ? darkMode ? "bg-red-900/30 text-red-300" : "bg-red-100 text-red-700"
-                          : darkMode ? "bg-amber-900/30 text-amber-300" : "bg-amber-100 text-amber-700"
-                      )}>
-                        {startup.riskLevel === 'high' ? 'Critique' : 'Attention'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              
-              {startups.filter(s => s.alerts.some(a => a.priority === 'high')).length === 0 && (
-                <div className={clsx(
-                  "p-4 rounded-lg text-center",
-                  darkMode ? "bg-green-900/10 text-green-300" : "bg-green-50 text-green-700"
                 )}>
-                  <CheckCircle className="h-6 w-6 mx-auto mb-2" />
-                  <p className="text-sm font-medium">Aucune alerte critique</p>
-                  <p className="text-xs mt-1">Votre portefeuille est en bonne santé</p>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className={clsx(
+                        "text-sm font-medium",
+                        darkMode ? "text-white" : "text-gray-900"
+                      )}>
+                        {deadline.title}
+                      </p>
+                      <p className={clsx(
+                        "text-xs mt-1",
+                        darkMode ? "text-gray-400" : "text-gray-500"
+                      )}>
+                        {deadline.description}
+                      </p>
+                      <div className="flex items-center mt-2">
+                        <Calendar className={clsx(
+                          "h-3 w-3 mr-1",
+                          darkMode ? "text-gray-400" : "text-gray-500"
+                        )} />
+                        <span className={clsx(
+                          "text-xs",
+                          darkMode ? "text-gray-400" : "text-gray-500"
+                        )}>
+                          {formatDate(deadline.date)}
+                        </span>
+                      </div>
+                    </div>
+                    <span className={clsx(
+                      "text-xs px-2 py-1 rounded-full ml-2",
+                      deadline.priority === 'high'
+                        ? darkMode ? "bg-red-900/30 text-red-300" : "bg-red-100 text-red-700"
+                        : darkMode ? "bg-amber-900/30 text-amber-300" : "bg-amber-100 text-amber-700"
+                    )}>
+                      {deadline.priority === 'high' ? 'Urgent' : 'Important'}
+                    </span>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
             
             <button className={clsx(
               "w-full mt-4 text-sm font-medium hover:underline flex items-center justify-center",
               darkMode ? "text-purple-400" : "text-primary"
             )}>
-              Voir toutes les alertes
+              Voir toutes les échéances
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </button>
+          </div>
+          
+          {/* Team Performance */}
+          <div className={clsx(
+            "rounded-xl shadow-sm p-6",
+            darkMode ? "bg-gray-800" : "bg-white"
+          )}>
+            <h3 className={clsx(
+              "text-lg font-semibold mb-4",
+              darkMode ? "text-white" : "text-gray-900"
+            )}>
+              Performance équipe
+            </h3>
+            
+            <div className="space-y-3">
+              {teamPerformance.slice(0, 3).map((member, index) => (
+                <div key={index} className={clsx(
+                  "p-3 rounded-lg",
+                  darkMode ? "bg-gray-700/50" : "bg-gray-50"
+                )}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className={clsx(
+                        "text-sm font-medium",
+                        darkMode ? "text-white" : "text-gray-900"
+                      )}>
+                        {member.name}
+                      </p>
+                      <p className={clsx(
+                        "text-xs",
+                        darkMode ? "text-gray-400" : "text-gray-500"
+                      )}>
+                        {member.role}
+                      </p>
+                    </div>
+                    <span className={clsx(
+                      "text-xs px-2 py-1 rounded-full",
+                      member.successRate >= 85
+                        ? darkMode ? "bg-green-900/30 text-green-300" : "bg-green-100 text-green-700"
+                        : darkMode ? "bg-amber-900/30 text-amber-300" : "bg-amber-100 text-amber-700"
+                    )}>
+                      {member.successRate}%
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className={clsx(
+                        darkMode ? "text-gray-400" : "text-gray-500"
+                      )}>
+                        Startups
+                      </span>
+                      <p className={clsx(
+                        "font-medium",
+                        darkMode ? "text-white" : "text-gray-900"
+                      )}>
+                        {member.startupsManaged}
+                      </p>
+                    </div>
+                    <div>
+                      <span className={clsx(
+                        darkMode ? "text-gray-400" : "text-gray-500"
+                      )}>
+                        Diagnostics
+                      </span>
+                      <p className={clsx(
+                        "font-medium",
+                        darkMode ? "text-white" : "text-gray-900"
+                      )}>
+                        {member.diagnosticsLaunched}
+                      </p>
+                    </div>
+                    <div>
+                      <span className={clsx(
+                        darkMode ? "text-gray-400" : "text-gray-500"
+                      )}>
+                        Activité
+                      </span>
+                      <p className={clsx(
+                        "font-medium",
+                        darkMode ? "text-white" : "text-gray-900"
+                      )}>
+                        {formatDate(member.lastActivity)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <button className={clsx(
+              "w-full mt-4 text-sm font-medium hover:underline flex items-center justify-center",
+              darkMode ? "text-purple-400" : "text-primary"
+            )}>
+              Gérer l'équipe
               <ChevronRight className="h-4 w-4 ml-1" />
             </button>
           </div>
@@ -1023,59 +1371,31 @@ const B2BDashboard: React.FC = () => {
             </h3>
             
             <div className="space-y-3">
-              {[
-                {
-                  action: 'Diagnostic IA généré',
-                  startup: 'GreenTech Solutions',
-                  time: '2 heures',
-                  icon: Zap,
-                  type: 'success'
-                },
-                {
-                  action: 'Alerte runway critique',
-                  startup: 'PropTech Innovations',
-                  time: '4 heures',
-                  icon: AlertTriangle,
-                  type: 'warning'
-                },
-                {
-                  action: 'Rapport téléchargé',
-                  startup: 'MediScan SAS',
-                  time: '5 heures',
-                  icon: Download,
-                  type: 'info'
-                },
-                {
-                  action: 'Nouvelle startup ajoutée',
-                  startup: 'AI Logistics',
-                  time: '1 jour',
-                  icon: Plus,
-                  type: 'success'
-                },
-                {
-                  action: 'Fiche projet mise à jour',
-                  startup: 'FinanceBot',
-                  time: '1 jour',
-                  icon: FileText,
-                  type: 'info'
-                }
-              ].map((activity, index) => (
-                <div key={index} className="flex items-center">
+              {recentActivities.slice(0, 5).map((activity) => (
+                <div key={activity.id} className="flex items-center">
                   <div className={clsx(
                     "rounded-full p-2 mr-3",
-                    activity.type === 'success'
-                      ? darkMode ? "bg-green-900/30" : "bg-green-100"
-                      : activity.type === 'warning'
-                        ? darkMode ? "bg-amber-900/30" : "bg-amber-100"
-                        : darkMode ? "bg-gray-700" : "bg-gray-100"
+                    activity.type === 'diagnostic'
+                      ? darkMode ? "bg-purple-900/30" : "bg-purple-100"
+                      : activity.type === 'alert'
+                        ? darkMode ? "bg-red-900/30" : "bg-red-100"
+                        : activity.type === 'report'
+                          ? darkMode ? "bg-blue-900/30" : "bg-blue-100"
+                          : activity.type === 'onboarding'
+                            ? darkMode ? "bg-green-900/30" : "bg-green-100"
+                            : darkMode ? "bg-gray-700" : "bg-gray-100"
                   )}>
                     <activity.icon className={clsx(
                       "h-4 w-4",
-                      activity.type === 'success'
-                        ? darkMode ? "text-green-400" : "text-green-600"
-                        : activity.type === 'warning'
-                          ? darkMode ? "text-amber-400" : "text-amber-600"
-                          : darkMode ? "text-gray-400" : "text-gray-500"
+                      activity.type === 'diagnostic'
+                        ? darkMode ? "text-purple-400" : "text-purple-600"
+                        : activity.type === 'alert'
+                          ? darkMode ? "text-red-400" : "text-red-600"
+                          : activity.type === 'report'
+                            ? darkMode ? "text-blue-400" : "text-blue-600"
+                            : activity.type === 'onboarding'
+                              ? darkMode ? "text-green-400" : "text-green-600"
+                              : darkMode ? "text-gray-400" : "text-gray-500"
                     )} />
                   </div>
                   <div className="flex-1">
@@ -1089,9 +1409,15 @@ const B2BDashboard: React.FC = () => {
                       "text-xs",
                       darkMode ? "text-gray-400" : "text-gray-500"
                     )}>
-                      {activity.startup} • Il y a {activity.time}
+                      {activity.startup} • {activity.user} • Il y a {activity.time}
                     </p>
                   </div>
+                  <span className={clsx(
+                    "text-xs px-2 py-1 rounded-full",
+                    darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"
+                  )}>
+                    {activity.category}
+                  </span>
                 </div>
               ))}
             </div>
@@ -1102,91 +1428,6 @@ const B2BDashboard: React.FC = () => {
             )}>
               Voir toute l'activité
               <ChevronRight className="h-4 w-4 ml-1" />
-            </button>
-          </div>
-          
-          {/* Team & Collaboration */}
-          <div className={clsx(
-            "rounded-xl shadow-sm p-6",
-            darkMode ? "bg-gray-800" : "bg-white"
-          )}>
-            <h3 className={clsx(
-              "text-lg font-semibold mb-4",
-              darkMode ? "text-white" : "text-gray-900"
-            )}>
-              Équipe & Collaboration
-            </h3>
-            
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <UserPlus className={clsx(
-                    "h-5 w-5 mr-2",
-                    darkMode ? "text-gray-400" : "text-gray-500"
-                  )} />
-                  <span className={clsx(
-                    "text-sm",
-                    darkMode ? "text-gray-300" : "text-gray-700"
-                  )}>
-                    Membres actifs
-                  </span>
-                </div>
-                <span className={clsx(
-                  "text-sm font-medium",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  8
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <MessageSquare className={clsx(
-                    "h-5 w-5 mr-2",
-                    darkMode ? "text-gray-400" : "text-gray-500"
-                  )} />
-                  <span className={clsx(
-                    "text-sm",
-                    darkMode ? "text-gray-300" : "text-gray-700"
-                  )}>
-                    Messages non lus
-                  </span>
-                </div>
-                <span className={clsx(
-                  "text-sm font-medium",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  3
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Calendar className={clsx(
-                    "h-5 w-5 mr-2",
-                    darkMode ? "text-gray-400" : "text-gray-500"
-                  )} />
-                  <span className={clsx(
-                    "text-sm",
-                    darkMode ? "text-gray-300" : "text-gray-700"
-                  )}>
-                    Échéances cette semaine
-                  </span>
-                </div>
-                <span className={clsx(
-                  "text-sm font-medium",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  5
-                </span>
-              </div>
-            </div>
-            
-            <button className={clsx(
-              "w-full mt-4 btn-secondary text-sm",
-              darkMode ? "bg-gray-700 text-white hover:bg-gray-600" : ""
-            )}>
-              Gérer l'équipe
             </button>
           </div>
         </div>

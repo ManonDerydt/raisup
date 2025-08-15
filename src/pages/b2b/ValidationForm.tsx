@@ -1,153 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, CheckCircle, ArrowRight } from 'lucide-react';
-import clsx from 'clsx';
+import { Shield, ArrowLeft, ArrowRight } from 'lucide-react';
 
 const ValidationForm: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   
-  // Load saved form data to show summary
-  const [formSummary, setFormSummary] = useState<any>({});
-  
-  useEffect(() => {
-    const structureData = localStorage.getItem('b2bStructureFormData');
-    const financialsData = localStorage.getItem('b2bFinancialsFormData');
-    const objectivesData = localStorage.getItem('b2bObjectivesFormData');
-    const contactData = localStorage.getItem('b2bContactFormData');
-    
-    setFormSummary({
-      structure: structureData ? JSON.parse(structureData) : {},
-      financials: financialsData ? JSON.parse(financialsData) : {},
-      objectives: objectivesData ? JSON.parse(objectivesData) : {},
-      contact: contactData ? JSON.parse(contactData) : {},
-    });
-  }, []);
-  
   const handleCreateAccount = () => {
     setLoading(true);
     
-    // Always redirect to B2B dashboard - no validation required
+    // Redirection garantie vers le dashboard B2B
     setTimeout(() => {
       setLoading(false);
-      
-      // Clear saved form data
-      localStorage.removeItem('b2bStructureFormData');
-      localStorage.removeItem('b2bFinancialsFormData');
-      localStorage.removeItem('b2bObjectivesFormData');
-      localStorage.removeItem('b2bContactFormData');
-      
-      // Guaranteed redirect to B2B dashboard
       navigate('/dashboard/b2b');
-    }, 500);
+    }, 300);
   };
   
   return (
     <div>
       <div className="flex items-center mb-6">
         <Shield className="h-6 w-6 text-primary dark:text-purple-400 mr-3" />
-        <h1 className="text-2xl font-bold dark:text-white">Validation et création du compte</h1>
+        <h1 className="text-2xl font-bold dark:text-white">Finalisation de votre espace</h1>
       </div>
       
       <p className="text-gray-600 dark:text-gray-300 mb-8">
-        Vérifiez vos informations et finalisez la création de votre compte structure.
+        Votre espace structure est prêt à être créé. Cliquez sur "Créer mon espace" pour accéder à votre dashboard.
       </p>
       
-      <div className="space-y-8">
-        {/* Récapitulatif */}
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4 dark:text-white">Récapitulatif de vos informations</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-medium text-primary dark:text-purple-400 mb-2">Structure</h3>
-              <div className="space-y-1 text-sm">
-                <p className="dark:text-gray-300"><span className="font-medium">Nom:</span> {formSummary.structure?.structureName || 'Non renseigné'}</p>
-                <p className="dark:text-gray-300"><span className="font-medium">Type:</span> {formSummary.structure?.structureType || 'Non renseigné'}</p>
-                <p className="dark:text-gray-300"><span className="font-medium">Localisation:</span> {formSummary.structure?.city || 'Non renseigné'}, {formSummary.structure?.country || 'Non renseigné'}</p>
-                <p className="dark:text-gray-300"><span className="font-medium">Équipe:</span> {formSummary.structure?.teamSize || 'Non renseigné'}</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-medium text-primary dark:text-purple-400 mb-2">Opérationnel</h3>
-              <div className="space-y-1 text-sm">
-                <p className="dark:text-gray-300"><span className="font-medium">Ticket moyen:</span> {formSummary.financials?.averageTicket ? `${formSummary.financials.averageTicket.toLocaleString()}€` : 'Non renseigné'}</p>
-                <p className="dark:text-gray-300"><span className="font-medium">Portefeuille:</span> {formSummary.financials?.portfolioSize || 'Non renseigné'} startups</p>
-                <p className="dark:text-gray-300"><span className="font-medium">Nouvelles/an:</span> {formSummary.financials?.newStartupsPerYear || 'Non renseigné'}</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-medium text-primary dark:text-purple-400 mb-2">Contact</h3>
-              <div className="space-y-1 text-sm">
-                <p className="dark:text-gray-300"><span className="font-medium">Nom:</span> {formSummary.contact?.fullName || 'Non renseigné'}</p>
-                <p className="dark:text-gray-300"><span className="font-medium">Rôle:</span> {formSummary.contact?.role || 'Non renseigné'}</p>
-                <p className="dark:text-gray-300"><span className="font-medium">Email:</span> {formSummary.contact?.email || 'Non renseigné'}</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-medium text-primary dark:text-purple-400 mb-2">Objectifs</h3>
-              <div className="space-y-1 text-sm">
-                <p className="dark:text-gray-300"><span className="font-medium">Principaux:</span> {formSummary.objectives?.mainObjectives?.length || 0} sélectionnés</p>
-                <p className="dark:text-gray-300"><span className="font-medium">Types recherchés:</span> {formSummary.objectives?.targetStartupTypes?.length || 0} sélectionnés</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              onClick={() => navigate('/register/b2b/structure')}
-              className="text-primary dark:text-purple-400 hover:text-opacity-80 text-sm font-medium"
-            >
-              Modifier les informations
-            </button>
-          </div>
-        </div>
+      <div className="bg-secondary-light dark:bg-purple-900/20 p-6 rounded-xl mb-8">
+        <h2 className="font-semibold text-primary dark:text-purple-400 mb-3">Votre espace structure inclut :</h2>
+        <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+          <li>• Dashboard de pilotage complet</li>
+          <li>• Gestion de portefeuille de startups</li>
+          <li>• Synthèse d'aides et opportunités</li>
+          <li>• Calendrier des échéances</li>
+          <li>• Rapports stratégiques automatisés</li>
+          <li>• Gestion d'équipe et droits d'accès</li>
+        </ul>
+      </div>
+      
+      <div className="pt-6 border-t border-gray-100 dark:border-gray-700 flex justify-between">
+        <button 
+          type="button"
+          onClick={() => navigate('/register/b2b/contact')}
+          className="btn-secondary flex items-center"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Retour
+        </button>
         
-        {/* Confirmation */}
-        <div className="bg-secondary-light dark:bg-purple-900/20 p-4 rounded-xl">
-          <div className="flex items-start">
-            <CheckCircle className="h-5 w-5 text-primary dark:text-purple-400 mr-2 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-medium text-primary dark:text-purple-400 mb-1">Création de votre espace</h3>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                Votre espace structure sera créé avec les informations fournies. 
-                Vous pourrez compléter et modifier ces informations depuis votre dashboard.
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="pt-6 border-t border-gray-100 dark:border-gray-700 flex justify-between">
-          <button 
-            type="button"
-            onClick={() => navigate('/register/b2b/contact')}
-            className="btn-secondary flex items-center"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour
-          </button>
-          
-          <button 
-            onClick={handleCreateAccount}
-            className="btn-primary flex items-center"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                Création en cours...
-              </>
-            ) : (
-              <>
-                Créer mon espace
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </>
-            )}
-          </button>
-        </div>
+        <button 
+          onClick={handleCreateAccount}
+          className="btn-primary flex items-center"
+        >
+          {loading ? (
+            <>
+              <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+              Création en cours...
+            </>
+          ) : (
+            <>
+              Créer mon espace
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
