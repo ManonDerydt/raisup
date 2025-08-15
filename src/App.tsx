@@ -65,13 +65,12 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="welcome" element={<DashboardWelcome />} />
           <Route path="financial-journey" element={<FinancialJourney />} />
-          <Route path="documents" element={<DocumentsPage />}>
-            {/* Ajouter la route pour generate_deck sous documents */}
+          {/* <Route path="documents" element={<DocumentsPage />}>
             <Route path="generate_deck" element={<PitchDeckGenerator />} />
-          </Route>
+          </Route> */}
 
           <Route path="fundraising" element={<FundraisingPage />} />
-          <Route path="analytics" element={<AnalysisPage />} />
+          {/* <Route path="analytics" element={<AnalysisPage />} /> */}
           <Route path="settings" element={<SettingsPage />} />
         </Route>
         
