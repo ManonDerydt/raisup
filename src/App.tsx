@@ -23,7 +23,7 @@ import HowItWorksPage from './pages/HowItWorksPage';
 import ProfileSelectionPage from './pages/ProfileSelectionPage';
 import B2BOnboardingLayout from './components/B2BOnboardingLayout';
 import StructureInfoForm from './pages/b2b/StructureInfoForm';
-import FinancialsForm from './pages/b2b/FinancialsForm';
+import B2BFinancialsForm from './pages/b2b/FinancialsForm';
 import ObjectivesForm from './pages/b2b/ObjectivesForm';
 import ContactForm from './pages/b2b/ContactForm';
 import ValidationForm from './pages/b2b/ValidationForm';
@@ -39,7 +39,7 @@ function App() {
         <Route path="/register/b2b" element={<B2BOnboardingLayout />}>
           <Route index element={<Navigate to="/register/b2b/structure" replace />} />
           <Route path="structure" element={<StructureInfoForm />} />
-          <Route path="financials" element={<FinancialsForm />} />
+          <Route path="financials" element={<B2BFinancialsForm />} />
           <Route path="objectives" element={<ObjectivesForm />} />
           <Route path="contact" element={<ContactForm />} />
           <Route path="validation" element={<ValidationForm />} />
