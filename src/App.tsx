@@ -30,6 +30,8 @@ import ValidationForm from './pages/b2b/ValidationForm';
 import PitchDeckGenerator from "./pages/pitch_generator.tsx";
 import B2BDashboardLayout from './components/B2BDashboardLayout';
 import B2BDashboard from './pages/B2BDashboard';
+import PortfolioPage from './pages/b2b/PortfolioPage';
+import FundingSynthesisPage from './pages/b2b/FundingSynthesisPage';
 
 function App() {
   return (
@@ -75,8 +77,8 @@ function App() {
         
         <Route path="/dashboard/b2b" element={<B2BDashboardLayout />}>
           <Route index element={<B2BDashboard />} />
-          <Route path="portfolio" element={<div>Portfolio page coming soon</div>} />
-          <Route path="funding-synthesis" element={<div>Funding synthesis page coming soon</div>} />
+          <Route path="portfolio" element={<PortfolioPage />} />
+          <Route path="funding-synthesis" element={<FundingSynthesisPage />} />
           <Route path="reports" element={<div>Reports page coming soon</div>} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

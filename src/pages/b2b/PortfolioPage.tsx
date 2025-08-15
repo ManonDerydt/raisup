@@ -21,7 +21,9 @@ import {
   Building2,
   Mail,
   Phone,
-  ExternalLink
+  ExternalLink,
+  Target,
+  Briefcase
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -37,6 +39,7 @@ const PortfolioPage: React.FC = () => {
   });
   const [selectedStartups, setSelectedStartups] = useState<number[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'all' | 'active' | 'alerts' | 'risk'>('all');
   
   // Check if dark mode is enabled
   React.useEffect(() => {
@@ -51,7 +54,9 @@ const PortfolioPage: React.FC = () => {
     totalAmountSought: 18500000,
     totalAmountRaised: 12300000,
     upToDateDiagnostics: 78,
-    criticalAlerts: 7
+    criticalAlerts: 7,
+    dilutiveFunding: 8900000,
+    nonDilutiveFunding: 3400000
   };
   
   // Mock startups data
@@ -72,7 +77,12 @@ const PortfolioPage: React.FC = () => {
       phone: '+33 1 23 45 67 89',
       website: 'https://mediscan.fr',
       onboardingProgress: 85,
-      lastActivity: '2025-01-12'
+      lastActivity: '2025-01-12',
+      kpis: {
+        mrr: 12000,
+        growth: 15,
+        users: 450
+      }
     },
     {
       id: 2,
@@ -90,7 +100,12 @@ const PortfolioPage: React.FC = () => {
       phone: '+33 1 34 56 78 90',
       website: 'https://greentech-solutions.com',
       onboardingProgress: 100,
-      lastActivity: '2025-01-11'
+      lastActivity: '2025-01-11',
+      kpis: {
+        mrr: 85000,
+        growth: 28,
+        users: 1200
+      }
     },
     {
       id: 3,
@@ -108,7 +123,12 @@ const PortfolioPage: React.FC = () => {
       phone: '+33 1 45 67 89 01',
       website: 'https://proptech-innov.fr',
       onboardingProgress: 45,
-      lastActivity: '2025-01-09'
+      lastActivity: '2025-01-09',
+      kpis: {
+        mrr: 0,
+        growth: 0,
+        users: 50
+      }
     },
     {
       id: 4,
@@ -126,7 +146,12 @@ const PortfolioPage: React.FC = () => {
       phone: '+33 1 56 78 90 12',
       website: 'https://financeai.com',
       onboardingProgress: 92,
-      lastActivity: '2025-01-12'
+      lastActivity: '2025-01-12',
+      kpis: {
+        mrr: 35000,
+        growth: 22,
+        users: 890
+      }
     },
     {
       id: 5,
@@ -144,26 +169,82 @@ const PortfolioPage: React.FC = () => {
       phone: '+33 1 67 89 01 23',
       website: 'https://edutech-pro.fr',
       onboardingProgress: 100,
-      lastActivity: '2024-12-20'
+      lastActivity: '2024-12-20',
+      kpis: {
+        mrr: 125000,
+        growth: 35,
+        users: 2500
+      }
+    },
+    {
+      id: 6,
+      name: 'FoodTech Connect',
+      sector: 'Foodtech',
+      stage: 'Seed',
+      status: 'En levée',
+      lastDiagnostic: '2025-01-11',
+      responsible: 'Marie Dubois',
+      amountSought: 900000,
+      amountRaised: 300000,
+      runway: 6,
+      alerts: ['runway-low', 'aide-available'],
+      email: 'contact@foodtech-connect.fr',
+      phone: '+33 1 78 90 12 34',
+      website: 'https://foodtech-connect.fr',
+      onboardingProgress: 75,
+      lastActivity: '2025-01-12',
+      kpis: {
+        mrr: 18000,
+        growth: 18,
+        users: 320
+      }
     }
   ];
   
-  // Filter startups based on search and filters
-  const filteredStartups = startups.filter(startup => {
-    const matchesSearch = startup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         startup.sector.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         startup.responsible.toLowerCase().includes(searchTerm.toLowerCase());
+  // Filter startups based on view mode and filters
+  const getFilteredStartups = () => {
+    let filtered = startups;
     
-    const matchesSector = !selectedFilters.sector || startup.sector === selectedFilters.sector;
-    const matchesStage = !selectedFilters.stage || startup.stage === selectedFilters.stage;
-    const matchesStatus = !selectedFilters.status || startup.status === selectedFilters.status;
-    const matchesResponsible = !selectedFilters.responsible || startup.responsible === selectedFilters.responsible;
-    const matchesAlerts = !selectedFilters.alerts || 
-                         (selectedFilters.alerts === 'with-alerts' && startup.alerts.length > 0) ||
-                         (selectedFilters.alerts === 'no-alerts' && startup.alerts.length === 0);
+    // Apply view mode filter
+    switch (viewMode) {
+      case 'active':
+        filtered = filtered.filter(s => ['Accompagnée', 'En levée'].includes(s.status));
+        break;
+      case 'alerts':
+        filtered = filtered.filter(s => s.alerts.length > 0);
+        break;
+      case 'risk':
+        filtered = filtered.filter(s => s.runway <= 6 || s.alerts.includes('runway-critical'));
+        break;
+    }
     
-    return matchesSearch && matchesSector && matchesStage && matchesStatus && matchesResponsible && matchesAlerts;
-  });
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(startup => 
+        startup.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        startup.sector.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        startup.responsible.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply other filters
+    if (selectedFilters.sector) {
+      filtered = filtered.filter(s => s.sector === selectedFilters.sector);
+    }
+    if (selectedFilters.stage) {
+      filtered = filtered.filter(s => s.stage === selectedFilters.stage);
+    }
+    if (selectedFilters.status) {
+      filtered = filtered.filter(s => s.status === selectedFilters.status);
+    }
+    if (selectedFilters.responsible) {
+      filtered = filtered.filter(s => s.responsible === selectedFilters.responsible);
+    }
+    
+    return filtered;
+  };
+  
+  const filteredStartups = getFilteredStartups();
   
   // Get unique values for filters
   const uniqueSectors = [...new Set(startups.map(s => s.sector))];
@@ -180,22 +261,25 @@ const PortfolioPage: React.FC = () => {
     );
   };
   
-  // Get alert icon and color
+  // Get alert info
   const getAlertInfo = (alertType: string) => {
     switch (alertType) {
       case 'aide-expiring':
-        return { icon: Calendar, color: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-900/30' };
+        return { icon: Calendar, color: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-900/30', label: 'Aide expire' };
+      case 'aide-available':
+        return { icon: Target, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30', label: 'Aide disponible' };
       case 'runway-low':
+        return { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30', label: 'Runway faible' };
       case 'runway-critical':
-        return { icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30' };
+        return { icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30', label: 'Runway critique' };
       case 'diagnostic-outdated':
-        return { icon: Clock, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' };
+        return { icon: Clock, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30', label: 'Diagnostic obsolète' };
       case 'incomplete-docs':
-        return { icon: FileText, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30' };
+        return { icon: FileText, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30', label: 'Docs incomplets' };
       case 'success-story':
-        return { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-100 dark:bg-green-900/30' };
+        return { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-100 dark:bg-green-900/30', label: 'Succès' };
       default:
-        return { icon: AlertTriangle, color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-900/30' };
+        return { icon: AlertTriangle, color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-900/30', label: 'Alerte' };
     }
   };
   
@@ -296,6 +380,15 @@ const PortfolioPage: React.FC = () => {
             <button className={clsx(
               "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors",
               darkMode 
+                ? "bg-gray-700 text-white hover:bg-gray-600" 
+                : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+            )}>
+              <FileText className="h-4 w-4 mr-2" />
+              Synthèse d'aides
+            </button>
+            <button className={clsx(
+              "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              darkMode 
                 ? "bg-purple-600 text-white hover:bg-purple-700" 
                 : "bg-primary text-white hover:bg-opacity-90"
             )}>
@@ -362,12 +455,18 @@ const PortfolioPage: React.FC = () => {
                 )}>
                   {formatCurrency(portfolioData.totalAmountRaised)}
                 </p>
-                <p className={clsx(
-                  "text-xs mt-1",
-                  darkMode ? "text-gray-500" : "text-gray-400"
-                )}>
-                  sur {formatCurrency(portfolioData.totalAmountSought)} recherchés
-                </p>
+                <div className="flex items-center mt-1">
+                  <span className={clsx(
+                    "text-xs",
+                    darkMode ? "text-gray-500" : "text-gray-400"
+                  )}>
+                    sur {formatCurrency(portfolioData.totalAmountSought)}
+                  </span>
+                  <div className="ml-2 flex items-center">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mr-1"></div>
+                    <span className="text-xs text-purple-500">{formatCurrency(portfolioData.dilutiveFunding)} dilutif</span>
+                  </div>
+                </div>
               </div>
               <div className={clsx(
                 "p-3 rounded-full",
@@ -391,7 +490,7 @@ const PortfolioPage: React.FC = () => {
                   "text-sm",
                   darkMode ? "text-gray-400" : "text-gray-500"
                 )}>
-                  Diagnostics à jour
+                  Diagnostics IA à jour
                 </p>
                 <p className={clsx(
                   "text-2xl font-bold",
@@ -462,6 +561,38 @@ const PortfolioPage: React.FC = () => {
           </div>
         </div>
         
+        {/* View Mode Tabs */}
+        <div className={clsx(
+          "rounded-xl shadow-sm mb-6",
+          darkMode ? "bg-gray-800" : "bg-white"
+        )}>
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            {[
+              { key: 'all', label: 'Toutes', count: startups.length },
+              { key: 'active', label: 'Actives', count: startups.filter(s => ['Accompagnée', 'En levée'].includes(s.status)).length },
+              { key: 'alerts', label: 'Avec alertes', count: startups.filter(s => s.alerts.length > 0).length },
+              { key: 'risk', label: 'À risque', count: startups.filter(s => s.runway <= 6).length }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setViewMode(tab.key as any)}
+                className={clsx(
+                  "px-6 py-4 text-sm font-medium border-b-2 transition-colors",
+                  viewMode === tab.key
+                    ? darkMode 
+                      ? "border-purple-500 text-purple-400" 
+                      : "border-primary text-primary"
+                    : darkMode 
+                      ? "border-transparent text-gray-400 hover:text-gray-300" 
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                )}
+              >
+                {tab.label} ({tab.count})
+              </button>
+            ))}
+          </div>
+        </div>
+        
         {/* Search and Filters */}
         <div className={clsx(
           "rounded-xl shadow-sm p-6 mb-8",
@@ -505,7 +636,7 @@ const PortfolioPage: React.FC = () => {
               )}
             >
               <Filter className="h-4 w-4 mr-2" />
-              Filtres
+              Filtres avancés
             </button>
           </div>
           
@@ -652,37 +783,31 @@ const PortfolioPage: React.FC = () => {
                     "px-6 py-4 text-left text-xs font-medium uppercase tracking-wider",
                     darkMode ? "text-gray-300" : "text-gray-500"
                   )}>
-                    Startup / Projet
+                    Startup / Stade
                   </th>
                   <th className={clsx(
                     "px-6 py-4 text-left text-xs font-medium uppercase tracking-wider",
                     darkMode ? "text-gray-300" : "text-gray-500"
                   )}>
-                    Secteur / Stade
+                    Secteur / Statut
                   </th>
                   <th className={clsx(
                     "px-6 py-4 text-left text-xs font-medium uppercase tracking-wider",
                     darkMode ? "text-gray-300" : "text-gray-500"
                   )}>
-                    Statut / Onboarding
+                    Coach / Diagnostic
                   </th>
                   <th className={clsx(
                     "px-6 py-4 text-left text-xs font-medium uppercase tracking-wider",
                     darkMode ? "text-gray-300" : "text-gray-500"
                   )}>
-                    Responsable / Diagnostic
+                    Financement / KPIs
                   </th>
                   <th className={clsx(
                     "px-6 py-4 text-left text-xs font-medium uppercase tracking-wider",
                     darkMode ? "text-gray-300" : "text-gray-500"
                   )}>
-                    Financement
-                  </th>
-                  <th className={clsx(
-                    "px-6 py-4 text-left text-xs font-medium uppercase tracking-wider",
-                    darkMode ? "text-gray-300" : "text-gray-500"
-                  )}>
-                    Alertes
+                    Alertes / Échéances
                   </th>
                   <th className={clsx(
                     "px-6 py-4 text-right text-xs font-medium uppercase tracking-wider",
@@ -714,7 +839,7 @@ const PortfolioPage: React.FC = () => {
                     </td>
                     
                     <td className="px-6 py-4">
-                      <div className="flex items-center">
+                      <div className="flex items-start">
                         <div>
                           <button className={clsx(
                             "font-medium hover:underline text-left",
@@ -724,16 +849,21 @@ const PortfolioPage: React.FC = () => {
                           </button>
                           <div className="flex items-center mt-1 space-x-2">
                             <span className={clsx(
-                              "text-xs",
-                              darkMode ? "text-gray-400" : "text-gray-500"
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                              getStageColor(startup.stage)
                             )}>
-                              Runway: {startup.runway} mois
+                              {startup.stage}
                             </span>
-                            {startup.runway <= 6 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-                                Critique
-                              </span>
-                            )}
+                            <span className={clsx(
+                              "text-xs",
+                              startup.runway <= 3 
+                                ? "text-red-500" 
+                                : startup.runway <= 6 
+                                  ? "text-orange-500" 
+                                  : "text-green-500"
+                            )}>
+                              Runway: {startup.runway}m
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -750,25 +880,14 @@ const PortfolioPage: React.FC = () => {
                         <div className="mt-1">
                           <span className={clsx(
                             "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                            getStageColor(startup.stage)
+                            getStatusColor(startup.status)
                           )}>
-                            {startup.stage}
+                            {startup.status}
                           </span>
                         </div>
-                      </div>
-                    </td>
-                    
-                    <td className="px-6 py-4">
-                      <div>
-                        <span className={clsx(
-                          "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-                          getStatusColor(startup.status)
-                        )}>
-                          {startup.status}
-                        </span>
                         <div className="mt-2">
                           <div className={clsx(
-                            "w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5",
+                            "w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5"
                           )}>
                             <div 
                               className={clsx(
@@ -825,7 +944,7 @@ const PortfolioPage: React.FC = () => {
                     
                     <td className="px-6 py-4">
                       <div>
-                        <div className="flex items-center">
+                        <div className="flex items-center mb-2">
                           <span className={clsx(
                             "text-sm font-medium",
                             darkMode ? "text-gray-300" : "text-gray-700"
@@ -839,7 +958,7 @@ const PortfolioPage: React.FC = () => {
                             / {formatCurrency(startup.amountSought)}
                           </span>
                         </div>
-                        <div className="mt-1">
+                        <div className="mb-2">
                           <div className={clsx(
                             "w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5"
                           )}>
@@ -849,11 +968,51 @@ const PortfolioPage: React.FC = () => {
                             />
                           </div>
                           <span className={clsx(
-                            "text-xs mt-1",
+                            "text-xs",
                             darkMode ? "text-gray-400" : "text-gray-500"
                           )}>
                             {Math.round((startup.amountRaised / startup.amountSought) * 100)}% levé
                           </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 text-xs">
+                          <div>
+                            <span className={clsx(
+                              darkMode ? "text-gray-400" : "text-gray-500"
+                            )}>MRR</span>
+                            <p className={clsx(
+                              "font-medium",
+                              darkMode ? "text-gray-300" : "text-gray-700"
+                            )}>
+                              {formatCurrency(startup.kpis.mrr)}
+                            </p>
+                          </div>
+                          <div>
+                            <span className={clsx(
+                              darkMode ? "text-gray-400" : "text-gray-500"
+                            )}>Growth</span>
+                            <p className={clsx(
+                              "font-medium flex items-center",
+                              startup.kpis.growth > 0 ? "text-green-500" : "text-red-500"
+                            )}>
+                              {startup.kpis.growth > 0 ? (
+                                <ArrowUpRight className="h-3 w-3 mr-1" />
+                              ) : (
+                                <ArrowDownRight className="h-3 w-3 mr-1" />
+                              )}
+                              {startup.kpis.growth}%
+                            </p>
+                          </div>
+                          <div>
+                            <span className={clsx(
+                              darkMode ? "text-gray-400" : "text-gray-500"
+                            )}>Users</span>
+                            <p className={clsx(
+                              "font-medium",
+                              darkMode ? "text-gray-300" : "text-gray-700"
+                            )}>
+                              {startup.kpis.users}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -866,24 +1025,27 @@ const PortfolioPage: React.FC = () => {
                             <div
                               key={index}
                               className={clsx(
-                                "p-1 rounded-full",
+                                "p-1.5 rounded-full group relative",
                                 alertInfo.bg
                               )}
-                              title={alert}
+                              title={alertInfo.label}
                             >
                               <alertInfo.icon className={clsx(
                                 "h-3 w-3",
                                 alertInfo.color
                               )} />
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                {alertInfo.label}
+                              </div>
                             </div>
                           );
                         })}
                         {startup.alerts.length === 0 && (
                           <span className={clsx(
-                            "text-xs",
-                            darkMode ? "text-gray-500" : "text-gray-400"
+                            "text-xs px-2 py-1 rounded-full",
+                            darkMode ? "bg-green-900/30 text-green-300" : "bg-green-100 text-green-600"
                           )}>
-                            Aucune alerte
+                            ✓ OK
                           </span>
                         )}
                       </div>
@@ -968,7 +1130,7 @@ const PortfolioPage: React.FC = () => {
         {/* Bulk actions */}
         {selectedStartups.length > 0 && (
           <div className={clsx(
-            "fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-lg border",
+            "fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-lg border z-50",
             darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
           )}>
             <div className="flex items-center space-x-4">
@@ -985,6 +1147,7 @@ const PortfolioPage: React.FC = () => {
                     ? "bg-purple-600 text-white hover:bg-purple-700" 
                     : "bg-primary text-white hover:bg-opacity-90"
                 )}>
+                  <Zap className="h-3 w-3 mr-1" />
                   Diagnostic IA groupé
                 </button>
                 <button className={clsx(
@@ -993,6 +1156,7 @@ const PortfolioPage: React.FC = () => {
                     ? "bg-gray-700 text-gray-300 hover:bg-gray-600" 
                     : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                 )}>
+                  <Download className="h-3 w-3 mr-1" />
                   Export sélection
                 </button>
                 <button 
