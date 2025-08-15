@@ -32,6 +32,7 @@ import B2BDashboardLayout from './components/B2BDashboardLayout';
 import B2BDashboard from './pages/B2BDashboard';
 import PortfolioPage from './pages/b2b/PortfolioPage';
 import FundingSynthesisPage from './pages/b2b/FundingSynthesisPage';
+import SimplifiedOnboardingForm from './pages/SimplifiedOnboardingForm';
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
           <Route path="contact" element={<ContactForm />} />
           <Route path="validation" element={<ValidationForm />} />
         </Route>
+        <Route path="/register/startup" element={<SimplifiedOnboardingForm />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/onboarding" element={<OnboardingLayout />}>

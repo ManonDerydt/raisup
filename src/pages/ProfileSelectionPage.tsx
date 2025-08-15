@@ -18,7 +18,7 @@ const ProfileSelectionPage: React.FC = () => {
     if (selectedProfile === 'B2B') {
       navigate('/register/b2b/structure');
     } else if (selectedProfile === 'B2C') {
-      navigate('/onboarding/entrepreneur');
+      navigate('/register/startup');
     }
   };
 
