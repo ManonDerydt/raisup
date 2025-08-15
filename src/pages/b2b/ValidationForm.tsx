@@ -67,7 +67,7 @@ const ValidationForm: React.FC = () => {
       localStorage.removeItem('b2bContactFormData');
       
       // Redirect to B2B dashboard or success page
-      navigate('/dashboard');
+      navigate('/dashboard/b2b');
     }, 2000);
   };
   

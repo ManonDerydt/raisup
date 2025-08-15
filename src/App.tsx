@@ -28,6 +28,8 @@ import ObjectivesForm from './pages/b2b/ObjectivesForm';
 import ContactForm from './pages/b2b/ContactForm';
 import ValidationForm from './pages/b2b/ValidationForm';
 import PitchDeckGenerator from "./pages/pitch_generator.tsx";
+import B2BDashboardLayout from './components/B2BDashboardLayout';
+import B2BDashboard from './pages/B2BDashboard';
 
 function App() {
   return (
@@ -68,6 +70,15 @@ function App() {
 
           <Route path="fundraising" element={<FundraisingPage />} />
           <Route path="analytics" element={<AnalysisPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+        
+        <Route path="/dashboard/b2b" element={<B2BDashboardLayout />}>
+          <Route index element={<B2BDashboard />} />
+          <Route path="portfolio" element={<div>Portfolio page coming soon</div>} />
+          <Route path="funding-synthesis" element={<div>Funding synthesis page coming soon</div>} />
+          <Route path="dilution-simulator" element={<div>Dilution simulator page coming soon</div>} />
+          <Route path="reports" element={<div>Reports page coming soon</div>} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
