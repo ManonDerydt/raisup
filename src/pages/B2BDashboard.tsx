@@ -26,7 +26,7 @@ import {
   MoreHorizontal,
   ChevronDown,
   ChevronUp,
-  Sparkles
+  Sparkles,
   Filter,
   RefreshCw
 } from 'lucide-react';
