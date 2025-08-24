@@ -32,6 +32,7 @@ import B2BDashboardLayout from './components/B2BDashboardLayout';
 import B2BDashboard from './pages/B2BDashboard';
 import PortfolioPage from './pages/b2b/PortfolioPage';
 import FundingSynthesisPage from './pages/b2b/FundingSynthesisPage';
+import StrategicReportsPage from './pages/b2b/StrategicReportsPage';
 import SimplifiedOnboardingForm from './pages/SimplifiedOnboardingForm';
 
 function App() {
@@ -80,7 +81,7 @@ function App() {
           <Route index element={<B2BDashboard />} />
           <Route path="portfolio" element={<PortfolioPage />} />
           <Route path="funding-synthesis" element={<FundingSynthesisPage />} />
-          <Route path="reports" element={<div>Reports page coming soon</div>} />
+          <Route path="reports" element={<StrategicReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
