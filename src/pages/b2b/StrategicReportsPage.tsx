@@ -24,6 +24,7 @@ import {
   Activity,
   Globe,
   Briefcase,
+  LayoutDashboard,
   Award,
   TrendingDown
 } from 'lucide-react';
