@@ -26,7 +26,8 @@ import {
   Briefcase,
   LayoutDashboard,
   Award,
-  TrendingDown
+  TrendingDown,
+  UserPlus
 } from 'lucide-react';
 import clsx from 'clsx';
 
