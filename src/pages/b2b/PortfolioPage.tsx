@@ -24,7 +24,8 @@ import {
   ExternalLink,
   X,
   Target,
-  Briefcase
+  Briefcase,
+  Send
 } from 'lucide-react';
 import clsx from 'clsx';
 
