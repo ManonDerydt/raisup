@@ -696,7 +696,7 @@ const B2BDashboard: React.FC = () => {
                     <p className="font-semibold text-primary dark:text-purple-400">
                       Diagnostic IA groupé
                     </p>
-            <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       Analyser tout le portefeuille
                     </p>
                   </div>
@@ -714,7 +714,7 @@ const B2BDashboard: React.FC = () => {
                     <p className="font-semibold text-gray-900 dark:text-white">
                       Export rapport mensuel
                     </p>
-            <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       Générer le rapport automatique
                     </p>
                   </div>
@@ -732,7 +732,7 @@ const B2BDashboard: React.FC = () => {
                     <p className="font-semibold text-gray-900 dark:text-white">
                       Actualiser la veille
                     </p>
-            <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       Nouvelles aides disponibles
                     </p>
                   </div>
