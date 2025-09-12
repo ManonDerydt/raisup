@@ -26,7 +26,9 @@ import {
   RefreshCw,
   ChevronUp,
   Sparkles,
-  LayoutDashboard
+  LayoutDashboard,
+  X,
+  Send
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -34,6 +36,10 @@ const B2BDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'quarterly' | 'annual'>('quarterly');
   const [darkMode, setDarkMode] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
   
   // Check if dark mode is enabled
   React.useEffect(() => {
@@ -156,6 +162,25 @@ const B2BDashboard: React.FC = () => {
     return `${amount}€`;
   };
   
+  // Handle startup invitation
+  const handleInviteStartup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setInviteLoading(false);
+      setInviteSuccess(true);
+      
+      // Reset form after success
+      setTimeout(() => {
+        setShowInviteModal(false);
+        setInviteEmail('');
+        setInviteSuccess(false);
+      }, 2000);
+    }, 1000);
+  };
+  
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -218,10 +243,10 @@ const B2BDashboard: React.FC = () => {
             Synthèse d'aides
           </button>
           <button 
-            onClick={() => navigate('/dashboard/b2b/portfolio?action=add')}
+            onClick={() => setShowInviteModal(true)}
             className="btn-primary flex items-center justify-center px-6 py-3"
           >
-            <Plus className="h-5 w-5 mr-2" />
+            <Plus className="h-4 w-4 mr-2" />
             Ajouter une startup
           </button>
         </div>
@@ -243,7 +268,7 @@ const B2BDashboard: React.FC = () => {
               </p>
             </div>
             <div className="bg-secondary-light dark:bg-purple-900/30 p-4 rounded-full">
-              <Building2 className="h-8 w-8 text-primary dark:text-purple-400" />
+              <Building2 className="h-6 w-6 text-primary dark:text-purple-400" />
             </div>
           </div>
         </div>
@@ -263,7 +288,7 @@ const B2BDashboard: React.FC = () => {
               </div>
             </div>
             <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-full">
-              <DollarSign className="h-8 w-8 text-green-600 dark:text-green-400" />
+              <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
           </div>
         </div>
@@ -282,7 +307,7 @@ const B2BDashboard: React.FC = () => {
               </p>
             </div>
             <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-full">
-              <Target className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              <Target className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
@@ -312,7 +337,7 @@ const B2BDashboard: React.FC = () => {
                 : "bg-gray-100 dark:bg-gray-700"
             )}>
               <AlertTriangle className={clsx(
-                "h-8 w-8",
+                "h-6 w-6",
                 dashboardData.criticalAlerts > 0 
                   ? "text-orange-500" 
                   : "text-gray-500 dark:text-gray-400"
@@ -653,7 +678,7 @@ const B2BDashboard: React.FC = () => {
               <ChevronRight className="h-4 w-4 ml-1" />
             </button>
           </div>
-          
+            <Eye className="h-5 w-5 text-primary dark:text-purple-400" />
           {/* Actions rapides */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-8">
@@ -666,12 +691,12 @@ const B2BDashboard: React.FC = () => {
                 className="w-full p-4 bg-secondary-light dark:bg-purple-900/20 rounded-xl hover:bg-opacity-80 transition-all duration-200 text-left group"
               >
                 <div className="flex items-center">
-                  <Zap className="h-5 w-5 text-primary dark:text-purple-400 mr-3" />
+                <Zap className="h-4 w-4 text-primary dark:text-purple-400 mr-3" />
                   <div>
                     <p className="font-semibold text-primary dark:text-purple-400">
                       Diagnostic IA groupé
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-300">
+            <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                       Analyser tout le portefeuille
                     </p>
                   </div>
@@ -684,12 +709,12 @@ const B2BDashboard: React.FC = () => {
                 className="w-full p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 text-left group"
               >
                 <div className="flex items-center">
-                  <Download className="h-5 w-5 text-gray-600 dark:text-gray-400 mr-3" />
+                <Download className="h-4 w-4 text-gray-600 dark:text-gray-400 mr-3" />
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white">
                       Export rapport mensuel
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-300">
+            <Calendar className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                       Générer le rapport automatique
                     </p>
                   </div>
@@ -702,12 +727,12 @@ const B2BDashboard: React.FC = () => {
                 className="w-full p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 text-left group"
               >
                 <div className="flex items-center">
-                  <RefreshCw className="h-5 w-5 text-gray-600 dark:text-gray-400 mr-3" />
+                <RefreshCw className="h-4 w-4 text-gray-600 dark:text-gray-400 mr-3" />
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white">
                       Actualiser la veille
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-300">
+            <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
                       Nouvelles aides disponibles
                     </p>
                   </div>
@@ -718,6 +743,95 @@ const B2BDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+    
+    {/* Modal d'invitation startup */}
+    {showInviteModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className={clsx(
+          "bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6",
+          "transform transition-all duration-300 scale-100"
+        )}>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <div className="bg-secondary-light dark:bg-purple-900/30 p-2 rounded-full mr-3">
+                <Mail className="h-5 w-5 text-primary dark:text-purple-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Inviter une startup
+              </h3>
+            </div>
+            <button
+              onClick={() => setShowInviteModal(false)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          
+          {inviteSuccess ? (
+            <div className="text-center py-8">
+              <div className="bg-green-100 dark:bg-green-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Invitation envoyée !
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                La startup recevra un email d'invitation pour s'inscrire sur la plateforme.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleInviteStartup}>
+              <div className="mb-6">
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  Envoyez une invitation à une startup pour qu'elle s'inscrive directement sur la plateforme et rejoigne votre portefeuille.
+                </p>
+                
+                <label htmlFor="inviteEmail" className="form-label">
+                  Email de la startup
+                </label>
+                <input
+                  id="inviteEmail"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="input-field"
+                  placeholder="startup@exemple.com"
+                  required
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="btn-secondary flex-1"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={inviteLoading || !inviteEmail}
+                  className="btn-primary flex-1 flex items-center justify-center"
+                >
+                  {inviteLoading ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                      Envoi...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Envoyer l'invitation
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    )}
     </div>
   );
 };

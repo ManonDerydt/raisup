@@ -40,6 +40,12 @@ const PortfolioPage: React.FC = () => {
   const [selectedStartups, setSelectedStartups] = useState<number[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'all' | 'active' | 'alerts' | 'risk'>('all');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedStartupDetails, setSelectedStartupDetails] = useState<any>(null);
   
   // Check if dark mode is enabled
   React.useEffect(() => {
@@ -261,6 +267,31 @@ const PortfolioPage: React.FC = () => {
     );
   };
   
+  // Handle startup invitation
+  const handleInviteStartup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setInviteLoading(false);
+      setInviteSuccess(true);
+      
+      // Reset form after success
+      setTimeout(() => {
+        setShowInviteModal(false);
+        setInviteEmail('');
+        setInviteSuccess(false);
+      }, 2000);
+    }, 1000);
+  };
+  
+  // Handle view startup details
+  const handleViewDetails = (startup: any) => {
+    setSelectedStartupDetails(startup);
+    setShowDetailsModal(true);
+  };
+  
   // Get alert info
   const getAlertInfo = (alertType: string) => {
     switch (alertType) {
@@ -394,6 +425,18 @@ const PortfolioPage: React.FC = () => {
             )}>
               <Plus className="h-4 w-4 mr-2" />
               Ajouter une startup
+            </button>
+            <button 
+              onClick={() => setShowInviteModal(true)}
+              className={clsx(
+                "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                darkMode 
+                  ? "bg-purple-600 text-white hover:bg-purple-700" 
+                  : "bg-primary text-white hover:bg-opacity-90"
+              )}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Inviter une startup
             </button>
           </div>
         </div>
@@ -1054,6 +1097,7 @@ const PortfolioPage: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end space-x-2">
                         <button
+                          onClick={() => handleViewDetails(startup)}
                           className={clsx(
                             "p-2 rounded-lg transition-colors",
                             darkMode 
@@ -1170,6 +1214,362 @@ const PortfolioPage: React.FC = () => {
                 >
                   Annuler
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Modal d'invitation startup */}
+        {showInviteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={clsx(
+              "bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6",
+              "transform transition-all duration-300 scale-100"
+            )}>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <div className="bg-secondary-light dark:bg-purple-900/30 p-2 rounded-full mr-3">
+                    <Mail className="h-5 w-5 text-primary dark:text-purple-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Inviter une startup
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowInviteModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {inviteSuccess ? (
+                <div className="text-center py-8">
+                  <div className="bg-green-100 dark:bg-green-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Invitation envoyée !
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    La startup recevra un email d'invitation pour s'inscrire sur la plateforme.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleInviteStartup}>
+                  <div className="mb-6">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                      Envoyez une invitation à une startup pour qu'elle s'inscrive directement sur la plateforme et rejoigne votre portefeuille.
+                    </p>
+                    
+                    <label htmlFor="inviteEmail" className="form-label">
+                      Email de la startup
+                    </label>
+                    <input
+                      id="inviteEmail"
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className="input-field"
+                      placeholder="startup@exemple.com"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowInviteModal(false)}
+                      className="btn-secondary flex-1"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={inviteLoading || !inviteEmail}
+                      className="btn-primary flex-1 flex items-center justify-center"
+                    >
+                      {inviteLoading ? (
+                        <>
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                          Envoi...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Envoyer l'invitation
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Modal de détails startup */}
+        {showDetailsModal && selectedStartupDetails && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={clsx(
+              "bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto",
+              "transform transition-all duration-300 scale-100"
+            )}>
+              <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="bg-secondary-light dark:bg-purple-900/30 p-2 rounded-full mr-3">
+                      <Building2 className="h-5 w-5 text-primary dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                        {selectedStartupDetails.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        Fiche détaillée du projet
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowDetailsModal(false)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Informations principales */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className={clsx(
+                      "p-6 rounded-xl",
+                      darkMode ? "bg-gray-700" : "bg-gray-50"
+                    )}>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Informations générales
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Secteur</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{selectedStartupDetails.sector}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Stade</p>
+                          <span className={clsx(
+                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                            getStageColor(selectedStartupDetails.stage)
+                          )}>
+                            {selectedStartupDetails.stage}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Statut</p>
+                          <span className={clsx(
+                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                            getStatusColor(selectedStartupDetails.status)
+                          )}>
+                            {selectedStartupDetails.status}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Coach responsable</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{selectedStartupDetails.responsible}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Runway</p>
+                          <p className={clsx(
+                            "font-medium",
+                            selectedStartupDetails.runway <= 3 
+                              ? "text-red-500" 
+                              : selectedStartupDetails.runway <= 6 
+                                ? "text-orange-500" 
+                                : "text-green-500"
+                          )}>
+                            {selectedStartupDetails.runway} mois
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Dernière activité</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{formatDate(selectedStartupDetails.lastActivity)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* KPIs */}
+                    <div className={clsx(
+                      "p-6 rounded-xl",
+                      darkMode ? "bg-gray-700" : "bg-gray-50"
+                    )}>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Indicateurs clés
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                            {formatCurrency(selectedStartupDetails.kpis.mrr)}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">MRR</p>
+                        </div>
+                        <div className="text-center">
+                          <p className={clsx(
+                            "text-2xl font-bold flex items-center justify-center",
+                            selectedStartupDetails.kpis.growth > 0 ? "text-green-500" : "text-red-500"
+                          )}>
+                            {selectedStartupDetails.kpis.growth > 0 ? (
+                              <ArrowUpRight className="h-5 w-5 mr-1" />
+                            ) : (
+                              <ArrowDownRight className="h-5 w-5 mr-1" />
+                            )}
+                            {selectedStartupDetails.kpis.growth}%
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Croissance</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                            {selectedStartupDetails.kpis.users}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Utilisateurs</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Financement */}
+                    <div className={clsx(
+                      "p-6 rounded-xl",
+                      darkMode ? "bg-gray-700" : "bg-gray-50"
+                    )}>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Financement
+                      </h4>
+                      <div className="mb-4">
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-gray-600 dark:text-gray-400">Progression</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {formatCurrency(selectedStartupDetails.amountRaised)} / {formatCurrency(selectedStartupDetails.amountSought)}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                          <div 
+                            className="bg-primary dark:bg-purple-600 h-3 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min((selectedStartupDetails.amountRaised / selectedStartupDetails.amountSought) * 100, 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {Math.round((selectedStartupDetails.amountRaised / selectedStartupDetails.amountSought) * 100)}% de l'objectif atteint
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Contact et actions */}
+                  <div className="space-y-6">
+                    <div className={clsx(
+                      "p-6 rounded-xl",
+                      darkMode ? "bg-gray-700" : "bg-gray-50"
+                    )}>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Contact
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center">
+                          <Mail className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
+                          <a 
+                            href={`mailto:${selectedStartupDetails.email}`}
+                            className="text-sm text-primary dark:text-purple-400 hover:underline"
+                          >
+                            {selectedStartupDetails.email}
+                          </a>
+                        </div>
+                        <div className="flex items-center">
+                          <Phone className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {selectedStartupDetails.phone}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <ExternalLink className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
+                          <a 
+                            href={selectedStartupDetails.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary dark:text-purple-400 hover:underline"
+                          >
+                            {selectedStartupDetails.website}
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Alertes */}
+                    {selectedStartupDetails.alerts.length > 0 && (
+                      <div className={clsx(
+                        "p-6 rounded-xl",
+                        darkMode ? "bg-gray-700" : "bg-gray-50"
+                      )}>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                          Alertes actives
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedStartupDetails.alerts.map((alert: string, index: number) => {
+                            const alertInfo = getAlertInfo(alert);
+                            return (
+                              <div key={index} className="flex items-center">
+                                <div className={clsx(
+                                  "p-1.5 rounded-full mr-3",
+                                  alertInfo.bg
+                                )}>
+                                  <alertInfo.icon className={clsx(
+                                    "h-4 w-4",
+                                    alertInfo.color
+                                  )} />
+                                </div>
+                                <span className="text-sm text-gray-700 dark:text-gray-300">
+                                  {alertInfo.label}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Actions */}
+                    <div className="space-y-3">
+                      <button className={clsx(
+                        "w-full px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                        darkMode 
+                          ? "bg-purple-600 text-white hover:bg-purple-700" 
+                          : "bg-primary text-white hover:bg-opacity-90"
+                      )}>
+                        <Zap className="h-4 w-4 mr-2 inline" />
+                        Lancer diagnostic IA
+                      </button>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <button className={clsx(
+                          "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                          darkMode 
+                            ? "bg-gray-600 text-white hover:bg-gray-500" 
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        )}>
+                          <FileText className="h-4 w-4 mr-1 inline" />
+                          Rapport
+                        </button>
+                        <button className={clsx(
+                          "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                          darkMode 
+                            ? "bg-gray-600 text-white hover:bg-gray-500" 
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        )}>
+                          <Mail className="h-4 w-4 mr-1 inline" />
+                          Contacter
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
