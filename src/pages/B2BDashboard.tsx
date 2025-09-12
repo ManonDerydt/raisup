@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   BarChart3, 
   Users, 
@@ -33,10 +34,12 @@ import {
 import clsx from 'clsx';
 
 const B2BDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [darkMode, setDarkMode] = useState(false);
   const [showSecondaryKPIs, setShowSecondaryKPIs] = useState(false);
   const [showAllStartups, setShowAllStartups] = useState(false);
   const [showAllAlerts, setShowAllAlerts] = useState(false);
+  const [performancePeriod, setPerformancePeriod] = useState<'monthly' | 'quarterly' | 'annual'>('quarterly');
   
   // Check if dark mode is enabled
   React.useEffect(() => {
@@ -239,6 +242,35 @@ const B2BDashboard: React.FC = () => {
   // Calculate funding progress
   const fundingProgress = (dashboardData.primaryKPIs.totalAmountRaised / dashboardData.primaryKPIs.totalAmountSought) * 100;
   
+  // Get performance data based on selected period
+  const getPerformanceData = () => {
+    return portfolioData.performanceData[performancePeriod];
+  };
+  
+  // Calculate max value for chart scaling
+  const getMaxValue = (data: any[], key: string) => {
+    return Math.max(...data.map(item => item[key]));
+  };
+  
+  // Navigation handlers
+  const handleAddStartup = () => {
+    // In a real app, this would open a modal or navigate to startup creation form
+    navigate('/dashboard/b2b/portfolio?action=add');
+  };
+  
+  const handleFundingSynthesis = () => {
+    navigate('/dashboard/b2b/funding-synthesis');
+  };
+  
+  const handleStrategicReports = () => {
+    navigate('/dashboard/b2b/reports');
+  };
+  
+  const handleCalendar = () => {
+    // In a real app, this would navigate to calendar page
+    navigate('/dashboard/b2b/calendar');
+  };
+  
   return (
     <div className={clsx(
       "py-8 px-6 lg:px-8 max-w-[1400px] mx-auto",
@@ -309,25 +341,10 @@ const B2BDashboard: React.FC = () => {
       
       {/* Primary KPIs - Hero Section */}
       <div className="mb-12">
-        <h2 className={clsx(
-          "text-xl font-semibold mb-6",
-          darkMode ? "text-white" : "text-gray-900"
-        )}>
+                "p-8 rounded-2xl",
           Indicateurs clés de performance
         </h2>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main KPI Card - Larger */}
-          <div className={clsx(
-            "lg:col-span-2 p-8 rounded-2xl shadow-lg border",
-            darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"
-          )}>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className={clsx(
-                  "text-lg font-medium",
-                  darkMode ? "text-gray-300" : "text-gray-600"
-                )}>
+                <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
                   Performance globale du portefeuille
                 </h3>
                 <div className="flex items-center mt-2">
@@ -342,10 +359,7 @@ const B2BDashboard: React.FC = () => {
                     <span className="text-green-500 font-medium">+12%</span>
                   </div>
                 </div>
-                <p className={clsx(
-                  "text-sm mt-1",
-                  darkMode ? "text-gray-400" : "text-gray-500"
-                )}>
+                <p className="text-sm mt-1 text-gray-500 dark:text-gray-400">
                   Taux de réussite des levées
                 </p>
               </div>
@@ -375,10 +389,10 @@ const B2BDashboard: React.FC = () => {
                   )}>
                     {formatCurrency(dashboardData.primaryKPIs.totalAmountRaised)} / {formatCurrency(dashboardData.primaryKPIs.totalAmountSought)}
                   </span>
-                </div>
+              <div className="grid grid-cols-3 gap-6 mb-8">
                 <div className={clsx(
-                  "h-3 rounded-full overflow-hidden",
-                  darkMode ? "bg-gray-700" : "bg-gray-200"
+                  "p-5 rounded-xl",
+              <div className="space-y-5">
                 )}>
                   <div 
                     className="h-full bg-gradient-to-r from-primary to-green-400"
@@ -774,20 +788,20 @@ const B2BDashboard: React.FC = () => {
                         {startup.alerts.length === 0 && (
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
                         )}
-                      </div>
+                      <div className="flex space-x-3 ml-6">
                       
-                      <div className="flex items-center space-x-1">
+                          "p-3 rounded-lg transition-all duration-200 hover:scale-110",
                         <button className={clsx(
-                          "p-2 rounded-lg transition-colors",
-                          darkMode ? "bg-gray-600 text-gray-300 hover:bg-gray-500" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                            ? "bg-gray-600 text-gray-300 hover:bg-gray-500 hover:text-white" 
+                            : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 hover:border-primary/30"
                         )}>
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-5 w-5" />
                         </button>
                         <button className={clsx(
-                          "p-2 rounded-lg transition-colors",
-                          darkMode ? "bg-purple-600 text-white hover:bg-purple-700" : "bg-primary text-white hover:bg-opacity-90"
+                            ? "bg-purple-600 text-white hover:bg-purple-700 hover:shadow-lg" 
+                            : "bg-primary text-white hover:bg-opacity-90 hover:shadow-lg"
                         )}>
-                          <Zap className="h-4 w-4" />
+                          <Zap className="h-5 w-5" />
                         </button>
                       </div>
                     </div>
@@ -837,7 +851,7 @@ const B2BDashboard: React.FC = () => {
             
             {/* Mock chart area */}
             <div className={clsx(
-              "h-64 rounded-xl flex items-center justify-center",
+              "p-8 rounded-2xl",
               darkMode ? "bg-gray-700/30" : "bg-gray-50"
             )}>
               <div className="text-center">
@@ -904,13 +918,13 @@ const B2BDashboard: React.FC = () => {
                         {alert.startup}
                       </h4>
                       <p className={clsx(
-                        "text-xs mt-1",
+                        "text-sm mt-2",
                         darkMode ? "text-gray-300" : "text-gray-600"
                       )}>
                         {alert.message}
                       </p>
                       <p className={clsx(
-                        "text-xs mt-2",
+                        "text-xs mt-3 font-medium",
                         darkMode ? "text-gray-500" : "text-gray-400"
                       )}>
                         Il y a {alert.time}
@@ -1145,27 +1159,27 @@ const B2BDashboard: React.FC = () => {
                     r="50"
                     stroke={darkMode ? "#374151" : "#e5e7eb"}
                     strokeWidth="8"
-                    fill="none"
+                  "p-6 rounded-xl text-center",
                   />
                   <circle
-                    cx="60"
-                    cy="60"
+                  <p className="text-3xl font-bold text-blue-500">{portfolioData.activeStartups}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Actives</p>
                     r="50"
                     stroke="#d3efdd"
-                    strokeWidth="8"
+                  "p-6 rounded-xl text-center",
                     fill="none"
                     strokeDasharray={`${2 * Math.PI * 50}`}
-                    strokeDashoffset={`${2 * Math.PI * 50 * (1 - 0.82)}`}
-                    className="transition-all duration-1000 ease-out"
+                  <p className="text-3xl font-bold text-orange-500">{portfolioData.criticalAlerts}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Avec alertes</p>
                   />
                 </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
+                  "p-6 rounded-xl text-center",
                   <span className={clsx(
                     "text-2xl font-bold",
-                    darkMode ? "text-white" : "text-gray-900"
+                  <p className="text-3xl font-bold text-green-500">
                   )}>
                     82%
-                  </span>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Alumni</p>
                 </div>
               </div>
               
