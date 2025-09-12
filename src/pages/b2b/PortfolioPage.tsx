@@ -22,7 +22,8 @@ import {
   Mail,
   Phone,
   ExternalLink,
-  Target,
+  Mail,
+  X
   Briefcase
 } from 'lucide-react';
 import clsx from 'clsx';
