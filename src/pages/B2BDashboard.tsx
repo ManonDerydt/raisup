@@ -341,17 +341,20 @@ const B2BDashboard: React.FC = () => {
       
       {/* Primary KPIs - Hero Section */}
       <div className="mb-12">
-        <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-          Indicateurs clés de performance
-        </h2>
-        
         <div className={clsx(
-          "p-8 rounded-2xl",
-          darkMode ? "bg-gray-800" : "bg-white shadow-sm"
+          "p-8 rounded-2xl shadow-lg border",
+          darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"
         )}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          <h2 className={clsx(
+            "text-2xl font-bold mb-8",
+            darkMode ? "text-white" : "text-gray-900"
+          )}>
+            Indicateurs clés de performance
+          </h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
                   Performance globale du portefeuille
                 </h3>
@@ -419,83 +422,85 @@ const B2BDashboard: React.FC = () => {
           </div>
           
           {/* Startups Count */}
-          <div className={clsx(
-            "p-6 rounded-2xl shadow-lg border",
-            darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"
-          )}>
-            <div className="flex items-center justify-between mb-4">
-              <div className={clsx(
-                "p-3 rounded-xl",
-                darkMode ? "bg-blue-900/30" : "bg-blue-100"
-              )}>
-                <Building2 className={clsx(
-                  "h-6 w-6",
-                  darkMode ? "text-blue-400" : "text-blue-600"
-                )} />
-              </div>
-            </div>
-            <div>
-              <p className={clsx(
-                "text-sm font-medium",
-                darkMode ? "text-gray-400" : "text-gray-600"
-              )}>
-                Startups accompagnées
-              </p>
-              <p className={clsx(
-                "text-3xl font-bold mt-1",
-                darkMode ? "text-white" : "text-gray-900"
-              )}>
-                {dashboardData.primaryKPIs.totalStartups}
-              </p>
-              <div className="flex items-center mt-2">
-                <span className={clsx(
-                  "text-sm",
-                  darkMode ? "text-green-400" : "text-green-600"
+          <div className="grid grid-cols-3 gap-6 mb-8">
+            <div className={clsx(
+              "p-6 rounded-2xl shadow-lg border",
+              darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"
+            )}>
+              <div className="flex items-center justify-between mb-4">
+                <div className={clsx(
+                  "p-3 rounded-xl",
+                  darkMode ? "bg-blue-900/30" : "bg-blue-100"
                 )}>
-                  {dashboardData.primaryKPIs.activeStartups} actives
-                </span>
+                  <Building2 className={clsx(
+                    "h-6 w-6",
+                    darkMode ? "text-blue-400" : "text-blue-600"
+                  )} />
+                </div>
               </div>
-            </div>
-          </div>
-          
-          {/* Funding Amount */}
-          <div className={clsx(
-            "p-6 rounded-2xl shadow-lg border",
-            darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"
-          )}>
-            <div className="flex items-center justify-between mb-4">
-              <div className={clsx(
-                "p-3 rounded-xl",
-                darkMode ? "bg-green-900/30" : "bg-green-100"
-              )}>
-                <DollarSign className={clsx(
-                  "h-6 w-6",
-                  darkMode ? "text-green-400" : "text-green-600"
-                )} />
-              </div>
-            </div>
-            <div>
-              <p className={clsx(
-                "text-sm font-medium",
-                darkMode ? "text-gray-400" : "text-gray-600"
-              )}>
-                Montant levé
-              </p>
-              <p className={clsx(
-                "text-3xl font-bold mt-1",
-                darkMode ? "text-white" : "text-gray-900"
-              )}>
-                {formatCurrency(dashboardData.primaryKPIs.totalAmountRaised)}
-              </p>
-              <div className="flex items-center mt-2">
-                <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-green-500 text-sm font-medium">+23%</span>
-                <span className={clsx(
-                  "text-sm ml-2",
-                  darkMode ? "text-gray-400" : "text-gray-500"
+              <div>
+                <p className={clsx(
+                  "text-sm font-medium",
+                  darkMode ? "text-gray-400" : "text-gray-600"
                 )}>
-                  vs. trimestre précédent
-                </span>
+                  Startups accompagnées
+                </p>
+                <p className={clsx(
+                  "text-3xl font-bold mt-1",
+                  darkMode ? "text-white" : "text-gray-900"
+                )}>
+                  {dashboardData.primaryKPIs.totalStartups}
+                </p>
+                <div className="flex items-center mt-2">
+                  <span className={clsx(
+                    "text-sm",
+                    darkMode ? "text-green-400" : "text-green-600"
+                  )}>
+                    {dashboardData.primaryKPIs.activeStartups} actives
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Funding Amount */}
+            <div className={clsx(
+              "p-6 rounded-2xl shadow-lg border",
+              darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-100"
+            )}>
+              <div className="flex items-center justify-between mb-4">
+                <div className={clsx(
+                  "p-3 rounded-xl",
+                  darkMode ? "bg-green-900/30" : "bg-green-100"
+                )}>
+                  <DollarSign className={clsx(
+                    "h-6 w-6",
+                    darkMode ? "text-green-400" : "text-green-600"
+                  )} />
+                </div>
+              </div>
+              <div>
+                <p className={clsx(
+                  "text-sm font-medium",
+                  darkMode ? "text-gray-400" : "text-gray-600"
+                )}>
+                  Montant levé
+                </p>
+                <p className={clsx(
+                  "text-3xl font-bold mt-1",
+                  darkMode ? "text-white" : "text-gray-900"
+                )}>
+                  {formatCurrency(dashboardData.primaryKPIs.totalAmountRaised)}
+                </p>
+                <div className="flex items-center mt-2">
+                  <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
+                  <span className="text-green-500 text-sm font-medium">+23%</span>
+                  <span className={clsx(
+                    "text-sm ml-2",
+                    darkMode ? "text-gray-400" : "text-gray-500"
+                  )}>
+                    vs. trimestre précédent
+                  </span>
+                </div>
               </div>
             </div>
           </div>
