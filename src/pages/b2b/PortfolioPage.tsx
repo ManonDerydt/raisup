@@ -23,6 +23,7 @@ import {
   Phone,
   ExternalLink,
   X,
+  Target,
   Briefcase
 } from 'lucide-react';
 import clsx from 'clsx';
