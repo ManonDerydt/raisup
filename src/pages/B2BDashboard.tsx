@@ -341,9 +341,17 @@ const B2BDashboard: React.FC = () => {
       
       {/* Primary KPIs - Hero Section */}
       <div className="mb-12">
-                "p-8 rounded-2xl",
+        <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
           Indicateurs clés de performance
         </h2>
+        
+        <div className={clsx(
+          "p-8 rounded-2xl",
+          darkMode ? "bg-gray-800" : "bg-white shadow-sm"
+        )}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            <div>
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
                   Performance globale du portefeuille
                 </h3>
@@ -389,10 +397,10 @@ const B2BDashboard: React.FC = () => {
                   )}>
                     {formatCurrency(dashboardData.primaryKPIs.totalAmountRaised)} / {formatCurrency(dashboardData.primaryKPIs.totalAmountSought)}
                   </span>
-              <div className="grid grid-cols-3 gap-6 mb-8">
+                </div>
                 <div className={clsx(
-                  "p-5 rounded-xl",
-              <div className="space-y-5">
+                  "w-full h-2 rounded-full overflow-hidden",
+                  darkMode ? "bg-gray-700" : "bg-gray-200"
                 )}>
                   <div 
                     className="h-full bg-gradient-to-r from-primary to-green-400"
@@ -788,16 +796,20 @@ const B2BDashboard: React.FC = () => {
                         {startup.alerts.length === 0 && (
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
                         )}
-                      <div className="flex space-x-3 ml-6">
+                      </div>
                       
-                          "p-3 rounded-lg transition-all duration-200 hover:scale-110",
+                      <div className="flex space-x-3 ml-6">
                         <button className={clsx(
+                          "p-3 rounded-lg transition-all duration-200 hover:scale-110",
+                          darkMode 
                             ? "bg-gray-600 text-gray-300 hover:bg-gray-500 hover:text-white" 
                             : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 hover:border-primary/30"
                         )}>
                           <Eye className="h-5 w-5" />
                         </button>
                         <button className={clsx(
+                          "p-3 rounded-lg transition-all duration-200 hover:scale-110",
+                          darkMode 
                             ? "bg-purple-600 text-white hover:bg-purple-700 hover:shadow-lg" 
                             : "bg-primary text-white hover:bg-opacity-90 hover:shadow-lg"
                         )}>
@@ -1159,27 +1171,26 @@ const B2BDashboard: React.FC = () => {
                     r="50"
                     stroke={darkMode ? "#374151" : "#e5e7eb"}
                     strokeWidth="8"
-                  "p-6 rounded-xl text-center",
+                    fill="none"
                   />
                   <circle
-                  <p className="text-3xl font-bold text-blue-500">{portfolioData.activeStartups}</p>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Actives</p>
+                    cx="60"
+                    cy="60"
                     r="50"
                     stroke="#d3efdd"
-                  "p-6 rounded-xl text-center",
+                    strokeWidth="8"
                     fill="none"
                     strokeDasharray={`${2 * Math.PI * 50}`}
-                  <p className="text-3xl font-bold text-orange-500">{portfolioData.criticalAlerts}</p>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Avec alertes</p>
+                    strokeDashoffset={`${2 * Math.PI * 50 * (1 - 0.82)}`}
                   />
                 </svg>
-                  "p-6 rounded-xl text-center",
+                <div className="absolute inset-0 flex items-center justify-center">
                   <span className={clsx(
                     "text-2xl font-bold",
-                  <p className="text-3xl font-bold text-green-500">
+                    darkMode ? "text-white" : "text-gray-900"
                   )}>
                     82%
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Alumni</p>
+                  </span>
                 </div>
               </div>
               
