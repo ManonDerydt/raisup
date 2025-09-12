@@ -22,7 +22,6 @@ import {
   Mail,
   Phone,
   ExternalLink,
-  Mail,
   X
   Briefcase
 } from 'lucide-react';
