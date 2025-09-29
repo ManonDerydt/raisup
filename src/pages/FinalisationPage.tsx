@@ -89,7 +89,7 @@ const FinalisationPage: React.FC = () => {
   
   const handleCopyLink = () => {
     // In a real app, this would be a unique link to the dossier
-    navigator.clipboard.writeText('https://fundai.com/dossier/mediscan-123456');
+    navigator.clipboard.writeText('https://raisup.com/dossier/mediscan-123456');
     setLinkCopied(true);
     
     setTimeout(() => {
@@ -393,7 +393,7 @@ const FinalisationPage: React.FC = () => {
               <div>
                 <span className="font-medium">J'accepte que mon dossier soit généré et partagé avec des investisseurs.</span>
                 <p className="text-sm text-gray-600 mt-1">
-                  Je comprends que ce dossier pourra être partagé avec des investisseurs potentiels via la plateforme FundAI.
+                  Je comprends que ce dossier pourra être partagé avec des investisseurs potentiels via la plateforme Raisup.
                 </p>
               </div>
             </button>
@@ -490,7 +490,7 @@ const FinalisationPage: React.FC = () => {
                       <input
                         type="text"
                         readOnly
-                        value="https://fundai.com/dossier/mediscan-123456"
+                        value="https://raisup.com/dossier/mediscan-123456"
                         className="input-field rounded-r-none flex-1 bg-white"
                       />
                       <button 

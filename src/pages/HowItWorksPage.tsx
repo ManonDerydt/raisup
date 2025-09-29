@@ -99,7 +99,7 @@ const HowItWorksPage: React.FC = () => {
               "font-semibold text-xl",
               darkMode ? "text-white" : "text-gray-900"
             )}>
-              FundAI
+              Raisup
             </span>
           </Link>
           <nav className="hidden md:flex space-x-8">
@@ -144,7 +144,7 @@ const HowItWorksPage: React.FC = () => {
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center space-x-2">
                 <Sparkles className="h-6 w-6 text-secondary-lighter" />
-                <span className="font-semibold text-xl">FundAI</span>
+                <span className="font-semibold text-xl">Raisup</span>
               </div>
               <button 
                 className="text-gray-700 hover:text-primary transition-colors"
@@ -194,7 +194,7 @@ const HowItWorksPage: React.FC = () => {
             "text-4xl md:text-5xl font-bold mb-6",
             darkMode ? "text-white" : "text-gray-900"
           )}>
-            Comment fonctionne FundAI
+            Comment fonctionne Raisup
           </h1>
           <p className={clsx(
             "text-xl max-w-3xl mx-auto mb-12",
@@ -281,7 +281,7 @@ const HowItWorksPage: React.FC = () => {
             "text-3xl font-bold text-center mb-16",
             darkMode ? "text-white" : "text-gray-900"
           )}>
-            Les avantages de FundAI
+            Les avantages de Raisup
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
@@ -335,19 +335,19 @@ const HowItWorksPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {[
                 {
-                  quote: "FundAI nous a fait gagner un temps précieux dans la préparation de notre levée de fonds. Les documents générés étaient d'une qualité exceptionnelle.",
+                  quote: "Raisup nous a fait gagner un temps précieux dans la préparation de notre levée de fonds. Les documents générés étaient d'une qualité exceptionnelle.",
                   author: "Sophie Martin",
                   role: "CEO, TechStart SAS",
                   avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
                 },
                 {
-                  quote: "Grâce à FundAI, nous avons pu lever 2  millions d'euros en seulement 3 mois. La qualité des analyses financières a vraiment fait la différence.",
+                  quote: "Grâce à Raisup, nous avons pu lever 2  millions d'euros en seulement 3 mois. La qualité des analyses financières a vraiment fait la différence.",
                   author: "Thomas Dubois",
                   role: "Fondateur, GreenTech",
                   avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
                 },
                 {
-                  quote: "La mise en relation avec des investisseurs qualifiés a été déterminante pour notre succès. FundAI a vraiment compris nos besoins spécifiques.",
+                  quote: "La mise en relation avec des investisseurs qualifiés a été déterminante pour notre succès. Raisup a vraiment compris nos besoins spécifiques.",
                   author: "Julie Leroy",
                   role: "COO, MedInnovate",
                   avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
@@ -411,7 +411,7 @@ const HowItWorksPage: React.FC = () => {
               "text-lg mb-8 max-w-2xl mx-auto",
               darkMode ? "text-gray-300" : "text-gray-700"
             )}>
-              Rejoignez des centaines d'entrepreneurs qui ont déjà optimisé leur processus de levée de fonds avec FundAI.
+              Rejoignez des centaines d'entrepreneurs qui ont déjà optimisé leur processus de levée de fonds avec Raisup.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
@@ -457,7 +457,7 @@ const HowItWorksPage: React.FC = () => {
                 "font-semibold",
                 darkMode ? "text-white" : "text-gray-900"
               )}>
-                FundAI
+                Raisup
               </span>
             </div>
             
@@ -495,7 +495,7 @@ const HowItWorksPage: React.FC = () => {
               "text-sm mt-6 md:mt-0",
               darkMode ? "text-gray-400" : "text-gray-500"
             )}>
-              © {new Date().getFullYear()} FundAI. Tous droits réservés.
+              © {new Date().getFullYear()} Raisup. Tous droits réservés.
             </div>
           </div>
         </div>

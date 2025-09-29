@@ -79,7 +79,7 @@ const PricingPage: React.FC = () => {
               "font-semibold text-xl",
               darkMode ? "text-white" : "text-gray-900"
             )}>
-              FundAI
+              Raisup
             </span>
           </Link>
           <nav className="hidden md:flex space-x-8">
@@ -124,7 +124,7 @@ const PricingPage: React.FC = () => {
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center space-x-2">
                 <Sparkles className="h-6 w-6 text-secondary-lighter" />
-                <span className="font-semibold text-xl">FundAI</span>
+                <span className="font-semibold text-xl">Raisup</span>
               </div>
               <button 
                 className="text-gray-700 hover:text-primary transition-colors"
@@ -418,7 +418,7 @@ const PricingPage: React.FC = () => {
               "text-lg mb-8 max-w-2xl mx-auto",
               darkMode ? "text-gray-300" : "text-gray-700"
             )}>
-              Rejoignez des centaines d'entrepreneurs qui ont déjà optimisé leur processus de levée de fonds avec FundAI.
+              Rejoignez des centaines d'entrepreneurs qui ont déjà optimisé leur processus de levée de fonds avec Raisup.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
@@ -464,7 +464,7 @@ const PricingPage: React.FC = () => {
                 "font-semibold",
                 darkMode ? "text-white" : "text-gray-900"
               )}>
-                FundAI
+                Raisup
               </span>
             </div>
             
@@ -502,7 +502,7 @@ const PricingPage: React.FC = () => {
               "text-sm mt-6 md:mt-0",
               darkMode ? "text-gray-400" : "text-gray-500"
             )}>
-              © {new Date().getFullYear()} FundAI. Tous droits réservés.
+              © {new Date().getFullYear()} . Tous droits réservés.
             </div>
           </div>
         </div>

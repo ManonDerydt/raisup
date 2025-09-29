@@ -28,7 +28,7 @@ const OnboardingLayout: React.FC = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <Link to="/" className="flex items-center space-x-2">
             <Sparkles className="h-6 w-6 text-secondary-lighter" />
-            <span className="font-semibold text-lg">FundAI</span>
+            <span className="font-semibold text-lg">Raisup</span>
           </Link>
           <Link to="/" className="flex items-center text-sm text-gray-500 hover:text-primary transition-colors">
             <ArrowLeft className="h-4 w-4 mr-1" />

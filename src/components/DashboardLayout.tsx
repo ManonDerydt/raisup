@@ -99,7 +99,7 @@ const DashboardLayout: React.FC = () => {
             "h-6 w-6",
             darkMode ? "text-purple-400" : "text-secondary-lighter"
           )} />
-          <span className="text-lg font-semibold">FundAI</span>
+          <span className="text-lg font-semibold">Raisup</span>
         </div>
         
         <div className="flex flex-col flex-1 overflow-y-auto">
@@ -178,7 +178,7 @@ const DashboardLayout: React.FC = () => {
                   "text-lg font-semibold",
                   darkMode ? "text-white" : "text-gray-900"
                 )}>
-                  FundAI
+                  Raisup
                 </span>
               </div>
               <button
