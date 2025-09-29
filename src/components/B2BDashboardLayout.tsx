@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Logo from '../../../front_end/public/raisup_logo.png'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
@@ -197,15 +198,12 @@ const B2BDashboardLayout: React.FC = () => {
         darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
       )}>
         <div className="flex items-center gap-x-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <Sparkles className={clsx(
-            "h-6 w-6",
-            darkMode ? "text-purple-400" : "text-secondary-lighter"
-          )} />
+     
           <div className="flex flex-col">
-            <span className="text-lg font-semibold">Raisup</span>
+             <img src={Logo}  alt="Logo" className="h-20  w-auto"/>
             <span className={clsx(
               "text-xs px-2 py-1 rounded-full w-fit",
-              darkMode ? "bg-purple-900/30 text-purple-300" : "bg-secondary-light text-primary"
+              darkMode ? "bg-purple-900/30 text-purple-300" : "bg-[#acc5ff] text-primary"
             )}>
               Structure Pro
             </span>
@@ -223,9 +221,9 @@ const B2BDashboardLayout: React.FC = () => {
                   location.pathname === item.href
                     ? darkMode 
                       ? "bg-gray-700 text-purple-400" 
-                      : "bg-secondary-light text-primary"
+                      : "bg-[#d2efdc] text-primary"
                     : darkMode 
-                      ? "text-gray-300 hover:bg-gray-700 hover:text-white" 
+                      ? "text-gray-300 hover:bg-[gray-700] hover:text-white" 
                       : "text-gray-700 hover:bg-gray-100 hover:text-primary"
                 )}
               >

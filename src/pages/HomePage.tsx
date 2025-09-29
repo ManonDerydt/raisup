@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, ArrowRight, Menu, X } from 'lucide-react';
 import clsx from 'clsx';
+import Logo from '../../../front_end/public/raisup_logo.png'
+import LogoWhite from '../../../front_end/public/raisup_logo_white.png'
 
 const HomePage: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Using placeholder logos - replace with actual logo URLs when available
-  const Logo = "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=80&fit=crop&crop=center";
-  const LogoWhite = "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=80&fit=crop&crop=center&blend=ffffff&blend-mode=overlay";
+  // const Logo = "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=80&fit=crop&crop=center";
 
   return (
     <div className="min-h-screen bg-white">

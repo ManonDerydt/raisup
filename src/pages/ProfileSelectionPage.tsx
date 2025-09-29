@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Building2, Rocket, ArrowRight, Users, Target } from 'lucide-react';
 import clsx from 'clsx';
 
+
 const ProfileSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedProfile, setSelectedProfile] = useState<'B2B' | 'B2C' | null>(null);

@@ -361,7 +361,7 @@ const B2BDashboard: React.FC = () => {
         <div className="mb-8">
           <div className="h-6 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-primary to-secondary-lighter transition-all duration-1000 ease-out"
+              className="h-full bg-[#d2efdc] transition-all duration-1000 ease-out"
               style={{ width: `${dashboardData.successRate}%` }}
             />
           </div>
@@ -447,7 +447,7 @@ const B2BDashboard: React.FC = () => {
                   <div className="flex-1 mx-4">
                     <div className="h-8 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-primary to-secondary-lighter transition-all duration-1000 ease-out flex items-center justify-end pr-3"
+                        className="h-full bg-[#ff99d8] transition-all duration-1000 ease-out flex items-center justify-end pr-3"
                         style={{ 
                           width: `${(performanceData.amountsRaised[index] / performanceData.maxAmount) * 100}%`,
                           animationDelay: `${index * 200}ms`
@@ -481,7 +481,7 @@ const B2BDashboard: React.FC = () => {
                   <div className="flex-1 mx-4">
                     <div className="h-8 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-secondary-lighter to-highlight transition-all duration-1000 ease-out flex items-center justify-end pr-3"
+                        className="h-full bg-[#acc5ff] transition-all duration-1000 ease-out flex items-center justify-end pr-3"
                         style={{ 
                           width: `${(performanceData.newStartups[index] / Math.max(...performanceData.newStartups)) * 100}%`,
                           animationDelay: `${index * 200}ms`
