@@ -202,7 +202,7 @@ const B2BDashboardLayout: React.FC = () => {
             darkMode ? "text-purple-400" : "text-secondary-lighter"
           )} />
           <div className="flex flex-col">
-            <span className="text-lg font-semibold">FundAI</span>
+            <span className="text-lg font-semibold">Raisup</span>
             <span className={clsx(
               "text-xs px-2 py-1 rounded-full w-fit",
               darkMode ? "bg-purple-900/30 text-purple-300" : "bg-secondary-light text-primary"
@@ -306,7 +306,7 @@ const B2BDashboardLayout: React.FC = () => {
                     "text-lg font-semibold",
                     darkMode ? "text-white" : "text-gray-900"
                   )}>
-                    FundAI
+                    Raiusp
                   </span>
                   <span className={clsx(
                     "text-xs px-2 py-1 rounded-full w-fit",

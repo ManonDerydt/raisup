@@ -133,7 +133,7 @@ const SimplifiedOnboardingForm: React.FC = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Sparkles className="h-6 w-6 text-secondary-lighter" />
-            <span className="font-semibold text-lg dark:text-white">FundAI</span>
+            <span className="font-semibold text-lg dark:text-white">Raisup</span>
           </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
             Étape {currentStep} sur {totalSteps}

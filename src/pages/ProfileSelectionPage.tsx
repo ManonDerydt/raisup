@@ -37,7 +37,7 @@ const ProfileSelectionPage: React.FC = () => {
             "font-semibold text-xl",
             darkMode ? "text-white" : "text-gray-900"
           )}>
-            FundAI
+            Raisup
           </span>
         </Link>
       </header>
