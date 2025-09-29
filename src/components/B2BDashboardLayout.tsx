@@ -15,12 +15,24 @@ import {
   LogOut,
   Moon,
   Sun,
-  DollarSign,
-  TrendingUp
+  Building2,
+  Calculator,
+  TrendingUp,
+  Briefcase,
+  Calendar,
+  MessageSquare,
+  AlertTriangle,
+  Eye,
+  UserPlus,
+  Shield,
+  Target,
+  Globe,
+  PieChart,
+  Activity
 } from 'lucide-react';
 import clsx from 'clsx';
 
-const DashboardLayout: React.FC = () => {
+const B2BDashboardLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -37,52 +49,142 @@ const DashboardLayout: React.FC = () => {
     }
   };
   
-  // Mock user data
+  // Mock user data for B2B structure
   const user = {
-    name: 'Marie Dupont',
-    email: 'marie.dupont@example.com',
-    company: 'MediScan SAS',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
+    name: 'Jean Martin',
+    email: 'jean.martin@techincubator.com',
+    structure: 'Tech Incubator Paris',
+    role: 'Directeur des Investissements',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
   };
   
-  // Mock notifications
+  // Enhanced notifications for B2B with different types and priorities
   const notifications = [
     {
       id: 1,
-      title: 'Nouveau message d\'investisseur',
-      message: 'Jean Martin de VC Capital souhaite en savoir plus sur votre projet.',
-      time: '10 min',
-      unread: true
+      title: 'Aide BPI France expire bientôt',
+      message: 'L\'aide pour MediScan expire dans 15 jours.',
+      time: '2 heures',
+      unread: true,
+      type: 'deadline',
+      priority: 'high',
+      category: 'Échéances'
     },
     {
       id: 2,
-      title: 'Document téléchargé',
-      message: 'Votre pitch deck a été téléchargé par 3 investisseurs.',
-      time: '1 heure',
-      unread: true
+      title: 'Startup à risque détectée',
+      message: 'PropTech Innovations: runway critique (< 3 mois).',
+      time: '3 heures',
+      unread: true,
+      type: 'risk',
+      priority: 'high',
+      category: 'Alertes'
     },
     {
       id: 3,
-      title: 'Rappel',
-      message: 'N\'oubliez pas de compléter votre profil financier.',
-      time: '3 heures',
-      unread: false
+      title: 'Nouvel appel à projets',
+      message: 'France 2030 - Santé Numérique ouvert jusqu\'au 30 juin.',
+      time: '5 heures',
+      unread: true,
+      type: 'opportunity',
+      priority: 'medium',
+      category: 'Opportunités'
+    },
+    {
+      id: 4,
+      title: 'Diagnostic IA terminé',
+      message: 'GreenTech Solutions: nouveau diagnostic disponible.',
+      time: '8 heures',
+      unread: true,
+      type: 'info',
+      priority: 'medium',
+      category: 'Diagnostics'
+    },
+    {
+      id: 5,
+      title: 'Rapport mensuel généré',
+      message: 'Le rapport de performance de votre portefeuille est prêt.',
+      time: '1 jour',
+      unread: false,
+      type: 'success',
+      priority: 'low',
+      category: 'Rapports'
     }
   ];
   
   const mainNavItems = [
-    { name: 'Tableau de bord', icon: LayoutDashboard, href: '/dashboard' },
-    { name: 'Parcours Financier', icon: TrendingUp, href: '/dashboard/financial-journey' },
-    // { name: 'Documents', icon: FileText, href: '/dashboard/documents' },
-    { name: 'Levée de fonds', icon: DollarSign, href: '/dashboard/fundraising' },
-    // { name: 'Analyses', icon: BarChart3, href: '/dashboard/analytics' },
-    { name: 'Paramètres', icon: Settings, href: '/dashboard/settings' }
+    { 
+      name: 'Vue d\'ensemble', 
+      icon: LayoutDashboard, 
+      href: '/dashboard/b2b',
+      description: 'KPIs et synthèse globale'
+    },
+    { 
+      name: 'Portefeuille Startups', 
+      icon: Briefcase, 
+      href: '/dashboard/b2b/portfolio',
+      description: 'Gestion et suivi des projets'
+    },
+    { 
+      name: 'Synthèse d\'aides', 
+      icon: FileText, 
+      href: '/dashboard/b2b/funding-synthesis',
+      description: 'Aides et subventions'
+    },
+    { 
+      name: 'Rapports Stratégiques', 
+      icon: PieChart, 
+      href: '/dashboard/b2b/reports',
+      description: 'Reporting et exports'
+    },
+    { 
+      name: 'Paramètres', 
+      icon: Settings, 
+      href: '/dashboard/b2b/settings',
+      description: 'Configuration structure'
+    }
   ];
   
   const handleLogout = () => {
-    // In a real app, this would handle logout logic
     navigate('/');
   };
+  
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'deadline':
+        return <Calendar className="h-4 w-4" />;
+      case 'risk':
+        return <AlertTriangle className="h-4 w-4" />;
+      case 'opportunity':
+        return <TrendingUp className="h-4 w-4" />;
+      case 'success':
+        return <BarChart3 className="h-4 w-4" />;
+      default:
+        return <Bell className="h-4 w-4" />;
+    }
+  };
+  
+  const getNotificationColor = (type: string, priority: string) => {
+    if (priority === 'high') {
+      return darkMode ? "bg-red-900/20 border-red-800/30" : "bg-red-50 border-red-200";
+    }
+    
+    switch (type) {
+      case 'deadline':
+        return darkMode ? "bg-amber-900/20 border-amber-800/30" : "bg-amber-50 border-amber-200";
+      case 'risk':
+        return darkMode ? "bg-red-900/20 border-red-800/30" : "bg-red-50 border-red-200";
+      case 'opportunity':
+        return darkMode ? "bg-blue-900/20 border-blue-800/30" : "bg-blue-50 border-blue-200";
+      case 'success':
+        return darkMode ? "bg-green-900/20 border-green-800/30" : "bg-green-50 border-green-200";
+      default:
+        return darkMode ? "bg-purple-900/20 border-purple-800/30" : "bg-secondary-light/30 border-secondary-lighter";
+    }
+  };
+  
+  // Count high priority notifications
+  const highPriorityCount = notifications.filter(n => n.priority === 'high' && n.unread).length;
   
   return (
     <div className={clsx(
@@ -91,7 +193,7 @@ const DashboardLayout: React.FC = () => {
     )}>
       {/* Left sidebar navigation */}
       <div className={clsx(
-        "hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:z-50 lg:border-r lg:pb-4",
+        "hidden lg:flex lg:flex-col lg:w-80 lg:fixed lg:inset-y-0 lg:z-50 lg:border-r lg:pb-4",
         darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
       )}>
         <div className="flex items-center gap-x-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -99,17 +201,25 @@ const DashboardLayout: React.FC = () => {
             "h-6 w-6",
             darkMode ? "text-purple-400" : "text-secondary-lighter"
           )} />
-          <span className="text-lg font-semibold">Raisup</span>
+          <div className="flex flex-col">
+            <span className="text-lg font-semibold">FundAI</span>
+            <span className={clsx(
+              "text-xs px-2 py-1 rounded-full w-fit",
+              darkMode ? "bg-purple-900/30 text-purple-300" : "bg-secondary-light text-primary"
+            )}>
+              Structure Pro
+            </span>
+          </div>
         </div>
         
         <div className="flex flex-col flex-1 overflow-y-auto">
-          <nav className="flex-1 px-4 py-6 space-y-1">
+          <nav className="flex-1 px-4 py-6 space-y-2">
             {mainNavItems.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
                 className={clsx(
-                  "flex items-center gap-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                  "flex items-start gap-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors group",
                   location.pathname === item.href
                     ? darkMode 
                       ? "bg-gray-700 text-purple-400" 
@@ -119,8 +229,18 @@ const DashboardLayout: React.FC = () => {
                       : "text-gray-700 hover:bg-gray-100 hover:text-primary"
                 )}
               >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {item.name}
+                <item.icon className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-medium">{item.name}</div>
+                  <div className={clsx(
+                    "text-xs mt-0.5",
+                    location.pathname === item.href
+                      ? darkMode ? "text-purple-300" : "text-primary/70"
+                      : darkMode ? "text-gray-400" : "text-gray-500"
+                  )}>
+                    {item.description}
+                  </div>
+                </div>
               </Link>
             ))}
           </nav>
@@ -139,10 +259,17 @@ const DashboardLayout: React.FC = () => {
                 )}>
                   {user.name}
                 </p>
-                <p className={clsx( "text-xs truncate",
+                <p className={clsx(
+                  "text-xs truncate",
                   darkMode ? "text-gray-400" : "text-gray-500"
                 )}>
-                  {user.company}
+                  {user.structure}
+                </p>
+                <p className={clsx(
+                  "text-xs truncate",
+                  darkMode ? "text-gray-500" : "text-gray-400"
+                )}>
+                  {user.role}
                 </p>
               </div>
               <button
@@ -174,12 +301,20 @@ const DashboardLayout: React.FC = () => {
                   "h-6 w-6",
                   darkMode ? "text-purple-400" : "text-secondary-lighter"
                 )} />
-                <span className={clsx(
-                  "text-lg font-semibold",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  Raisup
-                </span>
+                <div className="flex flex-col">
+                  <span className={clsx(
+                    "text-lg font-semibold",
+                    darkMode ? "text-white" : "text-gray-900"
+                  )}>
+                    FundAI
+                  </span>
+                  <span className={clsx(
+                    "text-xs px-2 py-1 rounded-full w-fit",
+                    darkMode ? "bg-purple-900/30 text-purple-300" : "bg-secondary-light text-primary"
+                  )}>
+                    Structure Pro
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
@@ -212,7 +347,17 @@ const DashboardLayout: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <item.icon className="h-5 w-5" />
-                  {item.name}
+                  <div>
+                    <div>{item.name}</div>
+                    <div className={clsx(
+                      "text-xs",
+                      location.pathname === item.href
+                        ? darkMode ? "text-purple-300" : "text-primary/70"
+                        : darkMode ? "text-gray-400" : "text-gray-500"
+                    )}>
+                      {item.description}
+                    </div>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -258,7 +403,7 @@ const DashboardLayout: React.FC = () => {
       )}
       
       {/* Main content */}
-      <div className="lg:pl-64 flex flex-col flex-1">
+      <div className="lg:pl-80 flex flex-col flex-1">
         {/* Top navigation */}
         <header className={clsx(
           "sticky top-0 z-30 flex h-16 items-center gap-x-4 border-b px-4 shadow-sm sm:px-6",
@@ -297,7 +442,7 @@ const DashboardLayout: React.FC = () => {
                         ? "bg-gray-700 text-white placeholder:text-gray-400 ring-gray-600 focus:ring-purple-500" 
                         : "bg-white text-gray-900 placeholder:text-gray-400 ring-gray-300 focus:ring-primary"
                     )}
-                    placeholder="Rechercher..."
+                    placeholder="Rechercher une startup, un projet, une aide..."
                     type="search"
                   />
                 </div>
@@ -305,6 +450,20 @@ const DashboardLayout: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-x-4 lg:gap-x-6">
+              {/* Structure name display */}
+              <div className="hidden md:flex items-center">
+                <Building2 className={clsx(
+                  "h-5 w-5 mr-2",
+                  darkMode ? "text-gray-400" : "text-gray-500"
+                )} />
+                <span className={clsx(
+                  "text-sm font-medium",
+                  darkMode ? "text-gray-300" : "text-gray-700"
+                )}>
+                  {user.structure}
+                </span>
+              </div>
+              
               {/* Dark mode toggle */}
               <button
                 type="button"
@@ -341,27 +500,40 @@ const DashboardLayout: React.FC = () => {
                   <span className="sr-only">Voir les notifications</span>
                   <Bell className="h-5 w-5" aria-hidden="true" />
                   {notifications.some(n => n.unread) && (
-                    <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+                    <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
+                  )}
+                  {highPriorityCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                      {highPriorityCount}
+                    </span>
                   )}
                 </button>
                 
                 {notificationsOpen && (
                   <div className={clsx(
-                    "absolute right-0 z-10 mt-2 w-80 origin-top-right rounded-md shadow-lg ring-1 ring-opacity-5 focus:outline-none",
+                    "absolute right-0 z-10 mt-2 w-96 origin-top-right rounded-md shadow-lg ring-1 ring-opacity-5 focus:outline-none",
                     darkMode 
                       ? "bg-gray-800 ring-gray-700" 
                       : "bg-white ring-gray-200"
                   )}>
                     <div className="py-2 px-3 border-b border-opacity-20 flex justify-between items-center">
-                      <h3 className="text-sm font-semibold">Notifications</h3>
-                      <button 
-                        className={clsx(
-                          "text-xs font-medium",
-                          darkMode ? "text-purple-400" : "text-primary"
-                        )}
-                      >
-                        Tout marquer comme lu
-                      </button>
+                      <h3 className="text-sm font-semibold">Alertes & Notifications</h3>
+                      <div className="flex items-center gap-2">
+                        <span className={clsx(
+                          "text-xs px-2 py-1 rounded-full",
+                          darkMode ? "bg-red-900/30 text-red-300" : "bg-red-100 text-red-700"
+                        )}>
+                          {highPriorityCount} urgentes
+                        </span>
+                        <button 
+                          className={clsx(
+                            "text-xs font-medium",
+                            darkMode ? "text-purple-400" : "text-primary"
+                          )}
+                        >
+                          Tout marquer comme lu
+                        </button>
+                      </div>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.map((notification) => (
@@ -370,9 +542,7 @@ const DashboardLayout: React.FC = () => {
                           className={clsx(
                             "px-4 py-3 hover:bg-opacity-10 transition-colors border-b border-opacity-10 relative",
                             notification.unread 
-                              ? darkMode 
-                                ? "bg-purple-900 bg-opacity-10 border-purple-800" 
-                                : "bg-secondary-light bg-opacity-30 border-secondary-light" 
+                              ? getNotificationColor(notification.type, notification.priority)
                               : darkMode 
                                 ? "border-gray-700" 
                                 : "border-gray-100"
@@ -381,35 +551,75 @@ const DashboardLayout: React.FC = () => {
                           {notification.unread && (
                             <span className={clsx(
                               "absolute left-2 top-4 block h-2 w-2 rounded-full",
-                              darkMode ? "bg-purple-400" : "bg-primary"
+                              notification.priority === 'high'
+                                ? "bg-red-500"
+                                : notification.type === 'deadline'
+                                  ? "bg-amber-500"
+                                  : notification.type === 'opportunity'
+                                    ? "bg-blue-500"
+                                    : darkMode ? "bg-purple-400" : "bg-primary"
                             )} />
                           )}
-                          <div className="ml-2">
-                            <p className={clsx(
-                              "text-sm font-medium",
-                              darkMode ? "text-white" : "text-gray-900"
+                          <div className="ml-2 flex items-start">
+                            <div className={clsx(
+                              "rounded-full p-1 mr-2 flex-shrink-0",
+                              notification.type === 'deadline'
+                                ? darkMode ? "bg-amber-900/30 text-amber-400" : "bg-amber-100 text-amber-600"
+                                : notification.type === 'risk'
+                                  ? darkMode ? "bg-red-900/30 text-red-400" : "bg-red-100 text-red-600"
+                                  : notification.type === 'opportunity'
+                                    ? darkMode ? "bg-blue-900/30 text-blue-400" : "bg-blue-100 text-blue-600"
+                                    : notification.type === 'success'
+                                      ? darkMode ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-600"
+                                      : darkMode ? "bg-purple-900/30 text-purple-400" : "bg-secondary-light text-primary"
                             )}>
-                              {notification.title}
-                            </p>
-                            <p className={clsx(
-                              "text-xs mt-1",
-                              darkMode ? "text-gray-400" : "text-gray-500"
-                            )}>
-                              {notification.message}
-                            </p>
-                            <p className={clsx(
-                              "text-xs mt-1",
-                              darkMode ? "text-gray-500" : "text-gray-400"
-                            )}>
-                              Il y a {notification.time}
-                            </p>
+                              {getNotificationIcon(notification.type)}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className={clsx(
+                                    "text-sm font-medium",
+                                    darkMode ? "text-white" : "text-gray-900"
+                                  )}>
+                                    {notification.title}
+                                  </p>
+                                  <span className={clsx(
+                                    "text-xs px-2 py-1 rounded-full",
+                                    darkMode ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"
+                                  )}>
+                                    {notification.category}
+                                  </span>
+                                </div>
+                                {notification.priority === 'high' && (
+                                  <span className={clsx(
+                                    "text-xs px-2 py-1 rounded-full ml-2",
+                                    darkMode ? "bg-red-900/30 text-red-300" : "bg-red-100 text-red-700"
+                                  )}>
+                                    Urgent
+                                  </span>
+                                )}
+                              </div>
+                              <p className={clsx(
+                                "text-xs mt-1",
+                                darkMode ? "text-gray-400" : "text-gray-500"
+                              )}>
+                                {notification.message}
+                              </p>
+                              <p className={clsx(
+                                "text-xs mt-1",
+                                darkMode ? "text-gray-500" : "text-gray-400"
+                              )}>
+                                Il y a {notification.time}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div className="py-2 px-3 text-center">
+                    <div className="py-2 px-3 text-center border-t border-gray-200 dark:border-gray-700">
                       <Link 
-                        to="/dashboard/notifications" 
+                        to="/dashboard/b2b/notifications" 
                         className={clsx(
                           "text-xs font-medium",
                           darkMode ? "text-purple-400" : "text-primary"
@@ -448,7 +658,7 @@ const DashboardLayout: React.FC = () => {
                 
                 {userMenuOpen && (
                   <div className={clsx(
-                    "absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md shadow-lg ring-1 ring-opacity-5 focus:outline-none",
+                    "absolute right-0 z-10 mt-2 w-64 origin-top-right rounded-md shadow-lg ring-1 ring-opacity-5 focus:outline-none",
                     darkMode 
                       ? "bg-gray-800 ring-gray-700" 
                       : "bg-white ring-gray-200"
@@ -477,14 +687,20 @@ const DashboardLayout: React.FC = () => {
                             "text-xs font-medium",
                             darkMode ? "text-purple-400" : "text-primary"
                           )}>
-                            {user.company}
+                            {user.structure}
+                          </p>
+                          <p className={clsx(
+                            "text-xs",
+                            darkMode ? "text-gray-400" : "text-gray-500"
+                          )}>
+                            {user.role}
                           </p>
                         </div>
                       </div>
                     </div>
                     <div className="py-1">
                       <Link
-                        to="/dashboard/profile"
+                        to="/dashboard/b2b/profile"
                         className={clsx(
                           "block px-4 py-2 text-sm",
                           darkMode 
@@ -496,7 +712,19 @@ const DashboardLayout: React.FC = () => {
                         Mon profil
                       </Link>
                       <Link
-                        to="/dashboard/settings"
+                        to="/dashboard/b2b/team"
+                        className={clsx(
+                          "block px-4 py-2 text-sm",
+                          darkMode 
+                            ? "text-gray-300 hover:bg-gray-700" 
+                            : "text-gray-700 hover:bg-gray-100"
+                        )}
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Gestion équipe
+                      </Link>
+                      <Link
+                        to="/dashboard/b2b/settings"
                         className={clsx(
                           "block px-4 py-2 text-sm",
                           darkMode 
@@ -535,4 +763,4 @@ const DashboardLayout: React.FC = () => {
   );
 };
 
-export default DashboardLayout;
+export default B2BDashboardLayout;

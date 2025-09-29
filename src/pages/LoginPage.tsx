@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
-import Logo from '../../dist/assets/raisup_logo.png'
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,6 +13,9 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [segment, setSegment] = useState<'B2B' | 'B2C'>('B2B');
+  
+  // Using placeholder logo - replace with actual logo URL when available
+  const Logo = "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=200&h=80&fit=crop&crop=center";
 
   // Check if dark mode is enabled
   React.useEffect(() => {
@@ -29,8 +31,12 @@ const LoginPage: React.FC = () => {
     // Simulate authentication
     setTimeout(() => {
       setLoading(false);
-      // For demo purposes, allow any login
-      navigate('/dashboard');
+      // Redirect based on selected segment
+      if (segment === 'B2B') {
+        navigate('/dashboard/b2b');
+      } else {
+        navigate('/dashboard');
+      }
     }, 1000);
   };
 
@@ -259,7 +265,7 @@ const LoginPage: React.FC = () => {
                   darkMode ? "text-purple-400" : "text-primary"
                 )}
               >
-                Créer un compte
+                Créer mon compte
               </Link>
             </p>
           </div>

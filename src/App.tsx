@@ -20,7 +20,20 @@ import AnalysisPage from './pages/AnalysisPage';
 import SettingsPage from './pages/SettingsPage';
 import PricingPage from './pages/PricingPage';
 import HowItWorksPage from './pages/HowItWorksPage';
+import ProfileSelectionPage from './pages/ProfileSelectionPage';
+import B2BOnboardingLayout from './components/B2BOnboardingLayout';
+import StructureInfoForm from './pages/b2b/StructureInfoForm';
+import B2BFinancialsForm from './pages/b2b/FinancialsForm';
+import ObjectivesForm from './pages/b2b/ObjectivesForm';
+import ContactForm from './pages/b2b/ContactForm';
+import ValidationForm from './pages/b2b/ValidationForm';
 import PitchDeckGenerator from "./pages/pitch_generator.tsx";
+import B2BDashboardLayout from './components/B2BDashboardLayout';
+import B2BDashboard from './pages/B2BDashboard';
+import PortfolioPage from './pages/b2b/PortfolioPage';
+import FundingSynthesisPage from './pages/b2b/FundingSynthesisPage';
+import StrategicReportsPage from './pages/b2b/StrategicReportsPage';
+import SimplifiedOnboardingForm from './pages/SimplifiedOnboardingForm';
 
 function App() {
   return (
@@ -28,6 +41,16 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<ProfileSelectionPage />} />
+        <Route path="/register/b2b" element={<B2BOnboardingLayout />}>
+          <Route index element={<Navigate to="/register/b2b/structure" replace />} />
+          <Route path="structure" element={<StructureInfoForm />} />
+          <Route path="financials" element={<B2BFinancialsForm />} />
+          <Route path="objectives" element={<ObjectivesForm />} />
+          <Route path="contact" element={<ContactForm />} />
+          <Route path="validation" element={<ValidationForm />} />
+        </Route>
+        <Route path="/register/startup" element={<SimplifiedOnboardingForm />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/onboarding" element={<OnboardingLayout />}>
@@ -45,13 +68,20 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="welcome" element={<DashboardWelcome />} />
           <Route path="financial-journey" element={<FinancialJourney />} />
-          <Route path="documents" element={<DocumentsPage />}>
-            {/* Ajouter la route pour generate_deck sous documents */}
+          {/* <Route path="documents" element={<DocumentsPage />}>
             <Route path="generate_deck" element={<PitchDeckGenerator />} />
-          </Route>
+          </Route> */}
 
           <Route path="fundraising" element={<FundraisingPage />} />
-          <Route path="analytics" element={<AnalysisPage />} />
+          {/* <Route path="analytics" element={<AnalysisPage />} /> */}
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+        
+        <Route path="/dashboard/b2b" element={<B2BDashboardLayout />}>
+          <Route index element={<B2BDashboard />} />
+          <Route path="portfolio" element={<PortfolioPage />} />
+          <Route path="funding-synthesis" element={<FundingSynthesisPage />} />
+          <Route path="reports" element={<StrategicReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
