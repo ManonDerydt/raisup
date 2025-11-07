@@ -113,7 +113,7 @@ const DashboardLayout: React.FC = () => {
                 className={clsx(
                   "flex items-center gap-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
                   location.pathname === item.href
-                    ? "bg-[#d2efdc] text-primary"
+                    ? "bg-[#d8ffbd] text-primary"
                     : darkMode 
                       ? "text-gray-300 hover:bg-gray-700 hover:text-white"
                       : "text-gray-700 hover:bg-gray-100 hover:text-primary"
@@ -369,10 +369,10 @@ const DashboardLayout: React.FC = () => {
                           key={notification.id} 
                           className={clsx(
                             "px-4 py-3 hover:bg-opacity-10 transition-colors border-b border-opacity-10 relative",
-                            notification.unread 
-                              ? darkMode 
-                                ? "bg-[#d2efdc] bg-opacity-10 border-purple-800" 
-                                : "bg-[#d2efdc] bg-opacity-30 border-secondary-light" 
+                            notification.unread
+                              ? darkMode
+                                ? "bg-[#d8ffbd] bg-opacity-10 border-purple-800"
+                                : "bg-[#d8ffbd] bg-opacity-30 border-secondary-light" 
                               : darkMode 
                                 ? "border-gray-700" 
                                 : "border-gray-100"
@@ -381,7 +381,7 @@ const DashboardLayout: React.FC = () => {
                           {notification.unread && (
                             <span className={clsx(
                               "absolute left-2 top-4 block h-2 w-2 rounded-full",
-                              darkMode ? "bg-[#d2efdc]" : "bg-primary"
+                              darkMode ? "bg-[#d8ffbd]" : "bg-primary"
                             )} />
                           )}
                           <div className="ml-2">

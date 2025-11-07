@@ -115,9 +115,9 @@ const HomePage: React.FC = () => {
         Démarrer mon dossier
         <ArrowRight className="ml-2 h-5 w-5" />
       </Link>
-      <Link 
-        to="/login" 
-        className="btn-secondary bg-[#d3efdd] flex items-center justify-center"
+      <Link
+        to="/login"
+        className="btn-secondary bg-[#d8ffbd] flex items-center justify-center"
       >
         Connexion
       </Link>

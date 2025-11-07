@@ -7,7 +7,7 @@ export default {
       colors: {
         primary: '#1d1d1b',
         'secondary-light': '#EFE9FF',
-        'secondary-lighter': '#d3efdd',
+        'secondary-lighter': '#d8ffbd',
         highlight: '#fdffd0',
       },
       borderRadius: {

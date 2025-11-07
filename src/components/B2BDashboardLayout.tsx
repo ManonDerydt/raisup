@@ -218,9 +218,9 @@ const B2BDashboardLayout: React.FC = () => {
                 className={clsx(
                   "flex items-start gap-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors group",
                   location.pathname === item.href
-                    ? darkMode 
-                      ? "bg-gray-700 text-purple-400" 
-                      : "bg-[#d2efdc] text-primary"
+                    ? darkMode
+                      ? "bg-gray-700 text-purple-400"
+                      : "bg-[#d8ffbd] text-primary"
                     : darkMode 
                       ? "text-gray-300 hover:bg-[gray-700] hover:text-white" 
                       : "text-gray-700 hover:bg-gray-100 hover:text-primary"
