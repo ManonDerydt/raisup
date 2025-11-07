@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, ArrowRight, Menu, X } from 'lucide-react';
 import clsx from 'clsx';
-import Logo from '../../../front_end/public/raisup_logo.png'
-import LogoWhite from '../../../front_end/public/raisup_logo_white.png'
 
 const HomePage: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -18,7 +16,7 @@ const HomePage: React.FC = () => {
           <div className="flex items-center space-x-2">
             {/* <Sparkles className="h-6 w-6 text-secondary-lighter" />
             <span className="font-semibold text-xl">HELO</span> */}
-            <img src={Logo}  alt="Logo" className="h-20  w-auto"/>
+            <img src="/raisup_logo.png"  alt="Logo" className="h-20  w-auto"/>
           </div>
           <nav className="hidden md:flex space-x-8">
             <a href="#" className="text-gray-600 hover:text-primary transition-colors">Accueil</a>
@@ -42,7 +40,7 @@ const HomePage: React.FC = () => {
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center space-x-2">
             
-              <img src={Logo}  alt="Logo" className="h-20  w-auto"/>
+              <img src="/raisup_logo.png"  alt="Logo" className="h-20  w-auto"/>
               </div>
               <button 
                 className="text-gray-700 hover:text-primary transition-colors"
@@ -134,7 +132,7 @@ const HomePage: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between md:items-start gap-10 pb-10 border-b border-gray-800">
         {/* Logo et colonne gauche */}
         <div className="mb-8 md:mb-0 flex-shrink-0">
-          <img src={LogoWhite}  alt="Logo" className="h-20  w-auto"/>
+          <img src="/raisup_logo_white.png"  alt="Logo" className="h-20  w-auto"/>
         </div>
         {/* Liens */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 flex-grow">

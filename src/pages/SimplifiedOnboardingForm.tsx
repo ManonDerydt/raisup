@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Check, Rocket, MapPin, DollarSign, Target, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
-import Logo from '../../../front_end/public/raisup_logo.png'
 
 type FormData = {
   // Informations de base

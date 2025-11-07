@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
-import Logo from '../../../front_end/public/raisup_logo.png'
 
 
 const LoginPage: React.FC = () => {
@@ -48,7 +47,7 @@ const LoginPage: React.FC = () => {
     )}>
       <header className="container mx-auto px-4 py-6">
         <Link to="/" className="flex items-center space-x-3">
-          <img src={Logo} alt="RAISUP Logo" className="h-16 w-auto" />
+          <img src="/raisup_logo.png" alt="RAISUP Logo" className="h-16 w-auto" />
           <span className={clsx(
             "font-semibold text-xl tracking-wide",
             darkMode ? "text-white" : "text-gray-900"

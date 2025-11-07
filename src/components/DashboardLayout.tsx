@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import Logo from '../../../front_end/public/raisup_logo.png'
-
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
@@ -99,7 +97,7 @@ const DashboardLayout: React.FC = () => {
       <div className="flex items-center gap-x-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
      
           <div className="flex flex-col">
-             <img src={Logo}  alt="Logo" className="h-20  w-auto"/>
+             <img src="/raisup_logo.png"  alt="Logo" className="h-20  w-auto"/>
             <span className={clsx(
               "text-xs px-2 py-1 rounded-full w-fit",
               darkMode ? "bg-purple-900/30 text-purple-300" : "bg-[#ffbcec] text-primary"
