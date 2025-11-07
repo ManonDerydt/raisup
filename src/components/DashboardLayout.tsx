@@ -71,12 +71,9 @@ const DashboardLayout: React.FC = () => {
   ];
   
   const mainNavItems = [
-    { name: 'Tableau de bord', icon: LayoutDashboard, href: '/dashboard' },
     { name: 'Parcours Financier', icon: TrendingUp, href: '/dashboard/financial-journey' },
-    { name: 'Documents', icon: FileText, href: '/dashboard/documents' },
     { name: 'Levée de fonds', icon: DollarSign, href: '/dashboard/fundraising' },
-    { name: 'Analyses', icon: BarChart3, href: '/dashboard/analytics' },
-    { name: 'Paramètres', icon: Settings, href: '/dashboard/settings' }
+    { name: 'Analyses', icon: BarChart3, href: '/dashboard/analytics' }
   ];
   
   const handleLogout = () => {
