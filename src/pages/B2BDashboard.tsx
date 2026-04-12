@@ -360,8 +360,8 @@ const B2BDashboard: React.FC = () => {
         
         <div className="mb-8">
           <div className="h-6 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-[#d2efdc] transition-all duration-1000 ease-out"
+            <div
+              className="h-full bg-[#d8ffbd] transition-all duration-1000 ease-out"
               style={{ width: `${dashboardData.successRate}%` }}
             />
           </div>

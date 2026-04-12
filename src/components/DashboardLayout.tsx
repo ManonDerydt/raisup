@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import Logo from '../../../front_end/public/raisup_logo.png'
-
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
@@ -73,12 +71,9 @@ const DashboardLayout: React.FC = () => {
   ];
   
   const mainNavItems = [
-    { name: 'Tableau de bord', icon: LayoutDashboard, href: '/dashboard' },
     { name: 'Parcours Financier', icon: TrendingUp, href: '/dashboard/financial-journey' },
-    { name: 'Documents', icon: FileText, href: '/dashboard/documents' },
     { name: 'Levée de fonds', icon: DollarSign, href: '/dashboard/fundraising' },
-    { name: 'Analyses', icon: BarChart3, href: '/dashboard/analytics' },
-    { name: 'Paramètres', icon: Settings, href: '/dashboard/settings' }
+    { name: 'Analyses', icon: BarChart3, href: '/dashboard/analytics' }
   ];
   
   const handleLogout = () => {
@@ -99,7 +94,7 @@ const DashboardLayout: React.FC = () => {
       <div className="flex items-center gap-x-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
      
           <div className="flex flex-col">
-             <img src={Logo}  alt="Logo" className="h-20  w-auto"/>
+             <img src="/raisup_logo.png"  alt="Logo" className="h-20  w-auto"/>
             <span className={clsx(
               "text-xs px-2 py-1 rounded-full w-fit",
               darkMode ? "bg-purple-900/30 text-purple-300" : "bg-[#ffbcec] text-primary"
@@ -118,7 +113,7 @@ const DashboardLayout: React.FC = () => {
                 className={clsx(
                   "flex items-center gap-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
                   location.pathname === item.href
-                    ? "bg-[#d2efdc] text-primary"
+                    ? "bg-[#d8ffbd] text-primary"
                     : darkMode 
                       ? "text-gray-300 hover:bg-gray-700 hover:text-white"
                       : "text-gray-700 hover:bg-gray-100 hover:text-primary"
@@ -374,10 +369,10 @@ const DashboardLayout: React.FC = () => {
                           key={notification.id} 
                           className={clsx(
                             "px-4 py-3 hover:bg-opacity-10 transition-colors border-b border-opacity-10 relative",
-                            notification.unread 
-                              ? darkMode 
-                                ? "bg-[#d2efdc] bg-opacity-10 border-purple-800" 
-                                : "bg-[#d2efdc] bg-opacity-30 border-secondary-light" 
+                            notification.unread
+                              ? darkMode
+                                ? "bg-[#d8ffbd] bg-opacity-10 border-purple-800"
+                                : "bg-[#d8ffbd] bg-opacity-30 border-secondary-light" 
                               : darkMode 
                                 ? "border-gray-700" 
                                 : "border-gray-100"
@@ -386,7 +381,7 @@ const DashboardLayout: React.FC = () => {
                           {notification.unread && (
                             <span className={clsx(
                               "absolute left-2 top-4 block h-2 w-2 rounded-full",
-                              darkMode ? "bg-[#d2efdc]" : "bg-primary"
+                              darkMode ? "bg-[#d8ffbd]" : "bg-primary"
                             )} />
                           )}
                           <div className="ml-2">
