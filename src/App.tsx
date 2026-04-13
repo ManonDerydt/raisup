@@ -28,6 +28,10 @@ import ObjectivesForm from './pages/b2b/ObjectivesForm';
 import ContactForm from './pages/b2b/ContactForm';
 import ValidationForm from './pages/b2b/ValidationForm';
 import PitchDeckGenerator from "./pages/pitch_generator.tsx";
+import DocumentGeneratorPage from './pages/DocumentGeneratorPage';
+import KPIsPage from './pages/KPIsPage';
+import ScorePage from './pages/ScorePage';
+import InvestorUpdatePage from './pages/InvestorUpdatePage';
 import B2BDashboardLayout from './components/B2BDashboardLayout';
 import B2BDashboard from './pages/B2BDashboard';
 import PortfolioPage from './pages/b2b/PortfolioPage';
@@ -72,8 +76,12 @@ function App() {
             <Route path="generate_deck" element={<PitchDeckGenerator />} />
           </Route>
 
+          <Route path="generate" element={<DocumentGeneratorPage />} />
           <Route path="fundraising" element={<FundraisingPage />} />
-          <Route path="analytics" element={<AnalysisPage />} /> 
+          <Route path="analytics" element={<AnalysisPage />} />
+          <Route path="kpis" element={<KPIsPage />} />
+          <Route path="score" element={<ScorePage />} />
+          <Route path="investor-update" element={<InvestorUpdatePage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
         

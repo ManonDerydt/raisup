@@ -1,961 +1,623 @@
-import React, { useState } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
-import { 
-  DollarSign, 
-  Building, 
-  FileText, 
-  ExternalLink, 
-  Download, 
-  Mail, 
-  Phone, 
-  Globe, 
-  Check, 
-  Info,
+import React, { useState, useEffect } from 'react';
+import {
+  Zap,
+  Building,
   Users,
   TrendingUp,
-  Sparkles
+  ExternalLink,
+  ChevronRight,
+  ToggleLeft,
+  ToggleRight,
+  Star,
+  Sparkles,
+  CheckCircle,
+  Info,
+  Calendar,
+  Target,
+  ArrowUpRight,
+  Send,
 } from 'lucide-react';
 import clsx from 'clsx';
+import testStartups, { TestStartup } from '../data/testStartups';
+import { matchInvestors, MatchResult, scoreBadgeColor, investorTypeLabel, formatTicket } from '../services/matchInvestors';
 
-const FundraisingPage: React.FC = () => {
-  const [darkMode, setDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState('non-dilutive');
-  
-  // Check if dark mode is enabled
-  React.useEffect(() => {
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    setDarkMode(isDarkMode);
-  }, []);
-  
-  // Mock data for non-dilutive funding sources
-  const nonDilutiveSources = [
-    {
-      id: 1,
-      name: 'Bpifrance - Aide à l\'Innovation',
-      logo: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?ixlib=rb-1.2.1&auto=format&fit=crop&w=64&h=64&q=80',
-      type: 'Subvention',
-      amount: '50 000 € - 200 000 €',
-      description: 'Financement des projets innovants à fort potentiel de croissance.',
-      eligibility: 'Startups et PME innovantes de moins de 5 ans',
-      deadline: '31 décembre 2025',
-      match: 92,
-      forms: [
-        { name: 'Formulaire de demande', url: '#', type: 'pdf' },
-        { name: 'Business plan', url: '#', type: 'docx' },
-        { name: 'Prévisions financières', url: '#', type: 'xlsx' }
-      ],
-      website: 'https://www.bpifrance.fr'
-    },
-    {
-      id: 2,
-      name: 'France 2030 - Santé Numérique',
-      logo: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=64&h=64&q=80',
-      type: 'Subvention',
-      amount: '100 000 € - 500 000 €',
-      description: 'Programme de soutien aux innovations dans le domaine de la santé numérique.',
-      eligibility: 'Startups et PME dans le secteur de la santé',
-      deadline: '15 septembre 2025',
-      match: 87,
-      forms: [
-        { name: 'Dossier de candidature', url: '#', type: 'pdf' },
-        { name: 'Présentation du projet', url: '#', type: 'pptx' }
-      ],
-      website: 'https://www.france2030.gouv.fr'
-    },
-    {
-      id: 3,
-      name: 'Région Île-de-France - PM\'up',
-      logo: 'https://images.unsplash.com/photo-1572025442646-866d16c84a54?ixlib=rb-1.2.1&auto=format&fit=crop&w=64&h=64&q=80',
-      type: 'Subvention',
-      amount: 'Jusqu\'à 250 000 €',
-      description: 'Aide au développement des PME franciliennes à fort potentiel.',
-      eligibility: 'PME basées en Île-de-France',
-      deadline: '30 juin 2025',
-      match: 78,
-      forms: [
-        { name: 'Formulaire PM\'up', url: '#', type: 'pdf' },
-        { name: 'Annexes financières', url: '#', type: 'xlsx' }
-      ],
-      website: 'https://www.iledefrance.fr'
-    },
-    {
-      id: 4,
-      name: 'Prêt Innovation - Bpifrance',
-      logo: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?ixlib=rb-1.2.1&auto=format&fit=crop&w=64&h=64&q=80',
-      type: 'Prêt',
-      amount: '50 000 € - 5 000 000 €',
-      description: 'Prêt à taux avantageux pour financer les projets innovants.',
-      eligibility: 'PME et ETI de plus de 3 ans',
-      deadline: 'Continu',
-      match: 85,
-      forms: [
-        { name: 'Dossier de demande de prêt', url: '#', type: 'pdf' },
-        { name: 'Plan de financement', url: '#', type: 'xlsx' }
-      ],
-      website: 'https://www.bpifrance.fr'
-    },
-    {
-      id: 5,
-      name: 'Horizon Europe - EIC Accelerator',
-      logo: 'https://images.unsplash.com/photo-1527689368864-3a821dbccc34?ixlib=rb-1.2.1&auto=format&fit=crop&w=64&h=64&q=80',
-      type: 'Subvention + Equity',
-      amount: 'Jusqu\'à 2 500 000 €',
-      description: 'Programme européen de financement pour les innovations de rupture.',
-      eligibility: 'Startups et PME innovantes',
-      deadline: '15 octobre 2025',
-      match: 72,
-      forms: [
-        { name: 'Application form', url: '#', type: 'pdf' },
-        { name: 'Financial annexes', url: '#', type: 'xlsx' },
-        { name: 'Technical proposal', url: '#', type: 'docx' }
-      ],
-      website: 'https://eic.ec.europa.eu'
-    }
-  ];
-  
-  // Mock data for dilutive funding sources
-  const dilutiveSources = [
-    {
-      id: 1,
-      name: 'Elaia Partners',
-      logo: 'https://images.unsplash.com/photo-1491336477066-31156b5e4f35?ixlib=rb-1.2.1&auto=format&fit=crop&w=64&h=64&q=80',
-      type: 'Venture Capital',
-      stage: 'Seed, Series A',
-      amount: '1M€ - 10M€',
-      focus: 'Deeptech, Healthtech, SaaS',
-      description: 'Fonds d\'investissement spécialisé dans les startups technologiques à fort potentiel.',
-      portfolio: 'Criteo, Shift Technology, Teads',
-      match: 94,
-      contact: {
-        email: 'contact@elaia.com',
-        phone: '+33 1 XX XX XX XX',
-        website: 'https://www.elaia.com'
-      }
-    },
-    {
-      id: 2,
-      name: 'Kima Ventures',
-      logo: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-1.2.1&auto=format&fit=crop&w=64&h=64&q=80',
-      type: 'Seed Fund',
-      stage: 'Pre-seed, Seed',
-      amount: '150K€ - 2M€',
-      focus: 'Tech, Digital Health, SaaS',
-      description: 'Fonds d\'amorçage très actif investissant dans des startups en phase initiale.',
-      portfolio: 'Zenly, Payfit, Sorare',
-      match: 89,
-      contact: {
-        email: 'apply@kimaventures.com',
-        phone: '+33 1 XX XX XX XX',
-        website: 'https://www.kimaventures.com'
-      }
-    },
-    {
-      id: 3,
-      name: 'Partech Ventures',
-      logo: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=64&h=64&q=80',
-      type: 'Venture Capital',
-      stage: 'Seed, Series A, Series B',
-      amount: '1M€ - 30M€',
-      focus: 'Healthtech, Fintech, Enterprise Software',
-      description: 'Fonds d\'investissement international avec une forte présence en Europe.',
-      portfolio: 'Alan, Doctolib, Made.com',
-      match: 86,
-      contact: {
-        email: 'info@partechpartners.com',
-        phone: '+33 1 XX XX XX XX',
-        website: 'https://www.partechpartners.com'
-      }
-    },
-    {
-      id: 4,
-      name: 'Business Angels Santé',
-      logo: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?ixlib=rb-1.2.1&auto=format&fit=crop&w=64&h=64&q=80',
-      type: 'Angel Investors',
-      stage: 'Pre-seed, Seed',
-      amount: '100K€ - 1M€',
-      focus: 'Healthtech, Medtech, Biotech',
-      description: 'Réseau de business angels spécialisés dans le secteur de la santé.',
-      portfolio: 'Diverses startups santé en France',
-      match: 91,
-      contact: {
-        email: 'contact@businessangels-sante.com',
-        phone: '+33 1 XX XX XX XX',
-        website: 'https://www.businessangels-sante.com'
-      }
-    },
-    {
-      id: 5,
-      name: 'Bpifrance Innovation Capital',
-      logo: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?ixlib=rb-1.2.1&auto=format&fit=crop&w=64&h=64&q=80',
-      type: 'Public Investment Fund',
-      stage: 'Series A, Series B',
-      amount: '2M€ - 20M€',
-      focus: 'Deeptech, Healthtech, Greentech',
-      description: 'Fonds d\'investissement public français soutenant l\'innovation.',
-      portfolio: 'Nombreuses entreprises innovantes françaises',
-      match: 83,
-      contact: {
-        email: 'contact@bpifrance.fr',
-        phone: '+33 1 XX XX XX XX',
-        website: 'https://www.bpifrance.fr'
-      }
-    }
-  ];
-  
-  // Function to render document type icon
-  const renderDocumentIcon = (type: string) => {
-    switch (type) {
-      case 'pdf':
-        return <FileText className="h-4 w-4 text-red-500" />;
-      case 'docx':
-        return <FileText className="h-4 w-4 text-blue-500" />;
-      case 'xlsx':
-        return <FileText className="h-4 w-4 text-green-500" />;
-      case 'pptx':
-        return <FileText className="h-4 w-4 text-orange-500" />;
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
+// ─── Score badge ───────────────────────────────────────────────────────────────
+const ScoreBadge: React.FC<{ score: number }> = ({ score }) => {
+  const color = scoreBadgeColor(score);
+  return (
+    <span className={clsx(
+      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold',
+      color === 'green'  && 'bg-green-100 text-green-700',
+      color === 'orange' && 'bg-orange-100 text-orange-700',
+      color === 'red'    && 'bg-red-100 text-red-700',
+    )}>
+      {score}%
+    </span>
+  );
+};
+
+// ─── Investor card ─────────────────────────────────────────────────────────────
+const InvestorCard: React.FC<{ result: MatchResult; darkMode: boolean }> = ({ result, darkMode }) => {
+  const { investor, score, whyMatch } = result;
+  const [expanded, setExpanded] = useState(false);
+  const [applied, setApplied] = useState(false);
+  const color = scoreBadgeColor(score);
+
+  const handleApply = () => {
+    window.open(investor.website, '_blank', 'noopener,noreferrer');
+    setApplied(true);
   };
-  
+
   return (
     <div className={clsx(
-      "py-8 px-4 sm:px-6 lg:px-8",
-      darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-900"
+      'rounded-xl border transition-all duration-200',
+      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
+      color === 'green'  && 'border-l-4 border-l-green-400',
+      color === 'orange' && 'border-l-4 border-l-orange-400',
+      color === 'red'    && 'border-l-4 border-l-red-400',
     )}>
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          {/* Left */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className={clsx('text-sm font-semibold truncate', darkMode ? 'text-white' : 'text-gray-900')}>
+                {investor.name}
+              </span>
+              <span className={clsx('text-xs px-2 py-0.5 rounded-full', darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600')}>
+                {investorTypeLabel(investor.type)}
+              </span>
+              {applied && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" /> Candidature envoyée
+                </span>
+              )}
+            </div>
+            <p className={clsx('text-xs mb-2', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+              {investor.description}
+            </p>
+            {/* Why match */}
+            <div className={clsx('flex items-start gap-1.5 text-xs rounded-lg px-2 py-1.5', darkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-50 text-gray-600')}>
+              <Sparkles className="h-3 w-3 mt-0.5 flex-shrink-0 text-primary" />
+              <span>{whyMatch}</span>
+            </div>
+          </div>
+
+          {/* Right */}
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <ScoreBadge score={score} />
+            <span className={clsx('text-xs font-medium', darkMode ? 'text-gray-300' : 'text-gray-700')}>
+              {formatTicket(investor.ticketMin, investor.ticketMax)}
+            </span>
+          </div>
+        </div>
+
+        {/* Actions row */}
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={() => setExpanded(p => !p)}
+            className={clsx(
+              'flex items-center gap-1 text-xs font-medium transition-colors',
+              darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800'
+            )}
+          >
+            <ChevronRight className={clsx('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')} />
+            {expanded ? 'Masquer' : 'Voir les détails'}
+          </button>
+
+          <div className="flex-1" />
+
+          <button
+            onClick={handleApply}
+            className={clsx(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
+              applied
+                ? 'bg-green-100 text-green-700 cursor-default'
+                : 'bg-primary text-white hover:bg-opacity-90 active:scale-95'
+            )}
+          >
+            {applied
+              ? <><CheckCircle className="h-3.5 w-3.5" /> Postulé</>
+              : <><Send className="h-3.5 w-3.5" /> Postuler</>
+            }
+          </button>
+        </div>
+
+        {expanded && (
+          <div className={clsx('mt-3 pt-3 border-t space-y-2', darkMode ? 'border-gray-700' : 'border-gray-100')}>
+            {/* Sectors */}
+            <div>
+              <p className={clsx('text-xs font-medium mb-1', darkMode ? 'text-gray-300' : 'text-gray-600')}>Secteurs</p>
+              <div className="flex flex-wrap gap-1">
+                {investor.sectors.map(s => (
+                  <span key={s} className={clsx('text-xs px-2 py-0.5 rounded-full', darkMode ? 'bg-gray-700 text-gray-300' : 'bg-secondary-light text-primary')}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Criteria */}
+            <div>
+              <p className={clsx('text-xs font-medium mb-1', darkMode ? 'text-gray-300' : 'text-gray-600')}>Critères clés</p>
+              <ul className="space-y-0.5">
+                {investor.criteria.map(c => (
+                  <li key={c} className={clsx('text-xs flex items-center gap-1.5', darkMode ? 'text-gray-400' : 'text-gray-600')}>
+                    <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Stages */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className={clsx('text-xs font-medium', darkMode ? 'text-gray-300' : 'text-gray-600')}>Stades :</p>
+              {investor.stages.map(s => (
+                <span key={s} className={clsx('text-xs px-2 py-0.5 rounded-full border', darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600')}>
+                  {s}
+                </span>
+              ))}
+            </div>
+
+            {/* Website */}
+            <a href={investor.website} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+              <ExternalLink className="h-3 w-3" />
+              {investor.website.replace('https://', '')}
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Score breakdown bar ───────────────────────────────────────────────────────
+const BreakdownBar: React.FC<{ label: string; value: number; max: number; darkMode: boolean }> = ({
+  label, value, max, darkMode
+}) => (
+  <div className="flex items-center gap-2">
+    <span className={clsx('text-xs w-14 flex-shrink-0', darkMode ? 'text-gray-400' : 'text-gray-500')}>{label}</span>
+    <div className={clsx('flex-1 h-1.5 rounded-full', darkMode ? 'bg-gray-700' : 'bg-gray-100')}>
+      <div
+        className="h-full rounded-full bg-primary transition-all duration-500"
+        style={{ width: `${(value / max) * 100}%` }}
+      />
+    </div>
+    <span className={clsx('text-xs w-8 text-right', darkMode ? 'text-gray-300' : 'text-gray-700')}>
+      {value}/{max}
+    </span>
+  </div>
+);
+
+// ─── Funding strategy helpers ──────────────────────────────────────────────────
+function stageLabel(stage: string): string {
+  const map: Record<string, string> = {
+    'pre-seed': 'Pre-seed', 'seed': 'Seed', 'series-a': 'Série A', 'series-b': 'Série B',
+  };
+  return map[stage] ?? stage;
+}
+
+function stageTimeline(stage: string): string {
+  const map: Record<string, string> = {
+    'pre-seed': '3 – 5 mois', 'seed': '4 – 6 mois',
+    'series-a': '6 – 9 mois', 'series-b': '9 – 12 mois',
+  };
+  return map[stage] ?? '4 – 6 mois';
+}
+
+function computeMix(startup: TestStartup, nonDilutiveResults: MatchResult[]) {
+  // Sum of top-3 non-dilutive max tickets, capped at 40% of funding need
+  const cap = startup.fundingAmount * 0.4;
+  const ndPotential = Math.min(
+    nonDilutiveResults.slice(0, 3).reduce((acc, r) => acc + r.investor.ticketMax, 0),
+    cap
+  );
+  const dilutiveNeeded = startup.fundingAmount - ndPotential;
+  const ndPct = Math.round((ndPotential / startup.fundingAmount) * 100);
+  const dPct = 100 - ndPct;
+  return { ndPotential, dilutiveNeeded, ndPct, dPct };
+}
+
+// ─── Funding strategy block ────────────────────────────────────────────────────
+const FundingStrategy: React.FC<{
+  startup: TestStartup;
+  nonDilutiveResults: MatchResult[];
+  darkMode: boolean;
+}> = ({ startup, nonDilutiveResults, darkMode }) => {
+  const { ndPotential, dilutiveNeeded, ndPct, dPct } = computeMix(startup, nonDilutiveResults);
+  const fmt = (n: number) => n >= 1_000_000
+    ? `${(n / 1_000_000).toFixed(1)}M€`
+    : `${Math.round(n / 1000)}K€`;
+
+  const tile = clsx('flex-1 rounded-xl p-4', darkMode ? 'bg-gray-700/60' : 'bg-gray-50');
+
+  return (
+    <div className={clsx(
+      'rounded-xl border p-5 mb-6',
+      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+    )}>
+      <div className="flex items-center gap-2 mb-5">
+        <div className={clsx('p-1.5 rounded-lg', darkMode ? 'bg-gray-700' : 'bg-secondary-light')}>
+          <TrendingUp className="h-4 w-4 text-primary" />
+        </div>
+        <h2 className={clsx('text-sm font-semibold', darkMode ? 'text-white' : 'text-gray-900')}>
+          Stratégie de financement recommandée
+        </h2>
+      </div>
+
+      {/* 3 KPI tiles */}
+      <div className="flex gap-3 mb-5 flex-wrap sm:flex-nowrap">
+        {/* Stage */}
+        <div className={tile}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Target className="h-3.5 w-3.5 text-primary" />
+            <span className={clsx('text-xs font-medium', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+              Stade actuel
+            </span>
+          </div>
+          <p className={clsx('text-lg font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
+            {stageLabel(startup.stage)}
+          </p>
+          <p className={clsx('text-xs', darkMode ? 'text-gray-500' : 'text-gray-400')}>
+            {startup.location}
+          </p>
+        </div>
+
+        {/* Objective */}
+        <div className={tile}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <ArrowUpRight className="h-3.5 w-3.5 text-primary" />
+            <span className={clsx('text-xs font-medium', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+              Objectif de levée
+            </span>
+          </div>
+          <p className={clsx('text-lg font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
+            {fmt(startup.fundingAmount)}
+          </p>
+          <p className={clsx('text-xs', darkMode ? 'text-gray-500' : 'text-gray-400')}>
+            dont {fmt(ndPotential)} non-dilutif possible
+          </p>
+        </div>
+
+        {/* Timeline */}
+        <div className={tile}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Calendar className="h-3.5 w-3.5 text-primary" />
+            <span className={clsx('text-xs font-medium', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+              Délai estimé
+            </span>
+          </div>
+          <p className={clsx('text-lg font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
+            {stageTimeline(startup.stage)}
+          </p>
+          <p className={clsx('text-xs', darkMode ? 'text-gray-500' : 'text-gray-400')}>
+            Pour boucler la levée
+          </p>
+        </div>
+      </div>
+
+      {/* Mix bar */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <span className={clsx('text-xs font-medium', darkMode ? 'text-gray-300' : 'text-gray-700')}>
+            Mix recommandé
+          </span>
+          <span className={clsx('text-xs', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+            {fmt(dilutiveNeeded)} dilutif + {fmt(ndPotential)} non-dilutif
+          </span>
+        </div>
+        <div className={clsx('w-full h-5 rounded-full overflow-hidden flex', darkMode ? 'bg-gray-700' : 'bg-gray-100')}>
+          <div
+            className="h-full bg-primary flex items-center justify-center transition-all duration-700"
+            style={{ width: `${dPct}%` }}
+          >
+            {dPct > 15 && <span className="text-white text-xs font-bold">{dPct}%</span>}
+          </div>
+          <div
+            className="h-full bg-green-400 flex items-center justify-center transition-all duration-700"
+            style={{ width: `${ndPct}%` }}
+          >
+            {ndPct > 10 && <span className="text-white text-xs font-bold">{ndPct}%</span>}
+          </div>
+        </div>
+        <div className="flex gap-4 mt-2">
+          <span className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span className="w-2.5 h-2.5 rounded-sm bg-primary inline-block" />
+            Dilutif ({dPct}% · {fmt(dilutiveNeeded)})
+          </span>
+          <span className="flex items-center gap-1.5 text-xs text-gray-500">
+            <span className="w-2.5 h-2.5 rounded-sm bg-green-400 inline-block" />
+            Non-dilutif ({ndPct}% · {fmt(ndPotential)})
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main page ─────────────────────────────────────────────────────────────────
+const FundraisingPage: React.FC = () => {
+  const [darkMode, setDarkMode] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+  const [selectedStartup, setSelectedStartup] = useState<TestStartup | null>(null);
+  const [activeTab, setActiveTab] = useState<'dilutive' | 'non-dilutive'>('dilutive');
+
+  useEffect(() => {
+    setDarkMode(document.documentElement.classList.contains('dark'));
+  }, []);
+
+  // Compute match results whenever selected startup changes
+  const matchResults = selectedStartup ? matchInvestors(selectedStartup) : null;
+
+  const card = clsx(
+    'rounded-xl border shadow-sm p-6',
+    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+  );
+
+  const labelCls = clsx('text-sm font-medium', darkMode ? 'text-gray-200' : 'text-gray-700');
+
+  return (
+    <div className={clsx('py-8 px-4 sm:px-6 lg:px-8 min-h-full', darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900')}>
+      <div className="max-w-5xl mx-auto">
+
+        {/* ── Header ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className={clsx(
-              "text-2xl font-bold",
-              darkMode ? "text-white" : "text-gray-900"
-            )}>
-              Levée de fonds
+            <h1 className={clsx('text-2xl font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
+              Matching Investisseurs
             </h1>
-            <p className={clsx(
-              "mt-1",
-              darkMode ? "text-gray-400" : "text-gray-500"
-            )}>
-              Explorez les options de financement adaptées à votre projet
+            <p className={clsx('mt-1 text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+              Algorithme de matching par secteur, stade, ticket et localisation
             </p>
           </div>
-          
-          <div className="mt-4 md:mt-0">
-            <button className={clsx(
-              "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-              darkMode 
-                ? "bg-purple-600 text-white hover:bg-purple-700" 
-                : "bg-primary text-white hover:bg-opacity-90"
-            )}>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Recommandations IA
-            </button>
-          </div>
+
+          {/* Demo mode toggle */}
+          <button
+            onClick={() => {
+              setDemoMode(p => !p);
+              if (!demoMode) setSelectedStartup(null);
+            }}
+            className={clsx(
+              'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all',
+              demoMode
+                ? 'bg-primary text-white border-primary'
+                : darkMode
+                  ? 'bg-gray-800 border-gray-600 text-gray-200 hover:border-gray-400'
+                  : 'bg-white border-gray-300 text-gray-700 hover:border-primary'
+            )}
+          >
+            {demoMode ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
+            Mode démo
+          </button>
         </div>
-        
-        <div className={clsx(
-          "rounded-xl shadow-sm overflow-hidden mb-8",
-          darkMode ? "bg-gray-800" : "bg-white"
-        )}>
-          <div className="p-6">
-            <div className="flex items-start mb-6">
-              <div className={clsx(
-                "p-2 rounded-full mr-3 flex-shrink-0",
-                darkMode ? "bg-purple-900/30" : "bg-secondary-light"
-              )}>
-                <TrendingUp className={clsx(
-                  "h-5 w-5",
-                  darkMode ? "text-purple-400" : "text-primary"
-                )} />
-              </div>
-              <div>
-                <h2 className={clsx(
-                  "text-lg font-semibold",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  Votre stratégie de financement
-                </h2>
-                <p className={clsx(
-                  "mt-1",
-                  darkMode ? "text-gray-400" : "text-gray-500"
-                )}>
-                  Basé sur votre profil, nous recommandons un mix de financement dilutif et non dilutif pour optimiser votre structure de capital.
-                </p>
-              </div>
+
+        {/* ── Demo mode — startup selector ── */}
+        {demoMode && (
+          <div className={clsx(card, 'mb-6')}>
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="h-4 w-4 text-primary" />
+              <h2 className={clsx('text-sm font-semibold', darkMode ? 'text-white' : 'text-gray-900')}>
+                Testez avec 5 profils startups réels
+              </h2>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className={clsx(
-                "p-4 rounded-lg",
-                darkMode ? "bg-gray-700" : "bg-gray-50"
-              )}>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className={clsx(
-                    "text-sm font-medium",
-                    darkMode ? "text-white" : "text-gray-900"
-                  )}>
-                    Objectif de levée
-                  </h3>
-                  <span className={clsx(
-                    "text-sm font-semibold",
-                    darkMode ? "text-purple-400" : "text-primary"
-                  )}>
-                    3 000 000 €
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className={clsx(
-                    darkMode ? "text-gray-400" : "text-gray-500"
-                  )}>
-                    Série A - Q3 2024
-                  </span>
-                </div>
-              </div>
-              
-              <div className={clsx(
-                "p-4 rounded-lg",
-                darkMode ? "bg-gray-700" : "bg-gray-50"
-              )}>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className={clsx(
-                    "text-sm font-medium",
-                    darkMode ? "text-white" : "text-gray-900"
-                  )}>
-                    Mix recommandé
-                  </h3>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-full bg-gray-200 dark:bg-gray-600 h-4 rounded-full overflow-hidden">
-                    <div className="flex h-full">
-                      <div 
-                        className="bg-purple-500 dark:bg-purple-600" 
-                        style={{width: '80%'}}
-                        title="Dilutif (equity): 80%"
-                      />
-                      <div 
-                        className="bg-blue-500 dark:bg-blue-600" 
-                        style={{width: '10%'}}
-                        title="Non dilutif (dette): 10%"
-                      />
-                      <div 
-                        className="bg-green-500 dark:bg-green-600" 
-                        style={{width: '10%'}}
-                        title="Non dilutif (subventions): 10%"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between text-xs mt-2">
-                  <span className={clsx(
-                    darkMode ? "text-purple-400" : "text-purple-600"
-                  )}>
-                    Dilutif: 80%
-                  </span>
-                  <span className={clsx(
-                    darkMode ? "text-green-400" : "text-green-600"
-                  )}>
-                    Non dilutif: 20%
-                  </span>
-                </div>
-              </div>
-              
-              <div className={clsx(
-                "p-4 rounded-lg",
-                darkMode ? "bg-gray-700" : "bg-gray-50"
-              )}>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className={clsx(
-                    "text-sm font-medium",
-                    darkMode ? "text-white" : "text-gray-900"
-                  )}>
-                    Structure d'actionnariat
-                  </h3>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-full bg-gray-200 dark:bg-gray-600 h-4 rounded-full overflow-hidden">
-                    <div className="flex h-full">
-                      <div 
-                        className="bg-blue-500 dark:bg-blue-600" 
-                        style={{width: '65%'}}
-                        title="Fondateurs: 65%"
-                      />
-                      <div 
-                        className="bg-green-500 dark:bg-green-600" 
-                        style={{width: '12%'}}
-                        title="Investisseurs Seed: 12%"
-                      />
-                      <div 
-                        className="bg-purple-500 dark:bg-purple-600" 
-                        style={{width: '20%'}}
-                        title="Investisseurs Série A: 20%"
-                      />
-                      <div 
-                        className="bg-yellow-500 dark:bg-yellow-600" 
-                        style={{width: '3%'}}
-                        title="Employés: 3%"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between text-xs mt-2">
-                  <span className={clsx(
-                    darkMode ? "text-blue-400" : "text-blue-600"
-                  )}>
-                    Fondateurs: 65%
-                  </span>
-                  <span className={clsx(
-                    darkMode ? "text-purple-400" : "text-purple-600"
-                  )}>
-                    Investisseurs: 32%
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <Tabs 
-              value={activeTab} 
-              onValueChange={setActiveTab}
-              className="w-full"
-            >
-              <TabsList className={clsx(
-                "grid w-full grid-cols-2 mb-6",
-                darkMode ? "bg-gray-700" : "bg-gray-100"
-              )}>
-                <TabsTrigger 
-                  value="non-dilutive" 
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {testStartups.map(startup => (
+                <button
+                  key={startup.id}
+                  onClick={() => setSelectedStartup(startup)}
                   className={clsx(
-                    "flex items-center justify-center py-3",
-                    darkMode ? "data-[state=active]:bg-gray-800 data-[state=active]:text-purple-400" : "data-[state=active]:bg-white data-[state=active]:text-primary"
+                    'text-left p-3 rounded-xl border transition-all duration-150',
+                    selectedStartup?.id === startup.id
+                      ? 'border-primary bg-secondary-light ring-1 ring-primary'
+                      : darkMode
+                        ? 'border-gray-600 hover:border-gray-400 bg-gray-700/50'
+                        : 'border-gray-200 hover:border-primary bg-gray-50'
                   )}
                 >
-                  <Building className="h-4 w-4 mr-2" />
-                  Financement Non Dilutif
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="dilutive" 
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">{startup.emoji}</span>
+                    <span className={clsx('text-sm font-semibold truncate', darkMode ? 'text-white' : 'text-gray-900')}>
+                      {startup.name}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-1.5">
+                    <span className={clsx('text-xs px-1.5 py-0.5 rounded', darkMode ? 'bg-gray-600 text-gray-300' : 'bg-white border border-gray-200 text-gray-600')}>
+                      {startup.sector}
+                    </span>
+                    <span className={clsx('text-xs px-1.5 py-0.5 rounded', darkMode ? 'bg-gray-600 text-gray-300' : 'bg-white border border-gray-200 text-gray-600')}>
+                      {startup.stage}
+                    </span>
+                  </div>
+                  <p className={clsx('text-xs leading-snug', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+                    {(startup.fundingAmount / 1000).toFixed(0)}K€ recherchés
+                    {startup.mrr > 0 ? ` · ${(startup.mrr / 1000).toFixed(0)}K€ MRR` : ' · Pre-revenue'}
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            {!selectedStartup && (
+              <p className={clsx('text-xs mt-3 flex items-center gap-1.5', darkMode ? 'text-gray-500' : 'text-gray-400')}>
+                <Info className="h-3.5 w-3.5" />
+                Sélectionne un profil pour voir les investisseurs matchés
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── No profile selected ── */}
+        {!selectedStartup && (
+          <div className={clsx(card, 'text-center py-16')}>
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-secondary-light mb-4">
+              <Star className="h-7 w-7 text-primary" />
+            </div>
+            <h2 className={clsx('text-lg font-semibold mb-2', darkMode ? 'text-white' : 'text-gray-900')}>
+              {demoMode ? 'Choisis un profil ci-dessus' : 'Active le mode démo'}
+            </h2>
+            <p className={clsx('text-sm max-w-sm mx-auto', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+              {demoMode
+                ? 'Clique sur un des 5 profils pour lancer le matching et voir les investisseurs compatibles.'
+                : 'Active le mode démo en haut à droite pour tester le matching avec 5 profils startups prédéfinis — sans remplir le formulaire complet.'}
+            </p>
+            {!demoMode && (
+              <button
+                onClick={() => setDemoMode(true)}
+                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-opacity-90 transition"
+              >
+                <ToggleRight className="h-4 w-4" />
+                Activer le mode démo
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Results ── */}
+        {selectedStartup && matchResults && (
+          <>
+            {/* Startup recap */}
+            <div className={clsx(card, 'mb-6')}>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-2xl">{selectedStartup.emoji}</span>
+                    <h2 className={clsx('text-lg font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
+                      {selectedStartup.name}
+                    </h2>
+                  </div>
+                  <p className={clsx('text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+                    {selectedStartup.description}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: 'Secteur', val: selectedStartup.sector },
+                    { label: 'Stade', val: selectedStartup.stage },
+                    { label: 'Besoin', val: `${(selectedStartup.fundingAmount / 1000).toFixed(0)}K€` },
+                    { label: 'MRR', val: selectedStartup.mrr > 0 ? `${(selectedStartup.mrr / 1000).toFixed(0)}K€` : '0' },
+                    { label: 'Ville', val: selectedStartup.location },
+                  ].map(({ label, val }) => (
+                    <div key={label} className={clsx('px-3 py-1.5 rounded-lg', darkMode ? 'bg-gray-700' : 'bg-gray-50')}>
+                      <p className={clsx('text-xs', darkMode ? 'text-gray-400' : 'text-gray-500')}>{label}</p>
+                      <p className={clsx('text-sm font-semibold', darkMode ? 'text-white' : 'text-gray-900')}>{val}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Score breakdown of best match */}
+              {matchResults.dilutive[0] && (
+                <div className={clsx('mt-4 pt-4 border-t', darkMode ? 'border-gray-700' : 'border-gray-100')}>
+                  <p className={clsx('text-xs font-medium mb-2', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+                    Détail du scoring — meilleur match ({matchResults.dilutive[0].investor.name})
+                  </p>
+                  <div className="space-y-1.5">
+                    <BreakdownBar label="Secteur" value={matchResults.dilutive[0].breakdown.sector} max={40} darkMode={darkMode} />
+                    <BreakdownBar label="Stade" value={matchResults.dilutive[0].breakdown.stage} max={30} darkMode={darkMode} />
+                    <BreakdownBar label="Ticket" value={matchResults.dilutive[0].breakdown.ticket} max={20} darkMode={darkMode} />
+                    <BreakdownBar label="Localisation" value={matchResults.dilutive[0].breakdown.location} max={10} darkMode={darkMode} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Funding strategy */}
+            <FundingStrategy
+              startup={selectedStartup}
+              nonDilutiveResults={matchResults.nonDilutive}
+              darkMode={darkMode}
+            />
+
+            {/* Tabs */}
+            <div className={clsx('flex rounded-xl border overflow-hidden mb-4', darkMode ? 'border-gray-700' : 'border-gray-200')}>
+              {(['dilutive', 'non-dilutive'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
                   className={clsx(
-                    "flex items-center justify-center py-3",
-                    darkMode ? "data-[state=active]:bg-gray-800 data-[state=active]:text-purple-400" : "data-[state=active]:bg-white data-[state=active]:text-primary"
+                    'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all',
+                    activeTab === tab
+                      ? darkMode ? 'bg-gray-800 text-white' : 'bg-white text-primary'
+                      : darkMode ? 'bg-gray-700/50 text-gray-400 hover:text-gray-200' : 'bg-gray-50 text-gray-500 hover:text-gray-700'
                   )}
                 >
-                  <Users className="h-4 w-4 mr-2" />
-                  Financement Dilutif
-                </TabsTrigger>
-              </TabsList>
-              
-              {/* Non-Dilutive Funding Tab */}
-              <TabsContent value="non-dilutive">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className={clsx(
-                      "text-lg font-medium",
-                      darkMode ? "text-white" : "text-gray-900"
-                    )}>
-                      Financements non dilutifs recommandés
-                    </h3>
-                    <div className={clsx(
-                      "px-3 py-1 rounded-full text-xs font-medium",
-                      darkMode ? "bg-purple-900/30 text-purple-300" : "bg-secondary-light text-primary"
-                    )}>
-                      Objectif: 600 000 € (20%)
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {nonDilutiveSources.map((source) => (
-                      <div 
-                        key={source.id}
-                        className={clsx(
-                          "p-4 rounded-xl border transition-colors",
-                          darkMode ? "bg-gray-700 border-gray-600 hover:border-purple-500/50" : "bg-white border-gray-200 hover:border-primary/30"
-                        )}
-                      >
-                        <div className="flex flex-col md:flex-row md:items-start">
-                          <div className="flex-shrink-0 mb-4 md:mb-0 md:mr-4">
-                            <div className="w-16 h-16 rounded-lg overflow-hidden">
-                              <img 
-                                src={source.logo} 
-                                alt={source.name} 
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="flex-1">
-                            <div className="flex flex-col md:flex-row md:items-start md:justify-between">
-                              <div>
-                                <h4 className={clsx(
-                                  "text-lg font-medium",
-                                  darkMode ? "text-white" : "text-gray-900"
-                                )}>
-                                  {source.name}
-                                </h4>
-                                <div className="flex items-center mt-1">
-                                  <span className={clsx(
-                                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mr-2",
-                                    source.type === 'Subvention'
-                                      ? darkMode ? "bg-green-900/30 text-green-300" : "bg-green-100 text-green-800"
-                                      : source.type === 'Prêt'
-                                        ? darkMode ? "bg-blue-900/30 text-blue-300" : "bg-blue-100 text-blue-800"
-                                        : darkMode ? "bg-purple-900/30 text-purple-300" : "bg-purple-100 text-purple-800"
-                                  )}>
-                                    {source.type}
-                                  </span>
-                                  <span className={clsx(
-                                    "text-sm",
-                                    darkMode ? "text-gray-400" : "text-gray-500"
-                                  )}>
-                                    {source.amount}
-                                  </span>
-                                </div>
-                              </div>
-                              
-                              <div className={clsx(
-                                "mt-2 md:mt-0 px-3 py-1 rounded-full text-xs font-medium",
-                                darkMode ? "bg-purple-900/30 text-purple-300" : "bg-secondary-light text-primary"
-                              )}>
-                                Match {source.match}%
-                              </div>
-                            </div>
-                            
-                            <p className={clsx(
-                              "mt-2 text-sm",
-                              darkMode ? "text-gray-300" : "text-gray-600"
-                            )}>
-                              {source.description}
-                            </p>
-                            
-                            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <h5 className={clsx(
-                                  "text-xs font-medium mb-2",
-                                  darkMode ? "text-gray-300" : "text-gray-700"
-                                )}>
-                                  Éligibilité
-                                </h5>
-                                <p className={clsx(
-                                  "text-xs",
-                                  darkMode ? "text-gray-400" : "text-gray-500"
-                                )}>
-                                  {source.eligibility}
-                                </p>
-                                <p className={clsx(
-                                  "text-xs mt-1",
-                                  darkMode ? "text-gray-400" : "text-gray-500"
-                                )}>
-                                  <span className="font-medium">Date limite:</span> {source.deadline}
-                                </p>
-                              </div>
-                              
-                              <div>
-                                <h5 className={clsx(
-                                  "text-xs font-medium mb-2",
-                                  darkMode ? "text-gray-300" : "text-gray-700"
-                                )}>
-                                  Documents requis
-                                </h5>
-                                <div className="space-y-1">
-                                  {source.forms.map((form, index) => (
-                                    <div key={index} className="flex items-center">
-                                      {renderDocumentIcon(form.type)}
-                                      <a 
-                                        href={form.url}
-                                        className={clsx(
-                                          "text-xs ml-2 hover:underline",
-                                          darkMode ? "text-purple-400" : "text-primary"
-                                        )}
-                                      >
-                                        {form.name}
-                                      </a>
-                                      <Download className={clsx(
-                                        "h-3 w-3 ml-1",
-                                        darkMode ? "text-gray-400" : "text-gray-500"
-                                      )} />
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                              <a 
-                                href={source.website}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={clsx(
-                                  "inline-flex items-center text-sm hover:underline",
-                                  darkMode ? "text-purple-400" : "text-primary"
-                                )}
-                              >
-                                Visiter le site
-                                <ExternalLink className="h-3 w-3 ml-1" />
-                              </a>
-                              
-                              <div className="mt-2 sm:mt-0 flex space-x-2">
-                                <button className={clsx(
-                                  "inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium transition-colors",
-                                  darkMode 
-                                    ? "bg-gray-600 text-white hover:bg-gray-500" 
-                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                )}>
-                                  Générer les documents
-                                </button>
-                                <button className={clsx(
-                                  "inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium transition-colors",
-                                  darkMode 
-                                    ? "bg-purple-600 text-white hover:bg-purple-700" 
-                                    : "bg-primary text-white hover:bg-opacity-90"
-                                )}>
-                                  Ajouter à ma sélection
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-              
-              {/* Dilutive Funding Tab */}
-              <TabsContent value="dilutive">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className={clsx(
-                      "text-lg font-medium",
-                      darkMode ? "text-white" : "text-gray-900"
-                    )}>
-                      Investisseurs recommandés
-                    </h3>
-                    <div className={clsx(
-                      "px-3 py-1 rounded-full text-xs font-medium",
-                      darkMode ? "bg-purple-900/30 text-purple-300" : "bg-secondary-light text-primary"
-                    )}>
-                      Objectif: 2 400 000 € (80%)
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {dilutiveSources.map((investor) => (
-                      <div 
-                        key={investor.id}
-                        className={clsx(
-                          "p-4 rounded-xl border transition-colors",
-                          darkMode ? "bg-gray-700 border-gray-600 hover:border-purple-500/50" : "bg-white border-gray-200 hover:border-primary/30"
-                        )}
-                      >
-                        <div className="flex flex-col md:flex-row md:items-start">
-                          <div className="flex-shrink-0 mb-4 md:mb-0 md:mr-4">
-                            <div className="w-16 h-16 rounded-lg overflow-hidden">
-                              <img 
-                                src={investor.logo} 
-                                alt={investor.name} 
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="flex-1">
-                            <div className="flex flex-col md:flex-row md:items-start md:justify-between">
-                              <div>
-                                <h4 className={clsx(
-                                  "text-lg font-medium",
-                                  darkMode ? "text-white" : "text-gray-900"
-                                )}>
-                                  {investor.name}
-                                </h4>
-                                <div className="flex items-center mt-1">
-                                  <span className={clsx(
-                                    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mr-2",
-                                    investor.type === 'Venture Capital'
-                                      ? darkMode ? "bg-purple-900/30 text-purple-300" : "bg-purple-100 text-purple-800"
-                                      : investor.type === 'Angel Investors'
-                                        ? darkMode ? "bg-blue-900/30 text-blue-300" : "bg-blue-100 text-blue-800"
-                                        : darkMode ? "bg-green-900/30 text-green-300" : "bg-green-100 text-green-800"
-                                  )}>
-                                    {investor.type}
-                                  </span>
-                                  <span className={clsx(
-                                    "text-sm",
-                                    darkMode ? "text-gray-400" : "text-gray-500"
-                                  )}>
-                                    {investor.stage}
-                                  </span>
-                                </div>
-                              </div>
-                              
-                              <div className={clsx(
-                                "mt-2 md:mt-0 px-3 py-1 rounded-full text-xs font-medium",
-                                darkMode ? "bg-purple-900/30 text-purple-300" : "bg-secondary-light text-primary"
-                              )}>
-                                Match {investor.match}%
-                              </div>
-                            </div>
-                            
-                            <p className={clsx(
-                              "mt-2 text-sm",
-                              darkMode ? "text-gray-300" : "text-gray-600"
-                            )}>
-                              {investor.description}
-                            </p>
-                            
-                            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <h5 className={clsx(
-                                  "text-xs font-medium mb-2",
-                                  darkMode ? "text-gray-300" : "text-gray-700"
-                                )}>
-                                  Informations clés
-                                </h5>
-                                <p className={clsx(
-                                  "text-xs",
-                                  darkMode ? "text-gray-400" : "text-gray-500"
-                                )}>
-                                  <span className="font-medium">Focus:</span> {investor.focus}
-                                </p>
-                                <p className={clsx(
-                                  "text-xs mt-1",
-                                  darkMode ? "text-gray-400" : "text-gray-500"
-                                )}>
-                                  <span className="font-medium">Ticket:</span> {investor.amount}
-                                </p>
-                                <p className={clsx(
-                                  "text-xs mt-1",
-                                  darkMode ? "text-gray-400" : "text-gray-500"
-                                )}>
-                                  <span className="font-medium">Portfolio:</span> {investor.portfolio}
-                                </p>
-                              </div>
-                              
-                              <div>
-                                <h5 className={clsx(
-                                  "text-xs font-medium mb-2",
-                                  darkMode ? "text-gray-300" : "text-gray-700"
-                                )}>
-                                  Contact
-                                </h5>
-                                <div className="space-y-1">
-                                  <div className="flex items-center">
-                                    <Mail className={clsx(
-                                      "h-3 w-3 mr-2",
-                                      darkMode ? "text-gray-400" : "text-gray-500"
-                                    )} />
-                                    <a 
-                                      href={`mailto:${investor.contact.email}`}
-                                      className={clsx(
-                                        "text-xs hover:underline",
-                                        darkMode ? "text-purple-400" : "text-primary"
-                                      )}
-                                    >
-                                      {investor.contact.email}
-                                    </a>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Phone className={clsx(
-                                      "h-3 w-3 mr-2",
-                                      darkMode ? "text-gray-400" : "text-gray-500"
-                                    )} />
-                                    <span className={clsx(
-                                      "text-xs",
-                                      darkMode ? "text-gray-300" : "text-gray-700"
-                                    )}>
-                                      {investor.contact.phone}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Globe className={clsx(
-                                      "h-3 w-3 mr-2",
-                                      darkMode ? "text-gray-400" : "text-gray-500"
-                                    )} />
-                                    <a 
-                                      href={investor.contact.website}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={clsx(
-                                        "text-xs hover:underline",
-                                        darkMode ? "text-purple-400" : "text-primary"
-                                      )}
-                                    >
-                                      {investor.contact.website.replace('https://', '')}
-                                    </a>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                              <a 
-                                href={investor.contact.website}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={clsx(
-                                  "inline-flex items-center text-sm hover:underline",
-                                  darkMode ? "text-purple-400" : "text-primary"
-                                )}
-                              >
-                                Visiter le site
-                                <ExternalLink className="h-3 w-3 ml-1" />
-                              </a>
-                              
-                              <div className="mt-2 sm:mt-0 flex space-x-2">
-                                <button className={clsx(
-                                  "inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium transition-colors",
-                                  darkMode 
-                                    ? "bg-gray-600 text-white hover:bg-gray-500" 
-                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                )}>
-                                  Préparer un pitch
-                                </button>
-                                <button className={clsx(
-                                  "inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium transition-colors",
-                                  darkMode 
-                                    ? "bg-purple-600 text-white hover:bg-purple-700" 
-                                    : "bg-primary text-white hover:bg-opacity-90"
-                                )}>
-                                  Ajouter à ma sélection
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-        
-        <div className={clsx(
-          "rounded-xl shadow-sm overflow-hidden",
-          darkMode ? "bg-gray-800" : "bg-white"
-        )}>
-          <div className="p-6">
-            <div className="flex items-start">
-              <div className={clsx(
-                "p-2 rounded-full mr-3 flex-shrink-0",
-                darkMode ? "bg-amber-900/30" : "bg-amber-100"
-              )}>
-                <Info className={clsx(
-                  "h-5 w-5",
-                  darkMode ? "text-amber-400" : "text-amber-600"
-                )} />
-              </div>
-              <div>
-                <h2 className={clsx(
-                  "text-lg font-semibold",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  Comprendre les types de financement
-                </h2>
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className={clsx(
-                      "text-md font-medium mb-2",
-                      darkMode ? "text-white" : "text-gray-900"
-                    )}>
-                      Financement dilutif (equity)
-                    </h3>
-                    <p className={clsx(
-                      "text-sm",
-                      darkMode ? "text-gray-300" : "text-gray-600"
-                    )}>
-                      Vous cédez une partie du capital de votre entreprise en échange de fonds, ce qui dilue la part des actionnaires existants. Ce type de financement est adapté pour les projets à fort potentiel de croissance nécessitant des investissements importants.
-                    </p>
-                    <div className="mt-2">
-                      <h4 className={clsx(
-                        "text-sm font-medium mb-1",
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      )}>
-                        Avantages:
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li className={clsx(
-                          "text-sm",
-                          darkMode ? "text-gray-400" : "text-gray-500"
-                        )}>
-                          Pas de remboursement à effectuer
-                        </li>
-                        <li className={clsx(
-                          "text-sm",
-                          darkMode ? "text-gray-400" : "text-gray-500"
-                        )}>
-                          Accès à l'expertise et au réseau des investisseurs
-                        </li>
-                        <li className={clsx(
-                          "text-sm",
-                          darkMode ? "text-gray-400" : "text-gray-500"
-                        )}>
-                          Montants généralement plus élevés
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className={clsx(
-                      "text-md font-medium mb-2",
-                      darkMode ? "text-white" : "text-gray-900"
-                    )}>
-                      Financement non dilutif
-                    </h3>
-                    <p className={clsx(
-                      "text-sm",
-                      darkMode ? "text-gray-300" : "text-gray-600"
-                    )}>
-                      Vous obtenez des fonds sans céder de parts de votre entreprise. Cela inclut les subventions, les prêts, les avances remboursables et les crédits d'impôt. Ce type de financement permet de préserver le contrôle des fondateurs.
-                    </p>
-                    <div className="mt-2">
-                      <h4 className={clsx(
-                        "text-sm font-medium mb-1",
-                        darkMode ? "text-gray-300" : "text-gray-700"
-                      )}>
-                        Avantages:
-                      </h4>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li className={clsx(
-                          "text-sm",
-                          darkMode ? "text-gray-400" : "text-gray-500"
-                        )}>
-                          Conservation de l'actionnariat
-                        </li>
-                        <li className={clsx(
-                          "text-sm",
-                          darkMode ? "text-gray-400" : "text-gray-500"
-                        )}>
-                          Taux d'intérêt souvent avantageux (prêts)
-                        </li>
-                        <li className={clsx(
-                          "text-sm",
-                          darkMode ? "text-gray-400" : "text-gray-500"
-                        )}>
-                          Pas de remboursement pour certaines subventions
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <p className={clsx(
-                    "text-sm font-medium",
-                    darkMode ? "text-gray-300" : "text-gray-700"
-                  )}>
-                    Notre recommandation: Une approche mixte
-                  </p>
-                  <p className={clsx(
-                    "text-sm mt-1",
-                    darkMode ? "text-gray-300" : "text-gray-600"
-                  )}>
-                    Pour optimiser votre structure de capital et maximiser vos chances de succès, nous recommandons de combiner financement dilutif et non dilutif. Cette approche vous permet de lever des montants importants tout en préservant une part significative du capital pour les fondateurs.
-                  </p>
-                </div>
-              </div>
+                  {tab === 'dilutive'
+                    ? <><Users className="h-4 w-4" /> Dilutif ({matchResults.dilutive.length})</>
+                    : <><Building className="h-4 w-4" /> Non dilutif ({matchResults.nonDilutive.length})</>
+                  }
+                </button>
+              ))}
             </div>
-          </div>
-        </div>
+
+            {/* Dilutive investors */}
+            {activeTab === 'dilutive' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className={clsx(labelCls, 'font-semibold')}>
+                    Top {matchResults.dilutive.length} investisseurs matchés
+                  </h3>
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" />≥ 80%</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />50–79%</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />{'< 50%'}</span>
+                  </div>
+                </div>
+                {matchResults.dilutive.length === 0 ? (
+                  <div className={clsx(card, 'text-center py-10')}>
+                    <p className={clsx('text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+                      Aucun investisseur dilutif compatible pour ce profil.
+                    </p>
+                  </div>
+                ) : (
+                  matchResults.dilutive.map(result => (
+                    <InvestorCard key={result.investor.id} result={result} darkMode={darkMode} />
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Non-dilutive */}
+            {activeTab === 'non-dilutive' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className={clsx(labelCls, 'font-semibold')}>
+                    Top {matchResults.nonDilutive.length} dispositifs non-dilutifs éligibles
+                  </h3>
+                  <span className={clsx('text-xs px-2 py-1 rounded-full', darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-700')}>
+                    Zéro dilution
+                  </span>
+                </div>
+                {matchResults.nonDilutive.length === 0 ? (
+                  <div className={clsx(card, 'text-center py-10')}>
+                    <p className={clsx('text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+                      Aucun dispositif non-dilutif compatible pour ce profil.
+                    </p>
+                  </div>
+                ) : (
+                  matchResults.nonDilutive.map(result => (
+                    <InvestorCard key={result.investor.id} result={result} darkMode={darkMode} />
+                  ))
+                )}
+
+                {/* Info box */}
+                <div className={clsx(
+                  'flex gap-3 p-4 rounded-xl border mt-4',
+                  darkMode ? 'bg-blue-900/20 border-blue-800 text-blue-300' : 'bg-blue-50 border-blue-100 text-blue-700'
+                )}>
+                  <TrendingUp className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium mb-0.5">Conseil stratégique</p>
+                    <p className="text-xs leading-relaxed opacity-90">
+                      Combiner le CIR avec une levée dilutive permet de réduire le montant levé de 15–30%
+                      et donc la dilution des fondateurs. C'est le white space que Raisup est le seul à combiner.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

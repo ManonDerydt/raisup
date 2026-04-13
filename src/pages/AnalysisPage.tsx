@@ -182,7 +182,7 @@ const AnalysisPage: React.FC = () => {
             <button className={clsx(
               "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors",
               darkMode 
-                ? "bg-purple-600 text-white hover:bg-purple-700" 
+                ? "bg-raisup-black text-white hover:bg-raisup-black/80" 
                 : "bg-primary text-white hover:bg-opacity-90"
             )}>
               <Sparkles className="h-4 w-4 mr-2" />
@@ -201,11 +201,11 @@ const AnalysisPage: React.FC = () => {
               <div className="flex items-center">
                 <div className={clsx(
                   "p-2 rounded-full mr-3",
-                  darkMode ? "bg-purple-900/30" : "bg-secondary-light"
+                  darkMode ? "bg-raisup-pink-pale/20" : "bg-secondary-light"
                 )}>
                   <BarChart3 className={clsx(
                     "h-5 w-5",
-                    darkMode ? "text-purple-400" : "text-primary"
+                    darkMode ? "text-raisup-pink" : "text-primary"
                   )} />
                 </div>
                 <h2 className={clsx(
@@ -774,11 +774,11 @@ const AnalysisPage: React.FC = () => {
               <div className="flex items-center">
                 <div className={clsx(
                   "p-2 rounded-full mr-3",
-                  darkMode ? "bg-purple-900/30" : "bg-secondary-light"
+                  darkMode ? "bg-raisup-pink-pale/20" : "bg-secondary-light"
                 )}>
                   <DollarSign className={clsx(
                     "h-5 w-5",
-                    darkMode ? "text-purple-400" : "text-primary"
+                    darkMode ? "text-raisup-pink" : "text-primary"
                   )} />
                 </div>
                 <h2 className={clsx(
@@ -833,7 +833,7 @@ const AnalysisPage: React.FC = () => {
                       </h4>
                       <span className={clsx(
                         "text-sm font-semibold",
-                        darkMode ? "text-purple-400" : "text-primary"
+                        darkMode ? "text-raisup-pink" : "text-primary"
                       )}>
                         {formatCurrency(financialData.investmentRequirements.total)}
                       </span>
@@ -871,11 +871,9 @@ const AnalysisPage: React.FC = () => {
                             {formatCurrency(financialData.investmentRequirements.breakdown.product)} (40%)
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-600 h-2 rounded-full overflow-hidden">
+                        <div className={clsx("w-full h-2 rounded-full overflow-hidden", darkMode ? "bg-raisup-pink" : "bg-gray-100")}>
                           <div 
-                            className={clsx(
-                              darkMode ? "bg-purple-500" : "bg-primary"
-                            )}
+                            className="h-full rounded-full bg-raisup-pink"
                             style={{ width: '40%' }}
                           />
                         </div>
@@ -894,7 +892,7 @@ const AnalysisPage: React.FC = () => {
                             {formatCurrency(financialData.investmentRequirements.breakdown.marketing)} (30%)
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-600 h-2 rounded-full overflow-hidden">
+                        <div className={clsx("w-full h-2 rounded-full overflow-hidden", darkMode ? "bg-raisup-pink" : "bg-gray-100")}>
                           <div 
                             className={clsx(
                               darkMode ? "bg-blue-500" : "bg-blue-500"
@@ -917,7 +915,7 @@ const AnalysisPage: React.FC = () => {
                             {formatCurrency(financialData.investmentRequirements.breakdown.operations)} (20%)
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-600 h-2 rounded-full overflow-hidden">
+                        <div className={clsx("w-full h-2 rounded-full overflow-hidden", darkMode ? "bg-raisup-pink" : "bg-gray-100")}>
                           <div 
                             className={clsx(
                               darkMode ? "bg-green-500" : "bg-green-500"
@@ -940,7 +938,7 @@ const AnalysisPage: React.FC = () => {
                             {formatCurrency(financialData.investmentRequirements.breakdown.other)} (10%)
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-600 h-2 rounded-full overflow-hidden">
+                        <div className={clsx("w-full h-2 rounded-full overflow-hidden", darkMode ? "bg-raisup-pink" : "bg-gray-100")}>
                           <div 
                             className={clsx(
                               darkMode ? "bg-yellow-500" : "bg-yellow-500"
@@ -1023,7 +1021,7 @@ const AnalysisPage: React.FC = () => {
                         step="100000"
                         value={investmentAmount}
                         onChange={(e) => setInvestmentAmount(parseInt(e.target.value))}
-                        className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                        className={clsx("w-full h-2 rounded-lg appearance-none cursor-pointer", darkMode ? "bg-raisup-pink" : "bg-gray-100")}
                       />
                       <div className="flex justify-between mt-1">
                         <span className={clsx(
@@ -1061,7 +1059,7 @@ const AnalysisPage: React.FC = () => {
                         step="1"
                         value={equityPercentage}
                         onChange={(e) => setEquityPercentage(parseInt(e.target.value))}
-                        className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                        className={clsx("w-full h-2 rounded-lg appearance-none cursor-pointer", darkMode ? "bg-raisup-pink" : "bg-gray-100")}
                       />
                       <div className="flex justify-between mt-1">
                         <span className={clsx(
@@ -1099,7 +1097,7 @@ const AnalysisPage: React.FC = () => {
                         step="1"
                         value={timeToBreakeven}
                         onChange={(e) => setTimeToBreakeven(parseInt(e.target.value))}
-                        className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                        className={clsx("w-full h-2 rounded-lg appearance-none cursor-pointer", darkMode ? "bg-raisup-pink" : "bg-gray-100")}
                       />
                       <div className="flex justify-between mt-1">
                         <span className={clsx(
@@ -1399,11 +1397,11 @@ const AnalysisPage: React.FC = () => {
               <div className="flex items-center">
                 <div className={clsx(
                   "p-2 rounded-full mr-3",
-                  darkMode ? "bg-purple-900/30" : "bg-secondary-light"
+                  darkMode ? "bg-raisup-pink-pale/20" : "bg-secondary-light"
                 )}>
                   <Users className={clsx(
                     "h-5 w-5",
-                    darkMode ? "text-purple-400" : "text-primary"
+                    darkMode ? "text-raisup-pink" : "text-primary"
                   )} />
                 </div>
                 <h2 className={clsx(
@@ -1922,7 +1920,7 @@ const AnalysisPage: React.FC = () => {
                 <div className={clsx(
                   "mt-6 p-4 rounded-lg border-2 border-dashed",
                   darkMode 
-                    ? "bg-purple-900/10 border-purple-800/30 text-purple-300" 
+                    ? "bg-raisup-pink-pale/20 border-raisup-pink/20 text-raisup-pink-dark" 
                     : "bg-secondary-light/30 border-secondary-lighter/50 text-primary"
                 )}>
                   <div className="flex items-start">

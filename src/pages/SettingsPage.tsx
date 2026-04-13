@@ -151,7 +151,7 @@ const SettingsPage: React.FC = () => {
             <button
               onClick={handleToggleDarkMode}
               className={clsx(
-                "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                "inline-flex items-center px-4 py-2 rounded-full font-medium transition-colors",
                 darkMode 
                   ? "bg-gray-700 text-gray-300 hover:bg-gray-600" 
                   : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
@@ -191,7 +191,7 @@ const SettingsPage: React.FC = () => {
                     "flex items-center px-6 py-4 text-sm font-medium border-b-2 transition-colors",
                     activeTab === 'profile'
                       ? darkMode 
-                        ? "border-purple-500 text-purple-400" 
+                        ? "border-raisup-pink text-raisup-pink-dark" 
                         : "border-primary text-primary"
                       : darkMode 
                         ? "border-transparent text-gray-400 hover:text-gray-300" 
@@ -207,7 +207,7 @@ const SettingsPage: React.FC = () => {
                     "flex items-center px-6 py-4 text-sm font-medium border-b-2 transition-colors",
                     activeTab === 'subscription'
                       ? darkMode 
-                        ? "border-purple-500 text-purple-400" 
+                        ? "border-raisup-pink text-raisup-pink-dark" 
                         : "border-primary text-primary"
                       : darkMode 
                         ? "border-transparent text-gray-400 hover:text-gray-300" 
@@ -223,7 +223,7 @@ const SettingsPage: React.FC = () => {
                     "flex items-center px-6 py-4 text-sm font-medium border-b-2 transition-colors",
                     activeTab === 'notifications'
                       ? darkMode 
-                        ? "border-purple-500 text-purple-400" 
+                        ? "border-raisup-pink text-raisup-pink-dark" 
                         : "border-primary text-primary"
                       : darkMode 
                         ? "border-transparent text-gray-400 hover:text-gray-300" 
@@ -239,7 +239,7 @@ const SettingsPage: React.FC = () => {
                     "flex items-center px-6 py-4 text-sm font-medium border-b-2 transition-colors",
                     activeTab === 'security'
                       ? darkMode 
-                        ? "border-purple-500 text-purple-400" 
+                        ? "border-raisup-pink text-raisup-pink-dark" 
                         : "border-primary text-primary"
                       : darkMode 
                         ? "border-transparent text-gray-400 hover:text-gray-300" 
@@ -266,13 +266,13 @@ const SettingsPage: React.FC = () => {
                   <button
                     onClick={() => setEditMode(!editMode)}
                     className={clsx(
-                      "inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                      "inline-flex items-center px-3 py-1.5 rounded-full font-medium transition-colors",
                       editMode
                         ? darkMode 
                           ? "bg-gray-700 text-gray-300 hover:bg-gray-600" 
                           : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                         : darkMode 
-                          ? "bg-purple-600 text-white hover:bg-purple-700" 
+                          ? "bg-raisup-black text-white hover:bg-raisup-black/80" 
                           : "bg-primary text-white hover:bg-opacity-90"
                     )}
                   >
@@ -364,8 +364,8 @@ const SettingsPage: React.FC = () => {
                               "w-full px-3 py-2 rounded-lg border transition-colors",
                               !editMode && "bg-opacity-50",
                               darkMode 
-                                ? "bg-gray-700 border-gray-600 text-white focus:border-purple-500" 
-                                : "bg-white border-gray-300 text-gray-900 focus:border-primary",
+                                ? "bg-gray-700 border-gray-600 text-white focus:border-raisup-pink" 
+                                : "bg-white border-gray-300 text-gray-900 focus:border-raisup-pink",
                               !editMode && (darkMode ? "bg-gray-800" : "bg-gray-50")
                             )}
                           />
@@ -391,8 +391,8 @@ const SettingsPage: React.FC = () => {
                               "w-full px-3 py-2 rounded-lg border transition-colors",
                               !editMode && "bg-opacity-50",
                               darkMode 
-                                ? "bg-gray-700 border-gray-600 text-white focus:border-purple-500" 
-                                : "bg-white border-gray-300 text-gray-900 focus:border-primary",
+                                ? "bg-gray-700 border-gray-600 text-white focus:border-raisup-pink" 
+                                : "bg-white border-gray-300 text-gray-900 focus:border-raisup-pink",
                               !editMode && (darkMode ? "bg-gray-800" : "bg-gray-50")
                             )}
                           />
@@ -418,8 +418,8 @@ const SettingsPage: React.FC = () => {
                               "w-full px-3 py-2 rounded-lg border transition-colors",
                               !editMode && "bg-opacity-50",
                               darkMode 
-                                ? "bg-gray-700 border-gray-600 text-white focus:border-purple-500" 
-                                : "bg-white border-gray-300 text-gray-900 focus:border-primary",
+                                ? "bg-gray-700 border-gray-600 text-white focus:border-raisup-pink" 
+                                : "bg-white border-gray-300 text-gray-900 focus:border-raisup-pink",
                               !editMode && (darkMode ? "bg-gray-800" : "bg-gray-50")
                             )}
                           />
@@ -445,8 +445,8 @@ const SettingsPage: React.FC = () => {
                               "w-full px-3 py-2 rounded-lg border transition-colors",
                               !editMode && "bg-opacity-50",
                               darkMode 
-                                ? "bg-gray-700 border-gray-600 text-white focus:border-purple-500" 
-                                : "bg-white border-gray-300 text-gray-900 focus:border-primary",
+                                ? "bg-gray-700 border-gray-600 text-white focus:border-raisup-pink" 
+                                : "bg-white border-gray-300 text-gray-900 focus:border-raisup-pink",
                               !editMode && (darkMode ? "bg-gray-800" : "bg-gray-50")
                             )}
                           />
@@ -472,8 +472,8 @@ const SettingsPage: React.FC = () => {
                               "w-full px-3 py-2 rounded-lg border transition-colors",
                               !editMode && "bg-opacity-50",
                               darkMode 
-                                ? "bg-gray-700 border-gray-600 text-white focus:border-purple-500" 
-                                : "bg-white border-gray-300 text-gray-900 focus:border-primary",
+                                ? "bg-gray-700 border-gray-600 text-white focus:border-raisup-pink" 
+                                : "bg-white border-gray-300 text-gray-900 focus:border-raisup-pink",
                               !editMode && (darkMode ? "bg-gray-800" : "bg-gray-50")
                             )}
                           />
@@ -498,8 +498,8 @@ const SettingsPage: React.FC = () => {
                               "w-full px-3 py-2 rounded-lg border transition-colors",
                               !editMode && "bg-opacity-50",
                               darkMode 
-                                ? "bg-gray-700 border-gray-600 text-white focus:border-purple-500" 
-                                : "bg-white border-gray-300 text-gray-900 focus:border-primary",
+                                ? "bg-gray-700 border-gray-600 text-white focus:border-raisup-pink" 
+                                : "bg-white border-gray-300 text-gray-900 focus:border-raisup-pink",
                               !editMode && (darkMode ? "bg-gray-800" : "bg-gray-50")
                             )}
                           >
@@ -514,9 +514,9 @@ const SettingsPage: React.FC = () => {
                           <button
                             type="submit"
                             className={clsx(
-                              "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                              "inline-flex items-center px-4 py-2 rounded-full font-medium transition-colors",
                               darkMode 
-                                ? "bg-purple-600 text-white hover:bg-purple-700" 
+                                ? "bg-raisup-black text-white hover:bg-raisup-black/80" 
                                 : "bg-primary text-white hover:bg-opacity-90"
                             )}
                           >
@@ -557,7 +557,7 @@ const SettingsPage: React.FC = () => {
                           </h3>
                           <span className={clsx(
                             "ml-2 px-2 py-0.5 text-xs font-medium rounded-full",
-                            darkMode ? "bg-purple-900/30 text-purple-300" : "bg-secondary-light text-primary"
+                            darkMode ? "bg-raisup-pink-pale/20 text-raisup-pink-dark" : "bg-secondary-light text-primary"
                           )}>
                             Actif
                           </span>
@@ -688,7 +688,7 @@ const SettingsPage: React.FC = () => {
                             </td>
                             <td className={clsx(
                               "px-4 py-3 text-sm text-right",
-                              darkMode ? "text-purple-400" : "text-primary"
+                              darkMode ? "text-raisup-pink-dark" : "text-primary"
                             )}>
                               <button className="hover:underline">Télécharger</button>
                             </td>
@@ -740,7 +740,7 @@ const SettingsPage: React.FC = () => {
                       
                       <button className={clsx(
                         "text-sm font-medium hover:underline",
-                        darkMode ? "text-purple-400" : "text-primary"
+                        darkMode ? "text-raisup-pink-dark" : "text-gray-600"
                       )}>
                         Modifier
                       </button>
@@ -798,7 +798,7 @@ const SettingsPage: React.FC = () => {
                               className={clsx(
                                 "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
                                 notifications.email[item.id as keyof typeof notifications.email]
-                                  ? darkMode ? "bg-purple-600" : "bg-primary"
+                                  ? "bg-raisup-pink"
                                   : darkMode ? "bg-gray-600" : "bg-gray-300"
                               )}
                             >
@@ -850,7 +850,7 @@ const SettingsPage: React.FC = () => {
                               className={clsx(
                                 "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
                                 notifications.sms[item.id as keyof typeof notifications.sms]
-                                  ? darkMode ? "bg-purple-600" : "bg-primary"
+                                  ? "bg-raisup-pink"
                                   : darkMode ? "bg-gray-600" : "bg-gray-300"
                               )}
                             >
@@ -902,7 +902,7 @@ const SettingsPage: React.FC = () => {
                               className={clsx(
                                 "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
                                 notifications.app[item.id as keyof typeof notifications.app]
-                                  ? darkMode ? "bg-purple-600" : "bg-primary"
+                                  ? "bg-raisup-pink"
                                   : darkMode ? "bg-gray-600" : "bg-gray-300"
                               )}
                             >
@@ -1016,7 +1016,7 @@ const SettingsPage: React.FC = () => {
                         
                         <button className={clsx(
                           "text-sm font-medium hover:underline",
-                          darkMode ? "text-purple-400" : "text-primary"
+                          darkMode ? "text-raisup-pink-dark" : "text-gray-600"
                         )}>
                           Gérer
                         </button>
@@ -1104,7 +1104,7 @@ const SettingsPage: React.FC = () => {
           <button
             onClick={handleLogout}
             className={clsx(
-              "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+              "inline-flex items-center px-4 py-2 rounded-full font-medium transition-colors",
               darkMode 
                 ? "bg-gray-700 text-gray-300 hover:bg-gray-600" 
                 : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"

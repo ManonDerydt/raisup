@@ -122,7 +122,7 @@ const DashboardWelcome: React.FC = () => {
       <div className={clsx(
         "bg-gradient-to-r py-12 px-4 sm:px-6 lg:px-8",
         darkMode 
-          ? "from-purple-900 to-purple-800" 
+          ? "from-raisup-black to-gray-900" 
           : "from-secondary-light to-secondary-lighter"
       )}>
         <div className="max-w-4xl mx-auto">
@@ -134,7 +134,7 @@ const DashboardWelcome: React.FC = () => {
               )}>
                 <Sparkles className={clsx(
                   "h-8 w-8",
-                  darkMode ? "text-purple-400" : "text-primary"
+                  darkMode ? "text-raisup-pink" : "text-primary"
                 )} />
               </div>
             </div>
@@ -178,8 +178,7 @@ const DashboardWelcome: React.FC = () => {
           )}>
             <div 
               className={clsx(
-                "h-full transition-all duration-500 ease-out",
-                darkMode ? "bg-purple-600" : "bg-primary"
+                "h-full transition-all duration-500 ease-out bg-raisup-pink"
               )}
               style={{ width: `${(currentStep / 3) * 100}%` }}
             />
@@ -189,17 +188,17 @@ const DashboardWelcome: React.FC = () => {
         {/* Step 1: Dashboard Overview */}
         {currentStep === 1 && (
           <div className={clsx(
-            "rounded-xl shadow-sm p-6 mb-6",
+            "rounded-2xl shadow-sm p-6 mb-6",
             darkMode ? "bg-gray-800" : "bg-white"
           )}>
             <div className="flex items-center mb-4">
               <div className={clsx(
                 "rounded-full p-2 mr-3",
-                darkMode ? "bg-purple-900" : "bg-secondary-light"
+                darkMode ? "bg-raisup-pink-pale/20" : "bg-secondary-light"
               )}>
                 <LayoutDashboard className={clsx(
                   "h-5 w-5",
-                  darkMode ? "text-purple-400" : "text-primary"
+                  darkMode ? "text-raisup-pink" : "text-primary"
                 )} />
               </div>
               <h3 className={clsx(
@@ -220,7 +219,7 @@ const DashboardWelcome: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className={clsx(
-                "border rounded-lg p-4",
+                "border rounded-2xl p-4",
                 darkMode ? "border-gray-700" : "border-gray-200"
               )}>
                 <h4 className={clsx(
@@ -238,7 +237,7 @@ const DashboardWelcome: React.FC = () => {
                     </span>
                     <span className={clsx(
                       "font-medium",
-                      darkMode ? "text-purple-400" : "text-primary"
+                      darkMode ? "text-raisup-pink" : "text-primary"
                     )}>
                       {companyData.progress}%
                     </span>
@@ -250,7 +249,7 @@ const DashboardWelcome: React.FC = () => {
                     <div 
                       className={clsx(
                         "h-full",
-                        darkMode ? "bg-purple-600" : "bg-primary"
+                        "bg-raisup-pink"
                       )}
                       style={{ width: `${companyData.progress}%` }}
                     />
@@ -265,7 +264,7 @@ const DashboardWelcome: React.FC = () => {
               </div>
               
               <div className={clsx(
-                "border rounded-lg p-4",
+                "border rounded-2xl p-4",
                 darkMode ? "border-gray-700" : "border-gray-200"
               )}>
                 <h4 className={clsx(
@@ -283,7 +282,7 @@ const DashboardWelcome: React.FC = () => {
                     </span>
                     <span className={clsx(
                       "font-medium",
-                      darkMode ? "text-purple-400" : "text-primary"
+                      darkMode ? "text-raisup-pink" : "text-primary"
                     )}>
                       {companyData.completedSteps}/{companyData.totalSteps}
                     </span>
@@ -295,7 +294,7 @@ const DashboardWelcome: React.FC = () => {
                     <div 
                       className={clsx(
                         "h-full",
-                        darkMode ? "bg-purple-600" : "bg-primary"
+                        "bg-raisup-pink"
                       )}
                       style={{ width: `${(companyData.completedSteps / companyData.totalSteps) * 100}%` }}
                     />
@@ -311,7 +310,7 @@ const DashboardWelcome: React.FC = () => {
             </div>
             
             <div className={clsx(
-              "rounded-lg p-4 mb-6",
+              "rounded-2xl p-4 mb-6",
               darkMode ? "bg-gray-700/50" : "bg-gray-50"
             )}>
               <h4 className={clsx(
@@ -345,10 +344,10 @@ const DashboardWelcome: React.FC = () => {
               onClick={handleNextStep}
               disabled={loading}
               className={clsx(
-                "w-full flex items-center justify-center py-3 px-6 rounded-xl font-medium transition-all duration-200",
+                "w-full flex items-center justify-center py-3 px-6 rounded-full font-semibold transition-all duration-200",
                 darkMode 
-                  ? "bg-purple-600 text-white hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50" 
-                  : "bg-primary text-white hover:bg-opacity-90 focus:ring-2 focus:ring-primary focus:ring-opacity-50",
+                  ? "bg-raisup-black text-white hover:bg-raisup-black/80 focus:ring-2 focus:ring-raisup-pink focus:ring-opacity-30" 
+                  : "bg-raisup-black text-white hover:bg-raisup-black/80",
                 loading && "opacity-70 cursor-not-allowed"
               )}
             >
@@ -367,17 +366,17 @@ const DashboardWelcome: React.FC = () => {
         {/* Step 2: Initial Setup */}
         {currentStep === 2 && (
           <div className={clsx(
-            "rounded-xl shadow-sm p-6 mb-6",
+            "rounded-2xl shadow-sm p-6 mb-6",
             darkMode ? "bg-gray-800" : "bg-white"
           )}>
             <div className="flex items-center mb-4">
               <div className={clsx(
                 "rounded-full p-2 mr-3",
-                darkMode ? "bg-purple-900" : "bg-secondary-light"
+                darkMode ? "bg-raisup-pink-pale/20" : "bg-secondary-light"
               )}>
                 <FileText className={clsx(
                   "h-5 w-5",
-                  darkMode ? "text-purple-400" : "text-primary"
+                  darkMode ? "text-raisup-pink" : "text-primary"
                 )} />
               </div>
               <h3 className={clsx(
@@ -403,7 +402,7 @@ const DashboardWelcome: React.FC = () => {
                 Vérification des informations
               </h4>
               <div className={clsx(
-                "rounded-lg p-4 mb-4",
+                "rounded-2xl p-4 mb-4",
                 darkMode ? "bg-gray-700/50" : "bg-gray-50"
               )}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -467,7 +466,7 @@ const DashboardWelcome: React.FC = () => {
                 <div className="mt-3 text-right">
                   <button className={clsx(
                     "text-sm font-medium hover:underline",
-                    darkMode ? "text-purple-400" : "text-primary"
+                    darkMode ? "text-raisup-pink" : "text-primary"
                   )}>
                     Modifier ces informations
                   </button>
@@ -586,10 +585,10 @@ const DashboardWelcome: React.FC = () => {
               onClick={handleNextStep}
               disabled={loading}
               className={clsx(
-                "w-full flex items-center justify-center py-3 px-6 rounded-xl font-medium transition-all duration-200",
+                "w-full flex items-center justify-center py-3 px-6 rounded-full font-semibold transition-all duration-200",
                 darkMode 
-                  ? "bg-purple-600 text-white hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50" 
-                  : "bg-primary text-white hover:bg-opacity-90 focus:ring-2 focus:ring-primary focus:ring-opacity-50",
+                  ? "bg-raisup-black text-white hover:bg-raisup-black/80 focus:ring-2 focus:ring-raisup-pink focus:ring-opacity-30" 
+                  : "bg-raisup-black text-white hover:bg-raisup-black/80",
                 loading && "opacity-70 cursor-not-allowed"
               )}
             >
@@ -608,17 +607,17 @@ const DashboardWelcome: React.FC = () => {
         {/* Step 3: Connect with Investors */}
         {currentStep === 3 && (
           <div className={clsx(
-            "rounded-xl shadow-sm p-6 mb-6",
+            "rounded-2xl shadow-sm p-6 mb-6",
             darkMode ? "bg-gray-800" : "bg-white"
           )}>
             <div className="flex items-center mb-4">
               <div className={clsx(
                 "rounded-full p-2 mr-3",
-                darkMode ? "bg-purple-900" : "bg-secondary-light"
+                darkMode ? "bg-raisup-pink-pale/20" : "bg-secondary-light"
               )}>
                 <Users className={clsx(
                   "h-5 w-5",
-                  darkMode ? "text-purple-400" : "text-primary"
+                  darkMode ? "text-raisup-pink" : "text-primary"
                 )} />
               </div>
               <h3 className={clsx(
@@ -680,7 +679,7 @@ const DashboardWelcome: React.FC = () => {
                     <div className="ml-auto">
                       <div className={clsx(
                         "px-2 py-1 rounded-full text-xs font-medium",
-                        darkMode ? "bg-[#D3EFDD]text-purple-300" : "bg-secondary-light text-primary"
+                        darkMode ? "bg-[#D3EFDD]text-raisup-pink-dark" : "bg-secondary-light text-primary"
                       )}>
                         Match {investor.match}%
                       </div>
@@ -692,8 +691,8 @@ const DashboardWelcome: React.FC = () => {
                     className={clsx(
                       "w-full py-2 text-sm font-medium rounded-lg flex items-center justify-center",
                       darkMode 
-                        ? "bg-purple-600 text-white hover:bg-purple-700" 
-                        : "bg-primary text-white hover:bg-opacity-90"
+                        ? "bg-raisup-black text-white hover:bg-raisup-black/80" 
+                        : "bg-raisup-black text-white hover:bg-raisup-black/80"
                     )}
                   >
                     <Users className="h-4 w-4 mr-2" />
@@ -704,16 +703,16 @@ const DashboardWelcome: React.FC = () => {
             </div>
             
             <div className={clsx(
-              "rounded-lg p-4 mb-6 flex items-start",
-              darkMode ? "bg-purple-900/20 border border-purple-800/30" : "bg-secondary-light bg-opacity-30"
+              "rounded-2xl p-4 mb-6 flex items-start",
+              darkMode ? "bg-raisup-pink-pale/20 border border-raisup-pink/20" : "bg-secondary-light bg-opacity-30"
             )}>
               <div className={clsx(
                 "p-2 rounded-full mr-3 flex-shrink-0",
-                darkMode ? "bg-purple-900/50" : "bg-white"
+                darkMode ? "bg-raisup-pink-pale/30" : "bg-white"
               )}>
                 <BarChart3 className={clsx(
                   "h-5 w-5",
-                  darkMode ? "text-purple-300" : "text-primary"
+                  darkMode ? "text-raisup-pink-dark" : "text-primary"
                 )} />
               </div>
               <div>
@@ -736,10 +735,10 @@ const DashboardWelcome: React.FC = () => {
               onClick={handleNextStep}
               disabled={loading}
               className={clsx(
-                "w-full flex items-center justify-center py-3 px-6 rounded-xl font-medium transition-all duration-200",
+                "w-full flex items-center justify-center py-3 px-6 rounded-full font-semibold transition-all duration-200",
                 darkMode 
-                  ? "bg-purple-600 text-white hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50" 
-                  : "bg-primary text-white hover:bg-opacity-90 focus:ring-2 focus:ring-primary focus:ring-opacity-50",
+                  ? "bg-raisup-black text-white hover:bg-raisup-black/80 focus:ring-2 focus:ring-raisup-pink focus:ring-opacity-30" 
+                  : "bg-raisup-black text-white hover:bg-raisup-black/80",
                 loading && "opacity-70 cursor-not-allowed"
               )}
             >

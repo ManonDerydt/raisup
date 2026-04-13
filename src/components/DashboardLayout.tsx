@@ -16,7 +16,10 @@ import {
   Moon,
   Sun,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  BarChart2,
+  Star,
+  Send
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -37,8 +40,8 @@ const DashboardLayout: React.FC = () => {
     }
   };
   
-  // Mock user data
-  const user = {
+  // Mock display data (separate from auth user)
+  const mockProfile = {
     name: 'Marie Dupont',
     email: 'marie.dupont@example.com',
     company: 'MediScan SAS',
@@ -71,9 +74,17 @@ const DashboardLayout: React.FC = () => {
   ];
   
   const mainNavItems = [
+    { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
     { name: 'Parcours Financier', icon: TrendingUp, href: '/dashboard/financial-journey' },
     { name: 'Levée de fonds', icon: DollarSign, href: '/dashboard/fundraising' },
-    { name: 'Analyses', icon: BarChart3, href: '/dashboard/analytics' }
+    { name: 'Analyses', icon: BarChart3, href: '/dashboard/analytics' },
+    { name: 'Générateur de Docs', icon: FileText, href: '/dashboard/generate' },
+  ];
+
+  const analyticsNavItems = [
+    { name: 'KPIs', icon: BarChart2, href: '/dashboard/kpis' },
+    { name: 'Score Raisup', icon: Star, href: '/dashboard/score' },
+    { name: 'Investor Update', icon: Send, href: '/dashboard/investor-update' },
   ];
   
   const handleLogout = () => {
@@ -81,6 +92,18 @@ const DashboardLayout: React.FC = () => {
     navigate('/');
   };
   
+  // Auth guard — à réactiver une fois Supabase configuré
+  // if (loading) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-gray-50">
+  //       <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+  //     </div>
+  //   );
+  // }
+  // if (!user) {
+  //   return <Navigate to="/login" replace />;
+  // }
+
   return (
     <div className={clsx(
       "min-h-screen flex",
@@ -92,9 +115,8 @@ const DashboardLayout: React.FC = () => {
         darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
       )}>
       <div className="flex items-center gap-x-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-     
           <div className="flex flex-col">
-             <img src="/raisup_logo.png"  alt="Logo" className="h-20  w-auto"/>
+            <img src="/raisup_logo.png" alt="Logo" className="h-20 w-auto" />
             <span className={clsx(
               "text-xs px-2 py-1 rounded-full w-fit",
               darkMode ? "bg-purple-900/30 text-purple-300" : "bg-[#ffbcec] text-primary"
@@ -103,7 +125,7 @@ const DashboardLayout: React.FC = () => {
             </span>
           </div>
         </div>
-        
+
         <div className="flex flex-col flex-1 overflow-y-auto">
           <nav className="flex-1 px-4 py-6 space-y-1">
             {mainNavItems.map((item) => (
@@ -114,7 +136,7 @@ const DashboardLayout: React.FC = () => {
                   "flex items-center gap-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
                   location.pathname === item.href
                     ? "bg-[#d8ffbd] text-primary"
-                    : darkMode 
+                    : darkMode
                       ? "text-gray-300 hover:bg-gray-700 hover:text-white"
                       : "text-gray-700 hover:bg-gray-100 hover:text-primary"
                 )}
@@ -123,13 +145,36 @@ const DashboardLayout: React.FC = () => {
                 {item.name}
               </Link>
             ))}
+
+            <div className="pt-4">
+              <p className={clsx('px-3 pb-1 text-xs font-semibold uppercase tracking-wider', darkMode ? 'text-gray-500' : 'text-gray-400')}>
+                Suivi & Analytics
+              </p>
+              {analyticsNavItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={clsx(
+                    "flex items-center gap-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                    location.pathname === item.href
+                      ? "bg-[#d8ffbd] text-primary"
+                      : darkMode
+                        ? "text-gray-300 hover:bg-gray-700 hover:text-white"
+                        : "text-gray-700 hover:bg-gray-100 hover:text-primary"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {item.name}
+                </Link>
+              ))}
+            </div>
           </nav>
-          
+
           <div className="px-4 py-4 mt-auto border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
               <img
                 className="h-10 w-10 rounded-full bg-gray-50 object-cover"
-                src={user.avatar}
+                src={mockProfile.avatar}
                 alt=""
               />
               <div className="ml-3 min-w-0 flex-1">
@@ -137,12 +182,12 @@ const DashboardLayout: React.FC = () => {
                   "text-sm font-medium truncate",
                   darkMode ? "text-white" : "text-gray-900"
                 )}>
-                  {user.name}
+                  {mockProfile.name}
                 </p>
                 <p className={clsx( "text-xs truncate",
                   darkMode ? "text-gray-400" : "text-gray-500"
                 )}>
-                  {user.company}
+                  {mockProfile.company}
                 </p>
               </div>
               <button
@@ -170,10 +215,7 @@ const DashboardLayout: React.FC = () => {
           )}>
             <div className="flex px-6 pb-4 items-center justify-between">
               <div className="flex items-center gap-x-2">
-                <Sparkles className={clsx(
-                  "h-6 w-6",
-                  darkMode ? "text-purple-400" : "text-secondary-lighter"
-                )} />
+                <Sparkles className={clsx("h-6 w-6", darkMode ? "text-purple-400" : "text-secondary-lighter")} />
                 <span className={clsx(
                   "text-lg font-semibold",
                   darkMode ? "text-white" : "text-gray-900"
@@ -202,12 +244,8 @@ const DashboardLayout: React.FC = () => {
                   className={clsx(
                     "flex items-center gap-x-2 rounded-md px-3 py-2 text-sm font-medium",
                     location.pathname === item.href
-                      ? darkMode 
-                        ? "bg-gray-700 text-purple-400" 
-                        : "bg-secondary-light text-primary"
-                      : darkMode 
-                        ? "text-gray-300 hover:bg-gray-700 hover:text-white" 
-                        : "text-gray-700 hover:bg-gray-100 hover:text-primary"
+                      ? "bg-raisup-pink-pale text-raisup-pink-dark"
+                      : "text-gray-400 hover:bg-white/10 hover:text-white"
                   )}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -221,7 +259,7 @@ const DashboardLayout: React.FC = () => {
               <div className="flex items-center">
                 <img
                   className="h-10 w-10 rounded-full bg-gray-50 object-cover"
-                  src={user.avatar}
+                  src={mockProfile.avatar}
                   alt=""
                 />
                 <div className="ml-3">
@@ -229,13 +267,13 @@ const DashboardLayout: React.FC = () => {
                     "text-sm font-medium",
                     darkMode ? "text-white" : "text-gray-900"
                   )}>
-                    {user.name}
+                    {mockProfile.name}
                   </p>
                   <p className={clsx(
                     "text-xs",
                     darkMode ? "text-gray-400" : "text-gray-500"
                   )}>
-                    {user.email}
+                    {mockProfile.email}
                   </p>
                 </div>
               </div>
@@ -294,8 +332,8 @@ const DashboardLayout: React.FC = () => {
                     className={clsx(
                       "block w-full rounded-md border-0 py-1.5 pl-10 pr-3 text-sm ring-1 ring-inset focus:ring-2 focus:ring-inset",
                       darkMode 
-                        ? "bg-gray-700 text-white placeholder:text-gray-400 ring-gray-600 focus:ring-purple-500" 
-                        : "bg-white text-gray-900 placeholder:text-gray-400 ring-gray-300 focus:ring-primary"
+                        ? "bg-gray-700 text-white placeholder:text-gray-400 ring-gray-600 focus:ring-raisup-pink" 
+                        : "bg-white text-gray-900 placeholder:text-gray-400 ring-gray-300 focus:ring-raisup-pink"
                     )}
                     placeholder="Rechercher..."
                     type="search"
@@ -357,7 +395,7 @@ const DashboardLayout: React.FC = () => {
                       <button 
                         className={clsx(
                           "text-xs font-medium",
-                          darkMode ? "text-purple-400" : "text-primary"
+                          darkMode ? "text-raisup-pink-dark" : "text-primary"
                         )}
                       >
                         Tout marquer comme lu
@@ -371,8 +409,8 @@ const DashboardLayout: React.FC = () => {
                             "px-4 py-3 hover:bg-opacity-10 transition-colors border-b border-opacity-10 relative",
                             notification.unread
                               ? darkMode
-                                ? "bg-[#d8ffbd] bg-opacity-10 border-purple-800"
-                                : "bg-[#d8ffbd] bg-opacity-30 border-secondary-light" 
+                                ? "bg-raisup-pink-pale/10 border-raisup-pink/20"
+                                : "bg-raisup-pink-pale/20 border-raisup-pink/10" 
                               : darkMode 
                                 ? "border-gray-700" 
                                 : "border-gray-100"
@@ -381,7 +419,7 @@ const DashboardLayout: React.FC = () => {
                           {notification.unread && (
                             <span className={clsx(
                               "absolute left-2 top-4 block h-2 w-2 rounded-full",
-                              darkMode ? "bg-[#d8ffbd]" : "bg-primary"
+                              "bg-raisup-pink"
                             )} />
                           )}
                           <div className="ml-2">
@@ -412,7 +450,7 @@ const DashboardLayout: React.FC = () => {
                         to="/dashboard/notifications" 
                         className={clsx(
                           "text-xs font-medium",
-                          darkMode ? "text-purple-400" : "text-primary"
+                          darkMode ? "text-raisup-pink-dark" : "text-primary"
                         )}
                       >
                         Voir toutes les notifications
@@ -431,14 +469,14 @@ const DashboardLayout: React.FC = () => {
                 >
                   <img
                     className="h-8 w-8 rounded-full bg-gray-50 object-cover"
-                    src={user.avatar}
+                    src={mockProfile.avatar}
                     alt=""
                   />
                   <span className={clsx(
                     "hidden text-sm font-medium lg:block",
                     darkMode ? "text-white" : "text-gray-900"
                   )}>
-                    {user.name}
+                    {mockProfile.name}
                   </span>
                   <ChevronDown className={clsx(
                     "h-4 w-4 hidden lg:block",
@@ -457,7 +495,7 @@ const DashboardLayout: React.FC = () => {
                       <div className="flex items-center">
                         <img
                           className="h-10 w-10 rounded-full bg-gray-50 object-cover"
-                          src={user.avatar}
+                          src={mockProfile.avatar}
                           alt=""
                         />
                         <div className="ml-3">
@@ -465,19 +503,19 @@ const DashboardLayout: React.FC = () => {
                             "text-sm font-medium",
                             darkMode ? "text-white" : "text-gray-900"
                           )}>
-                            {user.name}
+                            {mockProfile.name}
                           </p>
                           <p className={clsx(
                             "text-xs",
                             darkMode ? "text-gray-400" : "text-gray-500"
                           )}>
-                            {user.email}
+                            {mockProfile.email}
                           </p>
                           <p className={clsx(
                             "text-xs font-medium",
-                            darkMode ? "text-purple-400" : "text-primary"
+                            darkMode ? "text-raisup-pink-dark" : "text-primary"
                           )}>
-                            {user.company}
+                            {mockProfile.company}
                           </p>
                         </div>
                       </div>

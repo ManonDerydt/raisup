@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
+import { useAuth } from '../hooks/useAuth';
 
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -14,8 +16,6 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [segment, setSegment] = useState<'B2B' | 'B2C'>('B2B');
-  
-  // Using placeholder logo - replace with actual logo URL when available
 
   // Check if dark mode is enabled
   React.useEffect(() => {
@@ -23,21 +23,24 @@ const LoginPage: React.FC = () => {
     setDarkMode(isDarkMode);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    // Simulate authentication
-    setTimeout(() => {
+    const { error: authError } = await signIn(email, password);
+
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
-      // Redirect based on selected segment
-      if (segment === 'B2B') {
-        navigate('/dashboard/b2b');
-      } else {
-        navigate('/dashboard');
-      }
-    }, 1000);
+      return;
+    }
+
+    if (segment === 'B2B') {
+      navigate('/dashboard/b2b');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   return (
@@ -88,7 +91,7 @@ const LoginPage: React.FC = () => {
                 "px-6 py-2 rounded-full font-semibold text-lg transition",
                 segment === "B2B"
                   ? darkMode
-                    ? "bg-[purple-500] text-white"
+                    ? "bg-raisup-black text-white"
                     : "bg-primary text-white"
                   : darkMode
                   ? "bg-gray-700 text-gray-300 border border-gray-600"
@@ -104,7 +107,7 @@ const LoginPage: React.FC = () => {
                 "px-6 py-2 rounded-full font-semibold text-lg transition",
                 segment === "B2C"
                   ? darkMode
-                    ? "bg-purple-500 text-white"
+                    ? "bg-raisup-black text-white"
                     : "bg-primary text-white"
                   : darkMode
                   ? "bg-gray-700 text-gray-300 border border-gray-600"
@@ -140,8 +143,8 @@ const LoginPage: React.FC = () => {
                 className={clsx(
                   "w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200",
                   darkMode
-                    ? "bg-gray-700 border-gray-600 text-white focus:ring-purple-500/30 focus:border-purple-500"
-                    : "bg-white border-gray-200 text-gray-900 focus:ring-primary/20 focus:border-primary"
+                    ? "bg-gray-700 border-gray-600 text-white focus:ring-raisup-pink/30 focus:border-raisup-pink"
+                    : "bg-white border-gray-200 text-gray-900 focus:ring-raisup-pink/30 focus:border-raisup-pink"
                 )}
                 placeholder={segment === 'B2B' ? "structure@email.com" : "votre@email.com"}
               />
@@ -166,8 +169,8 @@ const LoginPage: React.FC = () => {
                   className={clsx(
                     "w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200",
                     darkMode
-                      ? "bg-gray-700 border-gray-600 text-white focus:ring-purple-500/30 focus:border-purple-500"
-                      : "bg-white border-gray-200 text-gray-900 focus:ring-primary/20 focus:border-primary"
+                      ? "bg-gray-700 border-gray-600 text-white focus:ring-raisup-pink/30 focus:border-raisup-pink"
+                      : "bg-white border-gray-200 text-gray-900 focus:ring-raisup-pink/30 focus:border-raisup-pink"
                   )}
                   placeholder="••••••••"
                 />
@@ -201,8 +204,8 @@ const LoginPage: React.FC = () => {
                   "w-5 h-5 rounded border flex items-center justify-center mr-2 cursor-pointer",
                   rememberMe
                     ? darkMode
-                      ? "border-purple-500 bg-purple-500/30"
-                      : "border-secondary-lighter bg-secondary-light"
+                      ? "border-raisup-pink bg-raisup-pink/20"
+                      : "border-raisup-pink bg-raisup-pink-pale"
                     : darkMode
                       ? "border-gray-600"
                       : "border-gray-300"
@@ -212,7 +215,7 @@ const LoginPage: React.FC = () => {
                 {rememberMe && (
                   <svg className={clsx(
                     "h-3 w-3",
-                    darkMode ? "text-purple-400" : "text-primary"
+                    darkMode ? "text-raisup-pink-dark" : "text-primary"
                   )} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -233,9 +236,9 @@ const LoginPage: React.FC = () => {
               type="submit"
               disabled={loading}
               className={clsx(
-                "w-full py-3 px-4 rounded-xl font-medium flex items-center justify-center space-x-2 transition-all duration-200",
+                "w-full py-3 px-4 rounded-full font-medium flex items-center justify-center space-x-2 transition-all duration-200",
                 darkMode
-                  ? "bg-purple-500 hover:bg-purple-600 text-white"
+                  ? "bg-raisup-black hover:bg-raisup-black/80 text-white"
                   : "bg-primary hover:bg-primary-dark text-white",
                 loading && "opacity-70 cursor-not-allowed"
               )}
@@ -262,7 +265,7 @@ const LoginPage: React.FC = () => {
                 to="/register"
                 className={clsx(
                   "font-medium hover:underline",
-                  darkMode ? "text-purple-400" : "text-primary"
+                  darkMode ? "text-raisup-pink-dark" : "text-primary"
                 )}
               >
                 Créer mon compte

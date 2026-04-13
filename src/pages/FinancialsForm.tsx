@@ -548,7 +548,7 @@ const FinancialsForm: React.FC = () => {
                 
                 <div className="space-y-4">
                   {fields.map((field, index) => (
-                    <div key={field.id} className="p-4 bg-gray-50 rounded-xl">
+                    <div key={field.id} className="p-4 bg-raisup-bg rounded-xl">
                       <div className="flex justify-between items-center mb-3">
                         <h3 className="font-medium">Actionnaire {index + 1}</h3>
                         {fields.length > 1 && (
