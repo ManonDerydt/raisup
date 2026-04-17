@@ -1,0 +1,517 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Sparkles, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import clsx from 'clsx';
+
+export type RaisupFormData = {
+  // Step 1 - Ambition
+  ambition: string;
+
+  // Step 2 - L'entreprise
+  startupName: string;
+  founderName: string;
+  description: string;
+  businessModel: string;
+  sector: string;
+  clientType: string;
+
+  // Step 3 - Siège social
+  country: string;
+  region: string;
+  city: string;
+  legalForm: string;
+  founderShare: number | null;
+
+  // Step 4 - Situation actuelle
+  isPreRevenue: boolean;
+  mrr: number | null;
+  momGrowth: number | null;
+  activeClients: number | null;
+  runway: number | null;
+  burnRate: number | null;
+  teamSize: number | null;
+  hasCTO: boolean;
+
+  // Step 5 - Équipe
+  sectorExperience: string;
+  previousStartup: string;
+  hadExit: string;
+  advisors: number | null;
+  problem: string;
+  solution: string;
+  competitiveAdvantage: string;
+
+  // Step 6 - Stratégie de financement
+  fundingTimeline: string;
+  fundraisingGoal: number | null;
+  maxDilution: number | null;
+  fundingPreference: string;
+  finalGoalValuation: number | null;
+};
+
+const defaultFormData: RaisupFormData = {
+  ambition: '',
+  startupName: '',
+  founderName: '',
+  description: '',
+  businessModel: '',
+  sector: '',
+  clientType: '',
+  country: 'France',
+  region: '',
+  city: '',
+  legalForm: '',
+  founderShare: null,
+  isPreRevenue: false,
+  mrr: null,
+  momGrowth: null,
+  activeClients: null,
+  runway: null,
+  burnRate: null,
+  teamSize: null,
+  hasCTO: false,
+  sectorExperience: '',
+  previousStartup: '',
+  hadExit: '',
+  advisors: null,
+  problem: '',
+  solution: '',
+  competitiveAdvantage: '',
+  fundingTimeline: '',
+  fundraisingGoal: null,
+  maxDilution: null,
+  fundingPreference: '',
+  finalGoalValuation: null,
+};
+
+const AMBITIONS = [
+  { value: 'Rentabilité et indépendance', label: 'Rentabilité et indépendance', color: 'bg-teal-100 text-teal-800 border-teal-300' },
+  { value: 'Leader marché français', label: 'Leader marché français', color: 'bg-green-100 text-green-800 border-green-300' },
+  { value: 'Expansion européenne', label: 'Expansion européenne', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  { value: 'Scale-up et exit', label: 'Scale-up et exit', color: 'bg-orange-100 text-orange-800 border-orange-300' },
+  { value: 'Licorne', label: 'Licorne', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+  { value: 'Je ne sais pas encore', label: 'Je ne sais pas encore', color: 'bg-gray-100 text-gray-700 border-gray-300' },
+];
+
+const REGIONS_FRANCE = [
+  'Île-de-France', 'Auvergne-Rhône-Alpes', 'Bretagne', 'Occitanie',
+  'Nouvelle-Aquitaine', 'Hauts-de-France', 'Grand Est', 'Provence-Alpes-Côte d\'Azur',
+  'Normandie', 'Pays de la Loire', 'Bourgogne-Franche-Comté', 'Centre-Val de Loire',
+  'Corse', 'Outre-mer',
+];
+
+const LEGAL_FORMS = ['SAS', 'SASU', 'SARL', 'EURL', 'SA', 'SNC', 'Auto-entrepreneur', 'Non encore créée'];
+const SECTORS = ['Fintech', 'Healthtech', 'Edtech', 'Proptech', 'Greentech', 'SaaS B2B', 'E-commerce', 'IA & Data', 'Marketplace', 'Deeptech', 'Legaltech', 'Foodtech', 'Autre'];
+const BUSINESS_MODELS = ['SaaS', 'Marketplace', 'E-commerce', 'Freemium', 'Hardware + services', 'Abonnement', 'Commission', 'Licences', 'Autre'];
+const CLIENT_TYPES = ['B2B', 'B2C', 'B2B2C', 'B2G', 'Mixte'];
+const EXPERIENCE_OPTIONS = ['< 1 an', '1-2 ans', '2-5 ans', '5+ ans'];
+const FUNDING_TIMELINES = ['< 3 mois', '3-6 mois', '6-12 mois', '12-18 mois', '> 18 mois'];
+const FUNDING_PREFERENCES = ['Equity (levée de fonds)', 'Prêt / dette', 'Subventions', 'Revenue-based financing', 'Mixte'];
+
+const steps = ['Ambition', "L'entreprise", 'Siège social', 'Situation actuelle', 'Équipe', 'Financement'];
+
+const RaisupOnboardingForm: React.FC = () => {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState<RaisupFormData>(() => {
+    try {
+      const saved = localStorage.getItem('raisupOnboardingData');
+      return saved ? { ...defaultFormData, ...JSON.parse(saved) } : defaultFormData;
+    } catch {
+      return defaultFormData;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('raisupOnboardingData', JSON.stringify(formData));
+  }, [formData]);
+
+  const set = (field: keyof RaisupFormData, value: unknown) =>
+    setFormData(prev => ({ ...prev, [field]: value }));
+
+  const numOrNull = (v: string): number | null => {
+    const n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    let saved = false;
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.from('raisup_profiles').insert([{
+          ambition: formData.ambition,
+          startup_name: formData.startupName,
+          founder_name: formData.founderName,
+          description: formData.description,
+          business_model: formData.businessModel,
+          sector: formData.sector,
+          client_type: formData.clientType,
+          country: formData.country,
+          region: formData.region,
+          city: formData.city,
+          legal_form: formData.legalForm,
+          founder_share: formData.founderShare,
+          is_pre_revenue: formData.isPreRevenue,
+          mrr: formData.mrr,
+          mom_growth: formData.momGrowth,
+          active_clients: formData.activeClients,
+          runway: formData.runway,
+          burn_rate: formData.burnRate,
+          team_size: formData.teamSize,
+          has_cto: formData.hasCTO,
+          sector_experience: formData.sectorExperience,
+          previous_startup: formData.previousStartup,
+          had_exit: formData.hadExit,
+          advisors: formData.advisors,
+          problem: formData.problem,
+          solution: formData.solution,
+          competitive_advantage: formData.competitiveAdvantage,
+          funding_timeline: formData.fundingTimeline,
+          amount_sought: formData.fundraisingGoal,
+          max_dilution: formData.maxDilution,
+          funding_preference: formData.fundingPreference,
+          target_valuation: formData.finalGoalValuation,
+        }]);
+        saved = !error;
+      } catch {
+        saved = false;
+      }
+    }
+    setSubmitting(false);
+    navigate(`/onboarding/raisup/success?saved=${saved}`);
+  };
+
+  const progress = (step / steps.length) * 100;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-2xl">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="h-5 w-5 text-secondary-lighter" />
+            <span className="font-semibold text-gray-900">Raisup</span>
+          </div>
+          <span className="text-sm text-gray-500">Étape {step} sur {steps.length}</span>
+        </div>
+        <div className="h-1.5 bg-gray-100">
+          <div className="h-full bg-secondary-lighter transition-all duration-500" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="container mx-auto px-4 py-2 max-w-2xl">
+          <div className="flex justify-between">
+            {steps.map((label, i) => (
+              <span key={label} className={clsx('text-xs transition-colors', i + 1 <= step ? 'text-primary font-medium' : 'text-gray-400')}>
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
+        {/* ─── Step 1: Ambition ─────────────────────────────────── */}
+        {step === 1 && (
+          <div className="bg-white rounded-2xl shadow-sm p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Quelle est votre ambition ?</h2>
+            <p className="text-gray-500 mb-6">Choisissez l'objectif principal de votre startup.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {AMBITIONS.map(a => (
+                <button key={a.value} type="button"
+                  onClick={() => set('ambition', a.value)}
+                  className={clsx('flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all',
+                    formData.ambition === a.value
+                      ? 'border-primary bg-secondary-light'
+                      : 'border-gray-200 hover:border-gray-300'
+                  )}>
+                  <div className={clsx('w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center',
+                    formData.ambition === a.value ? 'border-primary bg-primary' : 'border-gray-300')}>
+                    {formData.ambition === a.value && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <span className="font-medium text-gray-900">{a.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-end mt-8">
+              <button onClick={() => setStep(2)} disabled={!formData.ambition}
+                className="btn-primary flex items-center gap-2 disabled:opacity-50">
+                Continuer <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Step 2: L'entreprise ─────────────────────────────── */}
+        {step === 2 && (
+          <div className="bg-white rounded-2xl shadow-sm p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">L'entreprise</h2>
+            <p className="text-gray-500 mb-6">Décrivez votre startup et son modèle.</p>
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="form-label">Nom de la startup</label>
+                  <input className="input-field" placeholder="Ex: MediScan" value={formData.startupName}
+                    onChange={e => set('startupName', e.target.value)} />
+                </div>
+                <div>
+                  <label className="form-label">Nom du fondateur principal</label>
+                  <input className="input-field" placeholder="Ex: Alice Dupont" value={formData.founderName}
+                    onChange={e => set('founderName', e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Description courte</label>
+                <textarea className="input-field" rows={3} placeholder="En une phrase, décrivez votre produit ou service..."
+                  value={formData.description} onChange={e => set('description', e.target.value)} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div>
+                  <label className="form-label">Modèle économique</label>
+                  <select className="input-field" value={formData.businessModel} onChange={e => set('businessModel', e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    {BUSINESS_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Secteur</label>
+                  <select className="input-field" value={formData.sector} onChange={e => set('sector', e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Type de client</label>
+                  <select className="input-field" value={formData.clientType} onChange={e => set('clientType', e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    {CLIENT_TYPES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between mt-8">
+              <button onClick={() => setStep(1)} className="btn-secondary flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Retour</button>
+              <button onClick={() => setStep(3)} className="btn-primary flex items-center gap-2">Continuer <ArrowRight className="h-4 w-4" /></button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Step 3: Siège social ─────────────────────────────── */}
+        {step === 3 && (
+          <div className="bg-white rounded-2xl shadow-sm p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Siège social</h2>
+            <p className="text-gray-500 mb-6">Localisation et structure juridique.</p>
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="form-label">Pays</label>
+                  <input className="input-field" value={formData.country} onChange={e => set('country', e.target.value)} />
+                </div>
+                {formData.country === 'France' && (
+                  <div>
+                    <label className="form-label">Région</label>
+                    <select className="input-field" value={formData.region} onChange={e => set('region', e.target.value)}>
+                      <option value="">Sélectionner</option>
+                      {REGIONS_FRANCE.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="form-label">Ville</label>
+                  <input className="input-field" placeholder="Paris" value={formData.city} onChange={e => set('city', e.target.value)} />
+                </div>
+                <div>
+                  <label className="form-label">Forme juridique</label>
+                  <select className="input-field" value={formData.legalForm} onChange={e => set('legalForm', e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    {LEGAL_FORMS.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Part du fondateur principal (%)</label>
+                <input className="input-field" type="number" min={0} max={100} placeholder="Ex: 60"
+                  value={formData.founderShare ?? ''} onChange={e => set('founderShare', numOrNull(e.target.value))} />
+              </div>
+            </div>
+            <div className="flex justify-between mt-8">
+              <button onClick={() => setStep(2)} className="btn-secondary flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Retour</button>
+              <button onClick={() => setStep(4)} className="btn-primary flex items-center gap-2">Continuer <ArrowRight className="h-4 w-4" /></button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Step 4: Situation actuelle ───────────────────────── */}
+        {step === 4 && (
+          <div className="bg-white rounded-2xl shadow-sm p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Situation actuelle</h2>
+            <p className="text-gray-500 mb-6">Métriques clés de votre startup aujourd'hui.</p>
+            <div className="space-y-5">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-primary" checked={formData.isPreRevenue}
+                  onChange={e => set('isPreRevenue', e.target.checked)} />
+                <span className="text-gray-700 font-medium">Pre-revenue (pas encore de revenus)</span>
+              </label>
+              {!formData.isPreRevenue && (
+                <div>
+                  <label className="form-label">MRR — Monthly Recurring Revenue (€)</label>
+                  <input className="input-field" type="number" min={0} placeholder="Ex: 15000"
+                    value={formData.mrr ?? ''} onChange={e => set('mrr', numOrNull(e.target.value))} />
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="form-label">Croissance MoM (%)</label>
+                  <input className="input-field" type="number" placeholder="Ex: 15"
+                    value={formData.momGrowth ?? ''} onChange={e => set('momGrowth', numOrNull(e.target.value))} />
+                </div>
+                <div>
+                  <label className="form-label">Clients actifs</label>
+                  <input className="input-field" type="number" min={0} placeholder="Ex: 45"
+                    value={formData.activeClients ?? ''} onChange={e => set('activeClients', numOrNull(e.target.value))} />
+                </div>
+                <div>
+                  <label className="form-label">Runway (mois)</label>
+                  <input className="input-field" type="number" min={0} placeholder="Ex: 18"
+                    value={formData.runway ?? ''} onChange={e => set('runway', numOrNull(e.target.value))} />
+                </div>
+                <div>
+                  <label className="form-label">Burn rate mensuel (€)</label>
+                  <input className="input-field" type="number" min={0} placeholder="Ex: 30000"
+                    value={formData.burnRate ?? ''} onChange={e => set('burnRate', numOrNull(e.target.value))} />
+                </div>
+                <div>
+                  <label className="form-label">Taille de l'équipe</label>
+                  <input className="input-field" type="number" min={1} placeholder="Ex: 6"
+                    value={formData.teamSize ?? ''} onChange={e => set('teamSize', numOrNull(e.target.value))} />
+                </div>
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 accent-primary" checked={formData.hasCTO}
+                  onChange={e => set('hasCTO', e.target.checked)} />
+                <span className="text-gray-700 font-medium">L'équipe a un CTO (ou profil technique dédié)</span>
+              </label>
+            </div>
+            <div className="flex justify-between mt-8">
+              <button onClick={() => setStep(3)} className="btn-secondary flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Retour</button>
+              <button onClick={() => setStep(5)} className="btn-primary flex items-center gap-2">Continuer <ArrowRight className="h-4 w-4" /></button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Step 5: Équipe ───────────────────────────────────── */}
+        {step === 5 && (
+          <div className="bg-white rounded-2xl shadow-sm p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Équipe & Pitch</h2>
+            <p className="text-gray-500 mb-6">Expérience, problème, solution et différenciation.</p>
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div>
+                  <label className="form-label">Expérience dans le secteur</label>
+                  <select className="input-field" value={formData.sectorExperience} onChange={e => set('sectorExperience', e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    {EXPERIENCE_OPTIONS.map(x => <option key={x} value={x}>{x}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Startup précédente ?</label>
+                  <select className="input-field" value={formData.previousStartup} onChange={e => set('previousStartup', e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    <option value="oui">Oui</option>
+                    <option value="non">Non</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Exit réalisé ?</label>
+                  <select className="input-field" value={formData.hadExit} onChange={e => set('hadExit', e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    <option value="oui">Oui</option>
+                    <option value="non">Non</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="form-label">Nombre d'advisors</label>
+                <input className="input-field" type="number" min={0} placeholder="Ex: 2"
+                  value={formData.advisors ?? ''} onChange={e => set('advisors', numOrNull(e.target.value))} />
+              </div>
+              <div>
+                <label className="form-label">Problème résolu</label>
+                <textarea className="input-field" rows={2} placeholder="Quel problème résolvez-vous ?"
+                  value={formData.problem} onChange={e => set('problem', e.target.value)} />
+              </div>
+              <div>
+                <label className="form-label">Solution proposée</label>
+                <textarea className="input-field" rows={2} placeholder="Comment le résolvez-vous ?"
+                  value={formData.solution} onChange={e => set('solution', e.target.value)} />
+              </div>
+              <div>
+                <label className="form-label">Avantage concurrentiel</label>
+                <textarea className="input-field" rows={2} placeholder="En quoi êtes-vous différent(e) ?"
+                  value={formData.competitiveAdvantage} onChange={e => set('competitiveAdvantage', e.target.value)} />
+              </div>
+            </div>
+            <div className="flex justify-between mt-8">
+              <button onClick={() => setStep(4)} className="btn-secondary flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Retour</button>
+              <button onClick={() => setStep(6)} className="btn-primary flex items-center gap-2">Continuer <ArrowRight className="h-4 w-4" /></button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Step 6: Stratégie de financement ─────────────────── */}
+        {step === 6 && (
+          <div className="bg-white rounded-2xl shadow-sm p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Stratégie de financement</h2>
+            <p className="text-gray-500 mb-6">Objectifs et préférences pour votre levée.</p>
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="form-label">Timeline souhaitée</label>
+                  <select className="input-field" value={formData.fundingTimeline} onChange={e => set('fundingTimeline', e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    {FUNDING_TIMELINES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Préférence de financement</label>
+                  <select className="input-field" value={formData.fundingPreference} onChange={e => set('fundingPreference', e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    {FUNDING_PREFERENCES.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Montant recherché (€)</label>
+                  <input className="input-field" type="number" min={0} placeholder="Ex: 500000"
+                    value={formData.fundraisingGoal ?? ''} onChange={e => set('fundraisingGoal', numOrNull(e.target.value))} />
+                </div>
+                <div>
+                  <label className="form-label">Dilution max acceptée (%)</label>
+                  <input className="input-field" type="number" min={0} max={100} placeholder="Ex: 20"
+                    value={formData.maxDilution ?? ''} onChange={e => set('maxDilution', numOrNull(e.target.value))} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="form-label">Objectif de valorisation finale (€)</label>
+                  <input className="input-field" type="number" min={0} placeholder="Ex: 5000000"
+                    value={formData.finalGoalValuation ?? ''} onChange={e => set('finalGoalValuation', numOrNull(e.target.value))} />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between mt-8">
+              <button onClick={() => setStep(5)} className="btn-secondary flex items-center gap-2"><ArrowLeft className="h-4 w-4" /> Retour</button>
+              <button onClick={handleSubmit} disabled={submitting}
+                className="btn-primary flex items-center gap-2 disabled:opacity-60">
+                {submitting ? (
+                  <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Enregistrement...</span>
+                ) : (<><Sparkles className="h-4 w-4" /> Voir mon profil Raisup</>)}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default RaisupOnboardingForm;

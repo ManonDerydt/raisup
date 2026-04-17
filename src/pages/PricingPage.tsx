@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Sparkles, ArrowRight, Check, CheckCircle, X, Menu } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Sparkles, ArrowRight, Check, CheckCircle, X, Menu, Lock } from 'lucide-react';
 import clsx from 'clsx';
 
 const PricingPage: React.FC = () => {
@@ -8,7 +8,10 @@ const PricingPage: React.FC = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<string>('Pro');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+  const [searchParams] = useSearchParams();
+  const fromDashboard = searchParams.get('from') === 'welcome';
+  const fromType = searchParams.get('type'); // 'financement' | 'parcours'
+
   // Check if dark mode is enabled
   useEffect(() => {
     const isDarkMode = document.documentElement.classList.contains('dark');
@@ -168,6 +171,30 @@ const PricingPage: React.FC = () => {
       )}
 
       <main>
+        {/* Contextual banner — shown when redirected from dashboard */}
+        {fromDashboard && (
+          <div className="w-full py-4 px-4" style={{ backgroundColor: '#FFD6E5' }}>
+            <div className="container mx-auto max-w-3xl flex items-center gap-3">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F4B8CC' }}>
+                <Lock className="h-4 w-4" style={{ color: '#9D2B5A' }} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold" style={{ color: '#7A1A3A' }}>
+                  {fromType === 'parcours'
+                    ? 'Votre parcours financier complet est disponible avec un abonnement Raisup.'
+                    : 'Les opportunités de financement personnalisées sont disponibles avec un abonnement Raisup.'}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: '#9D2B5A' }}>
+                  Choisissez votre offre ci-dessous pour débloquer l'accès immédiatement.
+                </p>
+              </div>
+              <Link to="/dashboard/welcome" className="flex-shrink-0 text-xs font-semibold underline underline-offset-2" style={{ color: '#7A1A3A' }}>
+                Retour au tableau de bord
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Hero section */}
         <section className="container mx-auto px-4 py-16 text-center">
           <h1 className={clsx(
@@ -323,19 +350,25 @@ const PricingPage: React.FC = () => {
           </div>
           
           {/* CTA button after selecting a plan */}
-          <div className="mt-12">
-            <Link 
-              to="/login" 
-              className={clsx(
-                "px-6 py-3 rounded-xl font-medium transition-colors inline-flex items-center",
-                darkMode 
-                  ? "bg-secondary-lighter text-primary hover:bg-opacity-90" 
-                  : "bg-secondary-lighter text-primary hover:bg-opacity-90"
-              )}
+          <div className="mt-12 flex flex-col items-center gap-3">
+            <Link
+              to={fromDashboard ? '/dashboard/welcome' : '/login'}
+              onClick={() => {
+                // Simulate payment success — unlock premium access
+                localStorage.setItem('raisup_is_premium', 'true');
+                localStorage.setItem('raisup_plan', selectedPlan);
+              }}
+              className="px-8 py-4 rounded-full font-bold text-white transition-opacity hover:opacity-90 inline-flex items-center gap-2"
+              style={{ backgroundColor: '#0A0A0A', fontSize: 15 }}
             >
               Commencer avec le plan {selectedPlan}
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="h-5 w-5" />
             </Link>
+            {fromDashboard && (
+              <p className="text-xs text-gray-400">
+                Vous serez redirigé vers votre tableau de bord après confirmation
+              </p>
+            )}
           </div>
         </section>
         

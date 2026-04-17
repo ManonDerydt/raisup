@@ -18,6 +18,11 @@ export default {
         'raisup-pink-dark': '#C4728A',
         'raisup-black': '#0A0A0A',
         'raisup-bg': '#F8F8F8',
+        'raisup-green': '#D8FFBD',
+        'raisup-blue': '#ABC5FE',
+        'raisup-purple': '#CDB4FF',
+        'raisup-orange': '#FFB96D',
+        'raisup-red': '#FFB3B3',
       },
       borderRadius: {
         xl: '12px',

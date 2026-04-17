@@ -1,623 +1,552 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Zap,
-  Building,
-  Users,
-  TrendingUp,
-  ExternalLink,
-  ChevronRight,
-  ToggleLeft,
-  ToggleRight,
-  Star,
-  Sparkles,
-  CheckCircle,
-  Info,
-  Calendar,
-  Target,
-  ArrowUpRight,
-  Send,
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { Monitor, Zap, TrendingUp, Clock, Leaf, CheckCircle, ArrowRight, Star } from 'lucide-react';
 import clsx from 'clsx';
-import testStartups, { TestStartup } from '../data/testStartups';
-import { matchInvestors, MatchResult, scoreBadgeColor, investorTypeLabel, formatTicket } from '../services/matchInvestors';
 
-// ─── Score badge ───────────────────────────────────────────────────────────────
-const ScoreBadge: React.FC<{ score: number }> = ({ score }) => {
-  const color = scoreBadgeColor(score);
-  return (
-    <span className={clsx(
-      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold',
-      color === 'green'  && 'bg-green-100 text-green-700',
-      color === 'orange' && 'bg-orange-100 text-orange-700',
-      color === 'red'    && 'bg-red-100 text-red-700',
-    )}>
-      {score}%
-    </span>
-  );
+// ─── Design system ────────────────────────────────────────────────────────────
+const STAGE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
+  'pre-seed': { label: 'Pre-seed', bg: '#D8FFBD', text: '#2D6A00' },
+  'seed':     { label: 'Seed',     bg: '#ABC5FE', text: '#1A3A8F' },
+  'series-a': { label: 'Série A',  bg: '#CDB4FF', text: '#3D0D8F' },
+  'series-b': { label: 'Série B',  bg: '#FFB96D', text: '#7A3D00' },
 };
 
-// ─── Investor card ─────────────────────────────────────────────────────────────
-const InvestorCard: React.FC<{ result: MatchResult; darkMode: boolean }> = ({ result, darkMode }) => {
-  const { investor, score, whyMatch } = result;
-  const [expanded, setExpanded] = useState(false);
-  const [applied, setApplied] = useState(false);
-  const color = scoreBadgeColor(score);
+const INVESTOR_TYPE_CONFIG: Record<string, { bg: string; text: string }> = {
+  'VC':            { bg: '#EEF2FF', text: '#3730A3' },
+  'Angel':         { bg: '#F5F3FF', text: '#5B21B6' },
+  'Family Office': { bg: '#FFF7ED', text: '#9A3412' },
+  'Non-dilutif':   { bg: '#F0FFF4', text: '#15803D' },
+};
 
-  const handleApply = () => {
-    window.open(investor.website, '_blank', 'noopener,noreferrer');
-    setApplied(true);
-  };
+const NONDILUTIF_STATUS_CONFIG: Record<string, { bg: string; text: string }> = {
+  'Éligible':         { bg: '#D8FFBD', text: '#2D6A00' },
+  'Dossier en cours': { bg: '#ABC5FE', text: '#1A3A8F' },
+  'Déposé':           { bg: '#CDB4FF', text: '#3D0D8F' },
+  'Deadline proche':  { bg: '#FFB96D', text: '#7A3D00' },
+  'Refusé':           { bg: '#FFB3B3', text: '#8F1A1A' },
+};
 
-  return (
-    <div className={clsx(
-      'rounded-xl border transition-all duration-200',
-      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
-      color === 'green'  && 'border-l-4 border-l-green-400',
-      color === 'orange' && 'border-l-4 border-l-orange-400',
-      color === 'red'    && 'border-l-4 border-l-red-400',
-    )}>
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          {/* Left */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className={clsx('text-sm font-semibold truncate', darkMode ? 'text-white' : 'text-gray-900')}>
-                {investor.name}
-              </span>
-              <span className={clsx('text-xs px-2 py-0.5 rounded-full', darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600')}>
-                {investorTypeLabel(investor.type)}
-              </span>
-              {applied && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" /> Candidature envoyée
-                </span>
-              )}
-            </div>
-            <p className={clsx('text-xs mb-2', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-              {investor.description}
-            </p>
-            {/* Why match */}
-            <div className={clsx('flex items-start gap-1.5 text-xs rounded-lg px-2 py-1.5', darkMode ? 'bg-gray-700/50 text-gray-300' : 'bg-gray-50 text-gray-600')}>
-              <Sparkles className="h-3 w-3 mt-0.5 flex-shrink-0 text-primary" />
-              <span>{whyMatch}</span>
-            </div>
-          </div>
+const SECTOR_ICONS: Record<string, string> = {
+  'SaaS': '⚙️', 'HealthTech': '🏥', 'GreenTech': '🌱', 'IA': '🤖', 'FinTech': '💳',
+};
 
-          {/* Right */}
-          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <ScoreBadge score={score} />
-            <span className={clsx('text-xs font-medium', darkMode ? 'text-gray-300' : 'text-gray-700')}>
-              {formatTicket(investor.ticketMin, investor.ticketMax)}
-            </span>
-          </div>
-        </div>
+// Score helpers — neutres (pas de vert dilutif)
+const scoreBorder = (s: number) => s >= 80 ? '#6EE7B7' : s >= 50 ? '#FCD34D' : '#FCA5A5';
+const scoreBadgeCfg = (s: number) => s >= 80
+  ? { bg: '#ECFDF5', text: '#065F46' }
+  : s >= 50
+  ? { bg: '#FFFBEB', text: '#92400E' }
+  : { bg: '#FEF2F2', text: '#991B1B' };
 
-        {/* Actions row */}
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            onClick={() => setExpanded(p => !p)}
-            className={clsx(
-              'flex items-center gap-1 text-xs font-medium transition-colors',
-              darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-800'
-            )}
-          >
-            <ChevronRight className={clsx('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')} />
-            {expanded ? 'Masquer' : 'Voir les détails'}
-          </button>
+// ─── Logo avatar — tente une image, fallback initiales ───────────────────────
+const LOGO_URLS: Record<string, string> = {
+  'Kima Ventures':      'https://logo.clearbit.com/kimaventures.com',
+  'Marc Ournac':        '',
+  'Newfund':            'https://logo.clearbit.com/newfund.com',
+  'ISAI':               'https://logo.clearbit.com/isai.fr',
+  'Elaia':              'https://logo.clearbit.com/elaia.com',
+  'Bpifrance':          'https://logo.clearbit.com/bpifrance.fr',
+  'État':               '',
+  'Région Île-de-France': '',
+};
 
-          <div className="flex-1" />
+const LogoAvatar: React.FC<{ name: string; orgName?: string; bg?: string; text?: string }> = ({ name, orgName, bg = '#F3F4F6', text = '#374151' }) => {
+  const [imgOk, setImgOk] = useState(true);
+  const key = orgName ?? name;
+  const url = LOGO_URLS[key];
+  const letters = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-          <button
-            onClick={handleApply}
-            className={clsx(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-              applied
-                ? 'bg-green-100 text-green-700 cursor-default'
-                : 'bg-primary text-white hover:bg-opacity-90 active:scale-95'
-            )}
-          >
-            {applied
-              ? <><CheckCircle className="h-3.5 w-3.5" /> Postulé</>
-              : <><Send className="h-3.5 w-3.5" /> Postuler</>
-            }
-          </button>
-        </div>
-
-        {expanded && (
-          <div className={clsx('mt-3 pt-3 border-t space-y-2', darkMode ? 'border-gray-700' : 'border-gray-100')}>
-            {/* Sectors */}
-            <div>
-              <p className={clsx('text-xs font-medium mb-1', darkMode ? 'text-gray-300' : 'text-gray-600')}>Secteurs</p>
-              <div className="flex flex-wrap gap-1">
-                {investor.sectors.map(s => (
-                  <span key={s} className={clsx('text-xs px-2 py-0.5 rounded-full', darkMode ? 'bg-gray-700 text-gray-300' : 'bg-secondary-light text-primary')}>
-                    {s}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Criteria */}
-            <div>
-              <p className={clsx('text-xs font-medium mb-1', darkMode ? 'text-gray-300' : 'text-gray-600')}>Critères clés</p>
-              <ul className="space-y-0.5">
-                {investor.criteria.map(c => (
-                  <li key={c} className={clsx('text-xs flex items-center gap-1.5', darkMode ? 'text-gray-400' : 'text-gray-600')}>
-                    <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
-                    {c}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Stages */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className={clsx('text-xs font-medium', darkMode ? 'text-gray-300' : 'text-gray-600')}>Stades :</p>
-              {investor.stages.map(s => (
-                <span key={s} className={clsx('text-xs px-2 py-0.5 rounded-full border', darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-600')}>
-                  {s}
-                </span>
-              ))}
-            </div>
-
-            {/* Website */}
-            <a href={investor.website} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-              <ExternalLink className="h-3 w-3" />
-              {investor.website.replace('https://', '')}
-            </a>
-          </div>
-        )}
+  if (url && imgOk) {
+    return (
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 border border-[#E5E7EB] bg-white p-1.5">
+        <img
+          src={url}
+          alt={name}
+          className="w-full h-full object-contain"
+          onError={() => setImgOk(false)}
+        />
       </div>
+    );
+  }
+
+  return (
+    <div
+      className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
+      style={{ backgroundColor: bg, color: text }}
+    >
+      {letters}
     </div>
   );
 };
 
-// ─── Score breakdown bar ───────────────────────────────────────────────────────
-const BreakdownBar: React.FC<{ label: string; value: number; max: number; darkMode: boolean }> = ({
-  label, value, max, darkMode
-}) => (
-  <div className="flex items-center gap-2">
-    <span className={clsx('text-xs w-14 flex-shrink-0', darkMode ? 'text-gray-400' : 'text-gray-500')}>{label}</span>
-    <div className={clsx('flex-1 h-1.5 rounded-full', darkMode ? 'bg-gray-700' : 'bg-gray-100')}>
-      <div
-        className="h-full rounded-full bg-primary transition-all duration-500"
-        style={{ width: `${(value / max) * 100}%` }}
-      />
-    </div>
-    <span className={clsx('text-xs w-8 text-right', darkMode ? 'text-gray-300' : 'text-gray-700')}>
-      {value}/{max}
+// ─── Mock data ────────────────────────────────────────────────────────────────
+interface StartupProfile {
+  id: string; name: string; sector: string;
+  stage: 'pre-seed' | 'seed' | 'series-a' | 'series-b';
+  fundingAmount: number; mrr: number | null; location: string;
+  description: string; teamSize: number; founded: string; traction: string;
+  scoring: { secteur: number; stade: number; ticket: number; localisation: number };
+  strategy: { dilutifPct: number; timeline: string };
+}
+
+const TEST_PROFILES: StartupProfile[] = [
+  {
+    id: 'saas-b2b', name: 'FlowSync', sector: 'SaaS B2B', stage: 'seed',
+    fundingAmount: 500_000, mrr: 10_000, location: 'Paris',
+    description: 'Outil de synchronisation no-code pour équipes commerciales B2B. 45 clients actifs, croissance 18% MoM.',
+    teamSize: 6, founded: '2023', traction: '45 clients · 18% MoM',
+    scoring: { secteur: 92, stade: 85, ticket: 78, localisation: 90 },
+    strategy: { dilutifPct: 60, timeline: '4–6 mois' },
+  },
+  {
+    id: 'healthtech', name: 'MedIA', sector: 'HealthTech', stage: 'pre-seed',
+    fundingAmount: 300_000, mrr: null, location: 'Lyon',
+    description: "IA de détection précoce des cancers cutanés. Validée sur 5 000 images, en attente de marquage CE.",
+    teamSize: 3, founded: '2024', traction: '5K images testées · Marquage CE Q3',
+    scoring: { secteur: 88, stade: 70, ticket: 82, localisation: 65 },
+    strategy: { dilutifPct: 50, timeline: '5–8 mois' },
+  },
+  {
+    id: 'greentech', name: 'CarbonLoop', sector: 'GreenTech', stage: 'series-a',
+    fundingAmount: 3_000_000, mrr: 200_000, location: 'Paris',
+    description: 'Plateforme de compensation carbone vérifiée pour ETI. 30 clients grands comptes, 200K€ MRR stable.',
+    teamSize: 18, founded: '2021', traction: '30 grands comptes · ARR 2,4M€',
+    scoring: { secteur: 85, stade: 90, ticket: 75, localisation: 95 },
+    strategy: { dilutifPct: 75, timeline: '6–9 mois' },
+  },
+  {
+    id: 'deeptech-ia', name: 'NeuralEdge', sector: 'IA', stage: 'seed',
+    fundingAmount: 1_000_000, mrr: 50_000, location: 'Paris',
+    description: 'LLM spécialisé pour le droit français. Spinoff INRIA, 3 brevets déposés. Déployé chez 12 cabinets.',
+    teamSize: 8, founded: '2023', traction: '12 cabinets · 3 brevets déposés',
+    scoring: { secteur: 80, stade: 82, ticket: 68, localisation: 90 },
+    strategy: { dilutifPct: 65, timeline: '4–6 mois' },
+  },
+  {
+    id: 'fintech', name: 'PayLater Pro', sector: 'FinTech', stage: 'pre-seed',
+    fundingAmount: 200_000, mrr: null, location: 'Bordeaux',
+    description: 'BNPL B2B pour artisans et TPE. MVP live, 12 pilotes en cours, fondateur ex-Crédit Agricole.',
+    teamSize: 2, founded: '2024', traction: '12 pilotes · MVP live',
+    scoring: { secteur: 74, stade: 68, ticket: 80, localisation: 58 },
+    strategy: { dilutifPct: 55, timeline: '6–10 mois' },
+  },
+];
+
+interface Investor {
+  id: string; name: string; type: string; score: number;
+  ticket: string; description: string; reasons: [string, string, string];
+}
+
+const INVESTORS: Investor[] = [
+  { id: 'kima', name: 'Kima Ventures', type: 'VC', score: 90, ticket: '150K–500K€',
+    description: 'Le fonds le plus actif en Europe — 2 deals par semaine.',
+    reasons: ['Investit activement en SaaS B2B', 'Ticket aligné sur le stade seed', 'Décision rapide sous 2 semaines'] },
+  { id: 'ournac', name: 'Marc Ournac', type: 'Angel', score: 80, ticket: '25K–150K€',
+    description: 'Ex-DG Boursorama, investisseur FinTech et SaaS.',
+    reasons: ['Portfolio SaaS B2B majoritaire', 'Accompagnement opérationnel fort', 'Réseau commercial Europe'] },
+  { id: 'newfund', name: 'Newfund', type: 'VC', score: 70, ticket: '500K–5M€',
+    description: 'Fonds franco-américain early-stage.',
+    reasons: ['Investit dès le seed', 'Fourchette couvre votre besoin', 'Présence Paris et NYC'] },
+  { id: 'isai', name: 'ISAI', type: 'Family Office', score: 65, ticket: '200K–2M€',
+    description: 'Club de business angels fondateurs.',
+    reasons: ['Fondateurs SaaS dans le réseau', 'Ticket flexible', 'Accompagnement go-to-market'] },
+  { id: 'elaia', name: 'Elaia', type: 'VC', score: 55, ticket: '1M–10M€',
+    description: 'Fonds deep tech et B2B SaaS européen.',
+    reasons: ['Portfolio B2B compatible', 'Ticket légèrement supérieur au besoin', 'Délai de décision plus long'] },
+];
+
+interface NonDilutif {
+  id: string; name: string; organisme: string; amount: number;
+  status: string; description: string;
+  conditions: [string, string]; deadline?: string;
+}
+
+const NON_DILUTIF: NonDilutif[] = [
+  { id: 'bpi', name: 'BPI Bourse French Tech', organisme: 'Bpifrance', amount: 90_000,
+    status: 'Éligible',
+    description: "Aide à la maturation pour startups innovantes de moins d'un an.",
+    conditions: ["Startup < 1 an avec projet innovant", "Moins de 50 salariés"] },
+  { id: 'cir', name: 'CIR Crédit Impôt Recherche', organisme: 'État', amount: 180_000,
+    status: 'Dossier en cours',
+    description: '30% des dépenses R&D récupérables sur la déclaration fiscale.',
+    conditions: ['Dépenses R&D documentées', 'Déclaration via formulaire 2069-A'] },
+  { id: 'innovup', name: "Innov'up IDF", organisme: 'Région Île-de-France', amount: 70_000,
+    status: 'Deadline proche',
+    description: "Subvention pour projets d'innovation en Île-de-France.",
+    conditions: ['Siège social en IDF', "Projet d'innovation technologique"],
+    deadline: '28 avr' },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const fmtAmount = (n: number) =>
+  n >= 1_000_000 ? `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M€` : `${(n / 1000).toFixed(0)}K€`;
+
+// ─── Badges ───────────────────────────────────────────────────────────────────
+const StageBadge: React.FC<{ stage: string; small?: boolean }> = ({ stage, small }) => {
+  const cfg = STAGE_CONFIG[stage] ?? { label: stage, bg: '#E5E7EB', text: '#374151' };
+  return (
+    <span
+      className={clsx('inline-flex items-center font-semibold rounded-full', small ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-0.5')}
+      style={{ backgroundColor: cfg.bg, color: cfg.text }}
+    >
+      {cfg.label}
     </span>
+  );
+};
+
+const SectorBadge: React.FC<{ sector: string; small?: boolean }> = ({ sector, small }) => (
+  <span
+    className={clsx('inline-flex items-center font-medium rounded-full border', small ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-0.5')}
+    style={{ backgroundColor: '#F8F8F8', color: '#6B7280', borderColor: '#E5E7EB' }}
+  >
+    {sector}
+  </span>
+);
+
+// ─── Scoring bar ──────────────────────────────────────────────────────────────
+const ScoringBar: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (
+  <div>
+    <div className="flex justify-between items-center mb-1">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className="text-xs font-bold text-gray-700">{value}%</span>
+    </div>
+    <div className="h-2 rounded-full overflow-hidden bg-[#F3F4F6]">
+      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, backgroundColor: color }} />
+    </div>
   </div>
 );
 
-// ─── Funding strategy helpers ──────────────────────────────────────────────────
-function stageLabel(stage: string): string {
-  const map: Record<string, string> = {
-    'pre-seed': 'Pre-seed', 'seed': 'Seed', 'series-a': 'Série A', 'series-b': 'Série B',
-  };
-  return map[stage] ?? stage;
-}
-
-function stageTimeline(stage: string): string {
-  const map: Record<string, string> = {
-    'pre-seed': '3 – 5 mois', 'seed': '4 – 6 mois',
-    'series-a': '6 – 9 mois', 'series-b': '9 – 12 mois',
-  };
-  return map[stage] ?? '4 – 6 mois';
-}
-
-function computeMix(startup: TestStartup, nonDilutiveResults: MatchResult[]) {
-  // Sum of top-3 non-dilutive max tickets, capped at 40% of funding need
-  const cap = startup.fundingAmount * 0.4;
-  const ndPotential = Math.min(
-    nonDilutiveResults.slice(0, 3).reduce((acc, r) => acc + r.investor.ticketMax, 0),
-    cap
-  );
-  const dilutiveNeeded = startup.fundingAmount - ndPotential;
-  const ndPct = Math.round((ndPotential / startup.fundingAmount) * 100);
-  const dPct = 100 - ndPct;
-  return { ndPotential, dilutiveNeeded, ndPct, dPct };
-}
-
-// ─── Funding strategy block ────────────────────────────────────────────────────
-const FundingStrategy: React.FC<{
-  startup: TestStartup;
-  nonDilutiveResults: MatchResult[];
-  darkMode: boolean;
-}> = ({ startup, nonDilutiveResults, darkMode }) => {
-  const { ndPotential, dilutiveNeeded, ndPct, dPct } = computeMix(startup, nonDilutiveResults);
-  const fmt = (n: number) => n >= 1_000_000
-    ? `${(n / 1_000_000).toFixed(1)}M€`
-    : `${Math.round(n / 1000)}K€`;
-
-  const tile = clsx('flex-1 rounded-xl p-4', darkMode ? 'bg-gray-700/60' : 'bg-gray-50');
+// ─── ProfileCard ──────────────────────────────────────────────────────────────
+const ProfileCard: React.FC<{ profile: StartupProfile; selected: boolean; onClick: () => void }> = ({ profile, selected, onClick }) => {
+  const icon = SECTOR_ICONS[profile.sector.split(' ')[0]] ?? '🚀';
+  const mrrStr = profile.mrr ? `${fmtAmount(profile.mrr)} MRR` : 'Pre-revenue';
 
   return (
-    <div className={clsx(
-      'rounded-xl border p-5 mb-6',
-      darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-    )}>
-      <div className="flex items-center gap-2 mb-5">
-        <div className={clsx('p-1.5 rounded-lg', darkMode ? 'bg-gray-700' : 'bg-secondary-light')}>
-          <TrendingUp className="h-4 w-4 text-primary" />
+    <button
+      onClick={onClick}
+      className={clsx('w-full text-left rounded-2xl p-4 transition-all duration-200 flex flex-col gap-2', selected ? 'border-2 border-[#0A0A0A] bg-[#F8F8F8] shadow-md' : 'border-2 border-[#E5E7EB] bg-white hover:border-gray-300 hover:shadow-sm')}
+    >
+      <div className="flex items-center gap-2">
+        <span className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 bg-gray-100">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="text-[13px] font-bold text-gray-900 leading-tight truncate">{profile.name}</p>
+          <p className="text-[11px] text-gray-500 truncate">{profile.location}</p>
         </div>
-        <h2 className={clsx('text-sm font-semibold', darkMode ? 'text-white' : 'text-gray-900')}>
-          Stratégie de financement recommandée
-        </h2>
       </div>
+      <div className="flex flex-wrap gap-1">
+        <StageBadge stage={profile.stage} small />
+        <SectorBadge sector={profile.sector} small />
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-gray-700">{fmtAmount(profile.fundingAmount)}</span>
+        <span className="text-[11px] text-gray-400">{mrrStr}</span>
+      </div>
+    </button>
+  );
+};
 
-      {/* 3 KPI tiles */}
-      <div className="flex gap-3 mb-5 flex-wrap sm:flex-nowrap">
-        {/* Stage */}
-        <div className={tile}>
-          <div className="flex items-center gap-1.5 mb-1">
-            <Target className="h-3.5 w-3.5 text-primary" />
-            <span className={clsx('text-xs font-medium', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-              Stade actuel
-            </span>
-          </div>
-          <p className={clsx('text-lg font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
-            {stageLabel(startup.stage)}
-          </p>
-          <p className={clsx('text-xs', darkMode ? 'text-gray-500' : 'text-gray-400')}>
-            {startup.location}
-          </p>
+// ─── InvestorCard ─────────────────────────────────────────────────────────────
+const InvestorCard: React.FC<{ inv: Investor }> = ({ inv }) => {
+  const border = scoreBorder(inv.score);
+  const badge = scoreBadgeCfg(inv.score);
+  const typeCfg = INVESTOR_TYPE_CONFIG[inv.type] ?? { bg: '#F3F4F6', text: '#374151' };
+
+  return (
+    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 flex flex-col gap-4" style={{ borderLeft: `4px solid ${border}` }}>
+      {/* Top */}
+      <div className="flex items-start gap-3">
+        <LogoAvatar name={inv.name} bg={typeCfg.bg} text={typeCfg.text} />
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] font-bold text-gray-900 leading-tight">{inv.name}</p>
+          <span className="text-[11px] font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: typeCfg.bg, color: typeCfg.text }}>{inv.type}</span>
+          <p className="text-[13px] text-gray-500 mt-1.5 line-clamp-2">{inv.description}</p>
         </div>
-
-        {/* Objective */}
-        <div className={tile}>
-          <div className="flex items-center gap-1.5 mb-1">
-            <ArrowUpRight className="h-3.5 w-3.5 text-primary" />
-            <span className={clsx('text-xs font-medium', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-              Objectif de levée
-            </span>
-          </div>
-          <p className={clsx('text-lg font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
-            {fmt(startup.fundingAmount)}
-          </p>
-          <p className={clsx('text-xs', darkMode ? 'text-gray-500' : 'text-gray-400')}>
-            dont {fmt(ndPotential)} non-dilutif possible
-          </p>
-        </div>
-
-        {/* Timeline */}
-        <div className={tile}>
-          <div className="flex items-center gap-1.5 mb-1">
-            <Calendar className="h-3.5 w-3.5 text-primary" />
-            <span className={clsx('text-xs font-medium', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-              Délai estimé
-            </span>
-          </div>
-          <p className={clsx('text-lg font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
-            {stageTimeline(startup.stage)}
-          </p>
-          <p className={clsx('text-xs', darkMode ? 'text-gray-500' : 'text-gray-400')}>
-            Pour boucler la levée
-          </p>
+        <div className="flex-shrink-0 text-right">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-bold" style={{ backgroundColor: badge.bg, color: badge.text }}>
+            {inv.score}%
+          </span>
+          <p className="text-[11px] text-gray-400 mt-1">{inv.ticket}</p>
         </div>
       </div>
 
-      {/* Mix bar */}
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <span className={clsx('text-xs font-medium', darkMode ? 'text-gray-300' : 'text-gray-700')}>
-            Mix recommandé
+      {/* Reasons */}
+      <div className="flex flex-wrap gap-1.5">
+        {inv.reasons.map((r, i) => (
+          <span key={i} className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2 py-1 rounded-md">
+            <CheckCircle className="h-3 w-3 text-gray-400 flex-shrink-0" />
+            {r}
           </span>
-          <span className={clsx('text-xs', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-            {fmt(dilutiveNeeded)} dilutif + {fmt(ndPotential)} non-dilutif
-          </span>
-        </div>
-        <div className={clsx('w-full h-5 rounded-full overflow-hidden flex', darkMode ? 'bg-gray-700' : 'bg-gray-100')}>
-          <div
-            className="h-full bg-primary flex items-center justify-center transition-all duration-700"
-            style={{ width: `${dPct}%` }}
-          >
-            {dPct > 15 && <span className="text-white text-xs font-bold">{dPct}%</span>}
-          </div>
-          <div
-            className="h-full bg-green-400 flex items-center justify-center transition-all duration-700"
-            style={{ width: `${ndPct}%` }}
-          >
-            {ndPct > 10 && <span className="text-white text-xs font-bold">{ndPct}%</span>}
-          </div>
-        </div>
-        <div className="flex gap-4 mt-2">
-          <span className="flex items-center gap-1.5 text-xs text-gray-500">
-            <span className="w-2.5 h-2.5 rounded-sm bg-primary inline-block" />
-            Dilutif ({dPct}% · {fmt(dilutiveNeeded)})
-          </span>
-          <span className="flex items-center gap-1.5 text-xs text-gray-500">
-            <span className="w-2.5 h-2.5 rounded-sm bg-green-400 inline-block" />
-            Non-dilutif ({ndPct}% · {fmt(ndPotential)})
-          </span>
-        </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-2 border-t border-[#F3F4F6]">
+        <button className="text-xs text-gray-400 hover:text-gray-600 transition">Voir les détails &gt;</button>
+        <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-white hover:opacity-80 transition" style={{ backgroundColor: '#0A0A0A' }}>
+          Postuler <ArrowRight className="h-3 w-3" />
+        </button>
       </div>
     </div>
   );
 };
 
-// ─── Main page ─────────────────────────────────────────────────────────────────
-const FundraisingPage: React.FC = () => {
-  const [darkMode, setDarkMode] = useState(false);
-  const [demoMode, setDemoMode] = useState(false);
-  const [selectedStartup, setSelectedStartup] = useState<TestStartup | null>(null);
-  const [activeTab, setActiveTab] = useState<'dilutive' | 'non-dilutive'>('dilutive');
-
-  useEffect(() => {
-    setDarkMode(document.documentElement.classList.contains('dark'));
-  }, []);
-
-  // Compute match results whenever selected startup changes
-  const matchResults = selectedStartup ? matchInvestors(selectedStartup) : null;
-
-  const card = clsx(
-    'rounded-xl border shadow-sm p-6',
-    darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-  );
-
-  const labelCls = clsx('text-sm font-medium', darkMode ? 'text-gray-200' : 'text-gray-700');
+// ─── NonDilutifCard ───────────────────────────────────────────────────────────
+const NonDilutifCard: React.FC<{ dispositif: NonDilutif }> = ({ dispositif: d }) => {
+  const statusCfg = NONDILUTIF_STATUS_CONFIG[d.status] ?? { bg: '#E5E7EB', text: '#374151' };
 
   return (
-    <div className={clsx('py-8 px-4 sm:px-6 lg:px-8 min-h-full', darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900')}>
-      <div className="max-w-5xl mx-auto">
+    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 flex flex-col gap-4">
+      <div className="flex items-start gap-3">
+        <LogoAvatar name={d.name} orgName={d.organisme} bg="#D8FFBD" text="#2D6A00" />
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] font-bold text-gray-900 leading-tight">{d.name}</p>
+          <p className="text-[13px] text-gray-500">{d.organisme}</p>
+          <p className="text-[13px] text-gray-600 mt-1">{d.description}</p>
+        </div>
+        <div className="flex-shrink-0 text-right">
+          <p className="text-[18px] font-bold" style={{ color: '#2D6A00' }}>{fmtAmount(d.amount)}</p>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold mt-1" style={{ backgroundColor: statusCfg.bg, color: statusCfg.text }}>
+            {d.status}
+          </span>
+        </div>
+      </div>
 
-        {/* ── Header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col gap-1.5">
+        {d.conditions.map((c, i) => (
+          <span key={i} className="inline-flex items-center gap-1.5 text-xs text-gray-600">
+            <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 text-[10px] font-bold" style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>✓</span>
+            {c}
+          </span>
+        ))}
+      </div>
+
+      {d.deadline && (
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg w-fit text-xs font-semibold" style={{ backgroundColor: '#FFB96D', color: '#7A3D00' }}>
+          <Clock className="h-3.5 w-3.5" />
+          Deadline : {d.deadline}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between pt-2 border-t border-[#F3F4F6]">
+        <button className="text-xs text-gray-400 hover:text-gray-600 transition">Voir les détails &gt;</button>
+        <button className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold hover:opacity-80 transition" style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
+          Préparer le dossier <ArrowRight className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+const FundraisingPage: React.FC = () => {
+  const [selectedId, setSelectedId] = useState<string>(TEST_PROFILES[0].id);
+  const [demoMode, setDemoMode] = useState(true);
+  const [activeTab, setActiveTab] = useState<'dilutif' | 'non-dilutif'>('dilutif');
+
+  const selected = TEST_PROFILES.find(p => p.id === selectedId)!;
+  const dilutifAmt = Math.round(selected.fundingAmount * (selected.strategy.dilutifPct / 100));
+  const nonDilutifAmt = selected.fundingAmount - dilutifAmt;
+  const totalNonDilutif = NON_DILUTIF.reduce((s, d) => s + d.amount, 0);
+
+  return (
+    <div className="min-h-full py-8 px-4 sm:px-6 lg:px-8 bg-[#F8F8F8]">
+      <div className="max-w-5xl mx-auto space-y-5">
+
+        {/* ── 1. Header ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className={clsx('text-2xl font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
-              Matching Investisseurs
-            </h1>
-            <p className={clsx('mt-1 text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-              Algorithme de matching par secteur, stade, ticket et localisation
-            </p>
+            <h1 className="text-[28px] font-bold text-gray-900 leading-tight">Levée de fonds</h1>
+            <p className="text-sm text-gray-500 mt-1">Matching intelligent dilutif et non-dilutif pour votre profil</p>
           </div>
-
-          {/* Demo mode toggle */}
           <button
-            onClick={() => {
-              setDemoMode(p => !p);
-              if (!demoMode) setSelectedStartup(null);
-            }}
-            className={clsx(
-              'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all',
-              demoMode
-                ? 'bg-primary text-white border-primary'
-                : darkMode
-                  ? 'bg-gray-800 border-gray-600 text-gray-200 hover:border-gray-400'
-                  : 'bg-white border-gray-300 text-gray-700 hover:border-primary'
-            )}
+            onClick={() => setDemoMode(d => !d)}
+            className={clsx('inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition border-[1.5px]', demoMode ? 'bg-[#0A0A0A] text-white border-[#0A0A0A]' : 'bg-transparent text-[#0A0A0A] border-[#0A0A0A] hover:bg-gray-50')}
           >
-            {demoMode ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
-            Mode démo
+            <Monitor className="h-4 w-4" />
+            {demoMode ? 'Mode démo actif' : 'Mode démo'}
           </button>
         </div>
 
-        {/* ── Demo mode — startup selector ── */}
-        {demoMode && (
-          <div className={clsx(card, 'mb-6')}>
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="h-4 w-4 text-primary" />
-              <h2 className={clsx('text-sm font-semibold', darkMode ? 'text-white' : 'text-gray-900')}>
-                Testez avec 5 profils startups réels
-              </h2>
+        {/* ── 2. Sélecteur 5 profils ── */}
+        <div className="rounded-2xl bg-white border border-[#E5E7EB] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-gray-100">
+              <Zap className="h-4 w-4 text-gray-600" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {testStartups.map(startup => (
-                <button
-                  key={startup.id}
-                  onClick={() => setSelectedStartup(startup)}
-                  className={clsx(
-                    'text-left p-3 rounded-xl border transition-all duration-150',
-                    selectedStartup?.id === startup.id
-                      ? 'border-primary bg-secondary-light ring-1 ring-primary'
-                      : darkMode
-                        ? 'border-gray-600 hover:border-gray-400 bg-gray-700/50'
-                        : 'border-gray-200 hover:border-primary bg-gray-50'
-                  )}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">{startup.emoji}</span>
-                    <span className={clsx('text-sm font-semibold truncate', darkMode ? 'text-white' : 'text-gray-900')}>
-                      {startup.name}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mb-1.5">
-                    <span className={clsx('text-xs px-1.5 py-0.5 rounded', darkMode ? 'bg-gray-600 text-gray-300' : 'bg-white border border-gray-200 text-gray-600')}>
-                      {startup.sector}
-                    </span>
-                    <span className={clsx('text-xs px-1.5 py-0.5 rounded', darkMode ? 'bg-gray-600 text-gray-300' : 'bg-white border border-gray-200 text-gray-600')}>
-                      {startup.stage}
-                    </span>
-                  </div>
-                  <p className={clsx('text-xs leading-snug', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-                    {(startup.fundingAmount / 1000).toFixed(0)}K€ recherchés
-                    {startup.mrr > 0 ? ` · ${(startup.mrr / 1000).toFixed(0)}K€ MRR` : ' · Pre-revenue'}
-                  </p>
-                </button>
+            <h2 className="text-sm font-semibold text-gray-900">Testez avec 5 profils startups réels</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {TEST_PROFILES.map(profile => (
+              <ProfileCard key={profile.id} profile={profile} selected={selectedId === profile.id} onClick={() => setSelectedId(profile.id)} />
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-gray-400">
+            Profil sélectionné : <span className="font-semibold text-gray-600">{selected.name}</span> · {selected.sector} · {fmtAmount(selected.fundingAmount)} recherchés
+          </p>
+        </div>
+
+        {/* ── 3. Card profil sélectionné ── */}
+        <div className="rounded-2xl bg-white border border-[#E5E7EB] p-6">
+          <div className="flex flex-col sm:flex-row gap-6">
+            <div className="flex-1">
+              <h2 className="text-[20px] font-bold text-gray-900 mb-1">{selected.name}</h2>
+              <p className="text-sm text-gray-600 mb-3 leading-relaxed">{selected.description}</p>
+              <div className="flex flex-wrap gap-2">
+                <StageBadge stage={selected.stage} />
+                <SectorBadge sector={selected.sector} />
+                <span className="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full border bg-[#F8F8F8] text-gray-500 border-[#E5E7EB]">
+                  📍 {selected.location}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:w-60 flex-shrink-0">
+              {[
+                { label: 'Secteur',  value: selected.sector },
+                { label: 'Stade',    value: STAGE_CONFIG[selected.stage]?.label ?? selected.stage },
+                { label: 'Besoin',   value: fmtAmount(selected.fundingAmount) },
+                { label: 'MRR',      value: selected.mrr ? fmtAmount(selected.mrr) : 'Pre-revenue' },
+              ].map(m => (
+                <div key={m.label} className="rounded-xl p-3 bg-[#F8F8F8]">
+                  <p className="text-[11px] text-gray-400 mb-0.5">{m.label}</p>
+                  <p className="text-sm font-bold text-gray-900">{m.value}</p>
+                </div>
               ))}
             </div>
-
-            {!selectedStartup && (
-              <p className={clsx('text-xs mt-3 flex items-center gap-1.5', darkMode ? 'text-gray-500' : 'text-gray-400')}>
-                <Info className="h-3.5 w-3.5" />
-                Sélectionne un profil pour voir les investisseurs matchés
-              </p>
-            )}
           </div>
-        )}
 
-        {/* ── No profile selected ── */}
-        {!selectedStartup && (
-          <div className={clsx(card, 'text-center py-16')}>
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-secondary-light mb-4">
-              <Star className="h-7 w-7 text-primary" />
+          <div className="mt-5 pt-5 border-t border-[#F3F4F6]">
+            <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Détail du scoring — meilleur match</p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+              <ScoringBar label="Secteur"      value={selected.scoring.secteur}      color="#D8FFBD" />
+              <ScoringBar label="Stade"        value={selected.scoring.stade}        color="#ABC5FE" />
+              <ScoringBar label="Ticket"       value={selected.scoring.ticket}       color="#CDB4FF" />
+              <ScoringBar label="Localisation" value={selected.scoring.localisation} color="#FFB96D" />
             </div>
-            <h2 className={clsx('text-lg font-semibold mb-2', darkMode ? 'text-white' : 'text-gray-900')}>
-              {demoMode ? 'Choisis un profil ci-dessus' : 'Active le mode démo'}
-            </h2>
-            <p className={clsx('text-sm max-w-sm mx-auto', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-              {demoMode
-                ? 'Clique sur un des 5 profils pour lancer le matching et voir les investisseurs compatibles.'
-                : 'Active le mode démo en haut à droite pour tester le matching avec 5 profils startups prédéfinis — sans remplir le formulaire complet.'}
-            </p>
-            {!demoMode && (
-              <button
-                onClick={() => setDemoMode(true)}
-                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-opacity-90 transition"
+          </div>
+        </div>
+
+        {/* ── 4. Stratégie ── */}
+        <div className="rounded-2xl bg-white border border-[#E5E7EB] p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <TrendingUp className="h-4 w-4 text-gray-500" />
+            <h2 className="text-sm font-bold text-gray-900">Stratégie de financement recommandée</h2>
+          </div>
+
+          <div className="grid grid-cols-3 divide-x divide-[#E5E7EB] mb-6">
+            {[
+              { label: 'Stade actuel',    value: STAGE_CONFIG[selected.stage]?.label, icon: '📍', color: '#EEF2FF' },
+              { label: 'Objectif',        value: fmtAmount(selected.fundingAmount),    icon: '🎯', color: '#F0FDF4' },
+              { label: 'Délai estimé',    value: selected.strategy.timeline,           icon: '⏱', color: '#FFFBEB' },
+            ].map(m => (
+              <div key={m.label} className="flex flex-col items-center gap-1 py-2 px-4 text-center">
+                <span className="w-8 h-8 rounded-lg flex items-center justify-center text-base mb-1" style={{ backgroundColor: m.color }}>
+                  {m.icon}
+                </span>
+                <p className="text-[11px] text-gray-400">{m.label}</p>
+                <p className="text-base font-bold text-gray-900">{m.value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-400 font-medium mb-2">Mix recommandé</p>
+            <div className="flex h-[14px] rounded-lg overflow-hidden w-full">
+              <div
+                className="flex items-center justify-center text-[11px] font-bold text-white"
+                style={{ width: `${selected.strategy.dilutifPct}%`, backgroundColor: '#0A0A0A' }}
               >
-                <ToggleRight className="h-4 w-4" />
-                Activer le mode démo
-              </button>
-            )}
+                {selected.strategy.dilutifPct}%
+              </div>
+              <div
+                className="flex items-center justify-center text-[11px] font-bold"
+                style={{ width: `${100 - selected.strategy.dilutifPct}%`, backgroundColor: '#D8FFBD', color: '#2D6A00' }}
+              >
+                {100 - selected.strategy.dilutifPct}%
+              </div>
+            </div>
+            <div className="flex items-center gap-4 mt-2">
+              <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                <span className="w-3 h-3 rounded-sm inline-block bg-[#0A0A0A]" />
+                Dilutif {selected.strategy.dilutifPct}% · {fmtAmount(dilutifAmt)}
+              </span>
+              <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#D8FFBD' }} />
+                Non-dilutif {100 - selected.strategy.dilutifPct}% · {fmtAmount(nonDilutifAmt)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 5. Onglets ── */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setActiveTab('dilutif')}
+            className="flex-1 sm:flex-none px-6 py-3 rounded-xl text-sm font-semibold transition"
+            style={activeTab === 'dilutif'
+              ? { backgroundColor: '#0A0A0A', color: '#ffffff' }
+              : { backgroundColor: '#ffffff', color: '#6B7280', border: '1px solid #E5E7EB' }}
+          >
+            Dilutif (capital)
+          </button>
+          <button
+            onClick={() => setActiveTab('non-dilutif')}
+            className="flex-1 sm:flex-none px-6 py-3 rounded-xl text-sm font-semibold transition"
+            style={activeTab === 'non-dilutif'
+              ? { backgroundColor: '#D8FFBD', color: '#2D6A00' }
+              : { backgroundColor: '#ffffff', color: '#6B7280', border: '1px solid #E5E7EB' }}
+          >
+            Non-dilutif (aides)
+          </button>
+        </div>
+
+        {/* ── 6. Dilutif ── */}
+        {activeTab === 'dilutif' && (
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <h3 className="text-sm font-bold text-gray-900">Top 5 investisseurs matchés</h3>
+              <div className="flex items-center gap-4 text-xs text-gray-400">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full inline-block bg-emerald-200" />
+                  ≥ 80%
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full inline-block bg-amber-200" />
+                  50–79%
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full inline-block bg-red-200" />
+                  &lt; 50%
+                </span>
+              </div>
+            </div>
+            {INVESTORS.map(inv => <InvestorCard key={inv.id} inv={inv} />)}
           </div>
         )}
 
-        {/* ── Results ── */}
-        {selectedStartup && matchResults && (
-          <>
-            {/* Startup recap */}
-            <div className={clsx(card, 'mb-6')}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-2xl">{selectedStartup.emoji}</span>
-                    <h2 className={clsx('text-lg font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
-                      {selectedStartup.name}
-                    </h2>
-                  </div>
-                  <p className={clsx('text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-                    {selectedStartup.description}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { label: 'Secteur', val: selectedStartup.sector },
-                    { label: 'Stade', val: selectedStartup.stage },
-                    { label: 'Besoin', val: `${(selectedStartup.fundingAmount / 1000).toFixed(0)}K€` },
-                    { label: 'MRR', val: selectedStartup.mrr > 0 ? `${(selectedStartup.mrr / 1000).toFixed(0)}K€` : '0' },
-                    { label: 'Ville', val: selectedStartup.location },
-                  ].map(({ label, val }) => (
-                    <div key={label} className={clsx('px-3 py-1.5 rounded-lg', darkMode ? 'bg-gray-700' : 'bg-gray-50')}>
-                      <p className={clsx('text-xs', darkMode ? 'text-gray-400' : 'text-gray-500')}>{label}</p>
-                      <p className={clsx('text-sm font-semibold', darkMode ? 'text-white' : 'text-gray-900')}>{val}</p>
-                    </div>
-                  ))}
-                </div>
+        {/* ── 7. Non-dilutif ── */}
+        {activeTab === 'non-dilutif' && (
+          <div className="space-y-4">
+            <div
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl"
+              style={{ backgroundColor: '#F6FFF0', border: '1px solid #D8FFBD' }}
+            >
+              <div className="flex items-center gap-3">
+                <Leaf className="h-5 w-5 flex-shrink-0" style={{ color: '#2D6A00' }} />
+                <p className="text-sm font-semibold" style={{ color: '#2D6A00' }}>
+                  Financement sans dilution · {fmtAmount(totalNonDilutif)} identifiés pour votre profil
+                </p>
               </div>
-
-              {/* Score breakdown of best match */}
-              {matchResults.dilutive[0] && (
-                <div className={clsx('mt-4 pt-4 border-t', darkMode ? 'border-gray-700' : 'border-gray-100')}>
-                  <p className={clsx('text-xs font-medium mb-2', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-                    Détail du scoring — meilleur match ({matchResults.dilutive[0].investor.name})
-                  </p>
-                  <div className="space-y-1.5">
-                    <BreakdownBar label="Secteur" value={matchResults.dilutive[0].breakdown.sector} max={40} darkMode={darkMode} />
-                    <BreakdownBar label="Stade" value={matchResults.dilutive[0].breakdown.stage} max={30} darkMode={darkMode} />
-                    <BreakdownBar label="Ticket" value={matchResults.dilutive[0].breakdown.ticket} max={20} darkMode={darkMode} />
-                    <BreakdownBar label="Localisation" value={matchResults.dilutive[0].breakdown.location} max={10} darkMode={darkMode} />
-                  </div>
-                </div>
-              )}
+              <p className="text-[20px] font-bold" style={{ color: '#2D6A00' }}>
+                {fmtAmount(totalNonDilutif)} potentiel
+              </p>
             </div>
 
-            {/* Funding strategy */}
-            <FundingStrategy
-              startup={selectedStartup}
-              nonDilutiveResults={matchResults.nonDilutive}
-              darkMode={darkMode}
-            />
-
-            {/* Tabs */}
-            <div className={clsx('flex rounded-xl border overflow-hidden mb-4', darkMode ? 'border-gray-700' : 'border-gray-200')}>
-              {(['dilutive', 'non-dilutive'] as const).map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={clsx(
-                    'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all',
-                    activeTab === tab
-                      ? darkMode ? 'bg-gray-800 text-white' : 'bg-white text-primary'
-                      : darkMode ? 'bg-gray-700/50 text-gray-400 hover:text-gray-200' : 'bg-gray-50 text-gray-500 hover:text-gray-700'
-                  )}
-                >
-                  {tab === 'dilutive'
-                    ? <><Users className="h-4 w-4" /> Dilutif ({matchResults.dilutive.length})</>
-                    : <><Building className="h-4 w-4" /> Non dilutif ({matchResults.nonDilutive.length})</>
-                  }
-                </button>
-              ))}
-            </div>
-
-            {/* Dilutive investors */}
-            {activeTab === 'dilutive' && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className={clsx(labelCls, 'font-semibold')}>
-                    Top {matchResults.dilutive.length} investisseurs matchés
-                  </h3>
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" />≥ 80%</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />50–79%</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />{'< 50%'}</span>
-                  </div>
-                </div>
-                {matchResults.dilutive.length === 0 ? (
-                  <div className={clsx(card, 'text-center py-10')}>
-                    <p className={clsx('text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-                      Aucun investisseur dilutif compatible pour ce profil.
-                    </p>
-                  </div>
-                ) : (
-                  matchResults.dilutive.map(result => (
-                    <InvestorCard key={result.investor.id} result={result} darkMode={darkMode} />
-                  ))
-                )}
-              </div>
-            )}
-
-            {/* Non-dilutive */}
-            {activeTab === 'non-dilutive' && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className={clsx(labelCls, 'font-semibold')}>
-                    Top {matchResults.nonDilutive.length} dispositifs non-dilutifs éligibles
-                  </h3>
-                  <span className={clsx('text-xs px-2 py-1 rounded-full', darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-700')}>
-                    Zéro dilution
-                  </span>
-                </div>
-                {matchResults.nonDilutive.length === 0 ? (
-                  <div className={clsx(card, 'text-center py-10')}>
-                    <p className={clsx('text-sm', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-                      Aucun dispositif non-dilutif compatible pour ce profil.
-                    </p>
-                  </div>
-                ) : (
-                  matchResults.nonDilutive.map(result => (
-                    <InvestorCard key={result.investor.id} result={result} darkMode={darkMode} />
-                  ))
-                )}
-
-                {/* Info box */}
-                <div className={clsx(
-                  'flex gap-3 p-4 rounded-xl border mt-4',
-                  darkMode ? 'bg-blue-900/20 border-blue-800 text-blue-300' : 'bg-blue-50 border-blue-100 text-blue-700'
-                )}>
-                  <TrendingUp className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium mb-0.5">Conseil stratégique</p>
-                    <p className="text-xs leading-relaxed opacity-90">
-                      Combiner le CIR avec une levée dilutive permet de réduire le montant levé de 15–30%
-                      et donc la dilution des fondateurs. C'est le white space que Raisup est le seul à combiner.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
+            <h3 className="text-sm font-bold text-gray-900">3 dispositifs éligibles</h3>
+            {NON_DILUTIF.map(d => <NonDilutifCard key={d.id} dispositif={d} />)}
+          </div>
         )}
+
       </div>
     </div>
   );

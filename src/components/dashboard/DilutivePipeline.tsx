@@ -72,10 +72,10 @@ const DilutivePipeline: React.FC<Props> = ({ darkMode }) => {
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/dashboard/fundraising" className={clsx('text-xs font-medium hover:underline', darkMode ? 'text-gray-400' : 'text-gray-500')}>
+          <Link to="/dashboard/fundraising" className="text-xs font-semibold text-raisup-pink-dark hover:underline">
             Matchs recommandés →
           </Link>
-          <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-opacity-90 transition">
+          <button className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-raisup-black text-white text-xs font-semibold hover:opacity-80 transition">
             <Plus className="h-3.5 w-3.5" />
             Ajouter
           </button>
@@ -128,6 +128,30 @@ const DilutivePipeline: React.FC<Props> = ({ darkMode }) => {
           {showAll ? 'Masquer' : `Voir tout le pipeline (${pipeline.length})`}
         </button>
       )}
+
+      {/* Total summary row */}
+      {(() => {
+        const fmt = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M€` : `${(n / 1000).toFixed(0)}K€`;
+        const totalTicket = pipeline.reduce((s, i) => s + i.targetTicket, 0);
+        const activeCount = pipeline.filter(i => ['in-discussion', 'meeting', 'term-sheet'].includes(i.status)).length;
+        const avgProba = Math.round((activeCount / pipeline.length) * 100);
+        return (
+          <div className={clsx('mt-4 pt-3 border-t flex flex-wrap items-center gap-x-5 gap-y-1 text-xs', darkMode ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-500')}>
+            <span>
+              <span className={clsx('font-semibold', darkMode ? 'text-white' : 'text-gray-900')}>Total pipeline :</span>{' '}
+              {fmt(totalTicket)} visés
+            </span>
+            <span>
+              <span className={clsx('font-semibold', darkMode ? 'text-white' : 'text-gray-900')}>En discussion active :</span>{' '}
+              {activeCount} investisseurs
+            </span>
+            <span>
+              <span className={clsx('font-semibold', darkMode ? 'text-white' : 'text-gray-900')}>Prob. moyenne de closing :</span>{' '}
+              ~{avgProba}%
+            </span>
+          </div>
+        );
+      })()}
     </div>
   );
 };

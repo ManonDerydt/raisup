@@ -38,6 +38,9 @@ import PortfolioPage from './pages/b2b/PortfolioPage';
 import FundingSynthesisPage from './pages/b2b/FundingSynthesisPage';
 import StrategicReportsPage from './pages/b2b/StrategicReportsPage';
 import SimplifiedOnboardingForm from './pages/SimplifiedOnboardingForm';
+import RaisupOnboardingForm from './pages/RaisupOnboardingForm';
+import RaisupSuccessPage from './pages/RaisupSuccessPage';
+import LoadingStrategy from './pages/LoadingStrategy';
 
 function App() {
   return (
@@ -55,6 +58,9 @@ function App() {
           <Route path="validation" element={<ValidationForm />} />
         </Route>
         <Route path="/register/startup" element={<SimplifiedOnboardingForm />} />
+        <Route path="/onboarding/raisup" element={<RaisupOnboardingForm />} />
+        <Route path="/onboarding/raisup/success" element={<RaisupSuccessPage />} />
+        <Route path="/loading-strategy" element={<LoadingStrategy />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/onboarding" element={<OnboardingLayout />}>
