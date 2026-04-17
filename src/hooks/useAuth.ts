@@ -55,6 +55,37 @@ export function useAuth() {
     return { error };
   };
 
+  const resetPassword = async (email: string) => {
+    if (!isSupabaseConfigured) {
+      return { error: new Error('Supabase non configuré') };
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password',
+    });
+    return { error };
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    if (!isSupabaseConfigured) {
+      return { error: new Error('Supabase non configuré') };
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return { error };
+  };
+
+  const signInWithGoogle = async (redirectTo?: string) => {
+    if (!isSupabaseConfigured) {
+      return { data: null, error: new Error('Supabase non configuré') };
+    }
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectTo ?? (window.location.origin + '/loading-strategy'),
+      },
+    });
+    return { data, error };
+  };
+
   return {
     user: authState.user,
     session: authState.session,
@@ -62,5 +93,8 @@ export function useAuth() {
     signIn,
     signUp,
     signOut,
+    signInWithGoogle,
+    resetPassword,
+    updatePassword,
   };
 }

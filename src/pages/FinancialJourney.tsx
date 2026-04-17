@@ -1,13 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useNavigate, NavLink } from 'react-router-dom';
+import { useUserProfile } from '../hooks/useUserProfile';
 import {
   ArrowRight, CheckCircle, Clock, Star, Zap, Target,
-  TrendingUp, Users, AlertCircle, ChevronRight, Trophy,
+  TrendingUp, Users, AlertCircle, ChevronRight, Trophy, Lock,
+  FileText, Lightbulb, Map,
 } from 'lucide-react';
 import clsx from 'clsx';
-import mockFinancialJourney, { JourneyStep } from '../data/mockFinancialJourney';
+import {
+  generateTimeline, calculateScore, recommendedDilution, sectorBenchmarkDilution,
+  nextRoundValuation, getRaisupRecommendation, getObjectiveMessage, formatAmount,
+  getGlobalProgress,
+  type Profile, type TimelineStage, type TimelineResult,
+} from '../services/generateTimeline';
 
-// ─── useInView ────────────────────────────────────────────────────────────────
+// ─── useInView ─────────────────────────────────────────────────────────────────
+
 function useInView(threshold = 0.1) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -23,7 +31,8 @@ function useInView(threshold = 0.1) {
   return { ref, visible };
 }
 
-// ─── FadeSlide wrapper ────────────────────────────────────────────────────────
+// ─── FadeSlide ─────────────────────────────────────────────────────────────────
+
 const FadeSlide: React.FC<{
   children: React.ReactNode;
   from?: 'left' | 'right' | 'up';
@@ -37,11 +46,7 @@ const FadeSlide: React.FC<{
   return (
     <div
       ref={ref}
-      className={clsx(
-        'transition-all duration-700',
-        visible ? 'opacity-100 translate-x-0 translate-y-0' : `opacity-0 ${translate}`,
-        className,
-      )}
+      className={clsx('transition-all duration-700', visible ? 'opacity-100 translate-x-0 translate-y-0' : `opacity-0 ${translate}`, className)}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
@@ -49,30 +54,90 @@ const FadeSlide: React.FC<{
   );
 };
 
-// ─── Probability badge ────────────────────────────────────────────────────────
-const ProbaBadge: React.FC<{ value: number; stepId: string }> = ({ value, stepId }) => {
+// ─── Animated circle gauge ─────────────────────────────────────────────────────
+
+const CircleGauge: React.FC<{ score: number; size?: number }> = ({ score, size = 80 }) => {
+  const [anim, setAnim] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setAnim(score), 300); return () => clearTimeout(t); }, [score]);
+  const r = (size - 10) / 2;
+  const circ = 2 * Math.PI * r;
+  const color = score >= 70 ? '#22c55e' : score >= 50 ? '#FFB96D' : '#FFB3B3';
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(244,184,204,0.15)" strokeWidth="8" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F4B8CC" strokeWidth="8"
+          strokeDasharray={circ} strokeLinecap="round"
+          strokeDashoffset={circ - (anim / 100) * circ}
+          style={{ transition: 'stroke-dashoffset 1.4s cubic-bezier(0.4,0,0.2,1)' }}
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className="text-white font-black leading-none" style={{ fontSize: size * 0.22 }}>{score}</span>
+        <span className="text-gray-500" style={{ fontSize: size * 0.12 }}>/100</span>
+      </div>
+    </div>
+  );
+};
+
+// ─── Mix bar ───────────────────────────────────────────────────────────────────
+
+const MixBar: React.FC<{ dilutif: number; nonDilutif: number }> = ({ dilutif, nonDilutif }) => (
+  <div>
+    <p className="text-xs font-medium text-gray-500 mb-1.5">Mix de financement recommandé</p>
+    <div className="flex h-2 rounded-full overflow-hidden">
+      <div className="transition-all duration-700" style={{ width: `${dilutif}%`, backgroundColor: '#F4B8CC' }} />
+      <div className="flex-1" style={{ backgroundColor: '#D8FFBD' }} />
+    </div>
+    <div className="flex justify-between text-xs text-gray-400 mt-1">
+      <span>Dilutif {dilutif}%</span>
+      <span>Non-dilutif {nonDilutif}%</span>
+    </div>
+  </div>
+);
+
+// ─── Capital bar ───────────────────────────────────────────────────────────────
+
+const CapitalBar: React.FC<{ founders: number; current: number; newI: number }> = ({ founders, current, newI }) => (
+  <div>
+    <p className="text-xs font-medium text-gray-500 mb-1.5">Structure du capital après levée</p>
+    <div className="flex h-2 rounded-full overflow-hidden">
+      <div style={{ width: `${founders}%`, backgroundColor: '#0A0A0A' }} />
+      <div style={{ width: `${current}%`, backgroundColor: '#ABC5FE' }} />
+      <div style={{ width: `${newI}%`, backgroundColor: '#F4B8CC' }} />
+    </div>
+    <div className="flex gap-3 mt-1.5 flex-wrap">
+      {[
+        { label: `Fondateurs ${founders}%`, color: '#0A0A0A' },
+        { label: `Actuels ${current}%`, color: '#ABC5FE' },
+        { label: `Nouveaux ${newI}%`, color: '#F4B8CC' },
+      ].map(({ label, color }) => (
+        <div key={label} className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+          <span className="text-xs text-gray-400">{label}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// ─── Probability badge ─────────────────────────────────────────────────────────
+
+const ProbaBadge: React.FC<{ value: number; factors?: string[] }> = ({ value, factors = [] }) => {
   const [open, setOpen] = useState(false);
   const color = value >= 60 ? 'bg-green-100 text-green-700' : value >= 30 ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-600';
-  const factors: Record<string, string[]> = {
-    'series-a': ['Croissance MRR +14%/mois', 'Score Raisup 74/100', '10 mois de runway'],
-    'series-b': ['Dépend de la Série A', 'Marché adressable validé', 'Efficacité CAC à prouver'],
-    'series-c': ['Probabilité conditionnelle', 'Leadership marché requis', 'Rentabilité opérationnelle'],
-  };
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className={clsx('px-2.5 py-1 rounded-full text-xs font-bold transition-all', color)}
-      >
+      <button onClick={() => setOpen(!open)} className={clsx('px-2.5 py-1 rounded-full text-xs font-bold transition-all', color)}>
         {value}% de probabilité
       </button>
-      {open && (
-        <div className="absolute right-0 top-8 z-20 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-4">
+      {open && factors.length > 0 && (
+        <div className="absolute right-0 top-8 z-20 w-60 bg-white rounded-xl shadow-xl border border-gray-100 p-4">
           <p className="text-xs font-semibold text-gray-700 mb-2">Facteurs clés :</p>
           <ul className="space-y-1">
-            {(factors[stepId] ?? []).map((f) => (
+            {factors.map(f => (
               <li key={f} className="text-xs text-gray-500 flex gap-1.5">
-                <ChevronRight className="h-3 w-3 text-rose-400 flex-shrink-0 mt-0.5" />
+                <ChevronRight className="h-3 w-3 flex-shrink-0 mt-0.5" style={{ color: '#F4B8CC' }} />
                 {f}
               </li>
             ))}
@@ -84,75 +149,65 @@ const ProbaBadge: React.FC<{ value: number; stepId: string }> = ({ value, stepId
   );
 };
 
-// ─── Mix bar ──────────────────────────────────────────────────────────────────
-const MixBar: React.FC<{ dilutif: number }> = ({ dilutif }) => (
-  <div>
-    <p className="text-xs font-medium text-gray-500 mb-1.5">Mix de financement recommandé</p>
-    <div className="flex h-2 rounded-full overflow-hidden">
-      <div className="bg-rose-400 transition-all duration-700" style={{ width: `${dilutif}%` }} />
-      <div className="bg-gray-200 flex-1" />
-    </div>
-    <div className="flex justify-between text-xs text-gray-400 mt-1">
-      <span>Dilutif {dilutif}%</span>
-      <span>Non-dilutif {100 - dilutif}%</span>
-    </div>
-  </div>
-);
+// ─── Step card ─────────────────────────────────────────────────────────────────
 
-// ─── Capital bar ──────────────────────────────────────────────────────────────
-const CapitalBar: React.FC<{ founders: number; current: number; newI: number }> = ({ founders, current, newI }) => (
-  <div>
-    <p className="text-xs font-medium text-gray-500 mb-1.5">Structure du capital après levée</p>
-    <div className="flex h-2 rounded-full overflow-hidden">
-      <div className="bg-primary" style={{ width: `${founders}%` }} />
-      <div className="bg-blue-400" style={{ width: `${current}%` }} />
-      <div className="bg-rose-400" style={{ width: `${newI}%` }} />
-    </div>
-    <div className="flex gap-4 mt-1.5">
-      {[
-        { label: `Fondateurs ${founders}%`, color: 'bg-primary' },
-        { label: `Actuels ${current}%`, color: 'bg-blue-400' },
-        { label: `Nouveaux ${newI}%`, color: 'bg-rose-400' },
-      ].map(({ label, color }) => (
-        <div key={label} className="flex items-center gap-1">
-          <div className={clsx('w-2 h-2 rounded-full', color)} />
-          <span className="text-xs text-gray-400">{label}</span>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-// ─── Step card ────────────────────────────────────────────────────────────────
-const StepCard: React.FC<{ step: JourneyStep; side: 'left' | 'right' }> = ({ step, side }) => {
+const StepCard: React.FC<{ step: TimelineStage; profile: Profile; score: ReturnType<typeof calculateScore> }> = ({
+  step, profile, score,
+}) => {
   const isCurrent = step.status === 'current';
-  const isGoal = step.id === 'series-c';
+  const isObjective = step.isObjective;
+  const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
 
-  if (isGoal) {
+  const probabilityFactors = useMemo(() => {
+    const factors: string[] = [];
+    if (score.total > 70) factors.push(`Score Raisup fort : ${score.total}/100`);
+    else factors.push(`Score Raisup : ${score.total}/100 — à améliorer`);
+    if (mrr > 0) factors.push(`MRR actuel : ${formatAmount(mrr)}`);
+    else factors.push('Pre-revenue — traction à prouver');
+    if ((profile.runway ?? 0) >= 12) factors.push(`Runway confortable : ${profile.runway} mois`);
+    else factors.push(`Runway court : ${profile.runway ?? '?'} mois`);
+    return factors;
+  }, [score, mrr, profile]);
+
+  if (isObjective) {
     return (
       <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 100%)' }}>
         <div className="p-8 text-center">
           <div className="flex justify-center mb-4">
-            <Trophy className="h-10 w-10 text-rose-400" />
+            <Trophy className="h-10 w-10" style={{ color: '#F4B8CC' }} />
           </div>
-          <span className="text-xs font-bold tracking-widest uppercase text-rose-400 block mb-2">Objectif atteint</span>
-          <h3 className="text-3xl font-black text-white mb-2">Valorisation 50M€</h3>
-          <p className="text-gray-400 text-sm mb-6">Série C ou Pre-exit · 2029-2030</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            {step.kpis?.map(({ label, value }) => (
-              <div key={label} className="bg-white/5 rounded-xl p-3">
-                <p className="text-gray-400 text-xs mb-1">{label}</p>
-                <p className="text-white font-bold text-sm">{value}</p>
-              </div>
-            ))}
-          </div>
-          {step.probability !== undefined && (
-            <div className="flex justify-center mb-5">
-              <ProbaBadge value={step.probability} stepId={step.id} />
+          <span className="text-xs font-bold tracking-widest uppercase block mb-2" style={{ color: '#F4B8CC' }}>
+            Objectif atteint
+          </span>
+          <h3 className="text-3xl font-black text-white mb-2">{step.title}</h3>
+          {step.description && (
+            <p className="text-gray-400 text-sm mb-6 max-w-md mx-auto leading-relaxed">{step.description}</p>
+          )}
+          {step.kpis && step.kpis.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              {step.kpis.map(({ label, value }) => (
+                <div key={label} className="bg-white/5 rounded-xl p-3">
+                  <p className="text-gray-400 text-xs mb-1">{label}</p>
+                  <p className="text-white font-bold text-sm">{value}</p>
+                </div>
+              ))}
             </div>
           )}
-          <p className="text-rose-400 italic text-sm max-w-sm mx-auto">
-            "À ce stade, vous aurez le choix : continuer à croître, ouvrir le capital à un fonds Growth, ou préparer un exit stratégique."
+          {step.conditions && step.conditions.length > 0 && (
+            <div className="text-left bg-white/5 rounded-xl p-4 max-w-sm mx-auto">
+              <p className="text-xs font-semibold text-gray-400 mb-2">Conditions</p>
+              <ul className="space-y-1">
+                {step.conditions.map(c => (
+                  <li key={c} className="text-xs text-gray-300 flex gap-1.5">
+                    <ChevronRight className="h-3 w-3 flex-shrink-0 mt-0.5" style={{ color: '#F4B8CC' }} />
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <p className="text-sm mt-6 italic" style={{ color: '#F4B8CC' }}>
+            {getObjectiveMessage(profile)}
           </p>
         </div>
       </div>
@@ -162,66 +217,75 @@ const StepCard: React.FC<{ step: JourneyStep; side: 'left' | 'right' }> = ({ ste
   return (
     <div className={clsx(
       'rounded-2xl bg-white border shadow-sm transition-shadow hover:shadow-md relative',
-      isCurrent ? 'border-l-4 border-l-rose-400 border-gray-100' : 'border-gray-100',
-    )}>
+      isCurrent ? 'border-gray-100' : 'border-gray-100',
+    )}
+      style={isCurrent ? { borderLeft: '4px solid #F4B8CC' } : {}}
+    >
       {isCurrent && (
         <div className="absolute -top-3 left-4">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-400 text-white text-xs font-bold animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-xs font-bold animate-pulse"
+            style={{ backgroundColor: '#F4B8CC', color: '#0A0A0A' }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
             Vous êtes ici
           </span>
         </div>
       )}
       <div className="p-6 pt-7">
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-3 gap-3">
           <div>
-            <h3 className="font-bold text-primary text-base">{step.title}</h3>
-            <p className="text-gray-400 text-sm">{step.subtitle}</p>
+            <h3 className="font-bold text-gray-900 text-base">{step.title}</h3>
+            {step.estimatedDate && !isCurrent && (
+              <p className="text-gray-400 text-sm">{step.estimatedDate}</p>
+            )}
+            {step.amount != null && step.amount > 0 && (
+              <p className="text-sm font-semibold mt-0.5" style={{ color: '#F4B8CC' }}>
+                {formatAmount(step.amount)}
+              </p>
+            )}
           </div>
-          {step.probability !== undefined && (
-            <ProbaBadge value={step.probability} stepId={step.id} />
+          {step.probability != null && (
+            <ProbaBadge value={step.probability} factors={probabilityFactors} />
           )}
         </div>
 
-        <p className="text-gray-500 text-sm leading-relaxed mb-4">{step.description}</p>
+        {step.description && (
+          <p className="text-gray-500 text-sm leading-relaxed mb-4">{step.description}</p>
+        )}
 
         {/* KPIs */}
-        {step.kpis && (
-          <div className="flex gap-3 flex-wrap mb-4">
+        {step.kpis && step.kpis.length > 0 && (
+          <div className="flex gap-2 flex-wrap mb-4">
             {step.kpis.map(({ label, value }) => (
               <div key={label} className="bg-gray-50 rounded-lg px-3 py-1.5">
                 <span className="text-gray-400 text-xs">{label} </span>
-                <span className="text-primary font-semibold text-xs">{value}</span>
+                <span className="text-gray-900 font-semibold text-xs">{value}</span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Equity badges (current step) */}
-        {step.equityBadges && (
-          <div className="flex gap-2 mb-4">
-            {step.equityBadges.map(({ label, color }) => (
-              <span
-                key={label}
-                className={clsx(
-                  'px-2.5 py-1 rounded-full text-xs font-medium',
-                  color === 'green' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700',
-                )}
-              >
-                {label}
+        {/* Equity badges for current */}
+        {isCurrent && (
+          <div className="flex gap-2 mb-4 flex-wrap">
+            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+              Fondateurs {profile.founderSharePct ?? 85}%
+            </span>
+            {(profile.founderSharePct ?? 85) < 100 && (
+              <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                Investisseurs {100 - (profile.founderSharePct ?? 85)}%
               </span>
-            ))}
+            )}
           </div>
         )}
 
         {/* Conditions */}
-        {step.conditions && (
+        {step.conditions && step.conditions.length > 0 && (
           <div className="bg-gray-50 rounded-xl p-4 mb-4">
             <p className="text-xs font-semibold text-gray-600 mb-2">Ce qu'il faut atteindre avant cette étape</p>
             <ul className="space-y-1.5">
-              {step.conditions.map((c) => (
+              {step.conditions.map(c => (
                 <li key={c} className="flex items-start gap-2 text-xs text-gray-500">
-                  <ChevronRight className="h-3.5 w-3.5 text-rose-400 flex-shrink-0 mt-0.5" />
+                  <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color: '#F4B8CC' }} />
                   {c}
                 </li>
               ))}
@@ -230,9 +294,9 @@ const StepCard: React.FC<{ step: JourneyStep; side: 'left' | 'right' }> = ({ ste
         )}
 
         {/* Mix + Capital */}
-        {step.dilutiveMix !== undefined && (
+        {step.mix && !isCurrent && (
           <div className="space-y-3 mb-4">
-            <MixBar dilutif={step.dilutiveMix} />
+            <MixBar dilutif={step.mix.dilutif} nonDilutif={step.mix.nonDilutif} />
             {step.capitalAfter && (
               <CapitalBar
                 founders={step.capitalAfter.founders}
@@ -247,102 +311,94 @@ const StepCard: React.FC<{ step: JourneyStep; side: 'left' | 'right' }> = ({ ste
         {step.timeToNext && (
           <p className="text-xs text-gray-400 italic mt-2">{step.timeToNext}</p>
         )}
-
-        {/* CTA */}
-        {step.status === 'future' && (
-          <Link
-            to="/dashboard/fundraising"
-            className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 transition-colors bg-rose-50 px-3 py-2 rounded-lg"
-          >
-            Voir les investisseurs matchés pour cette étape
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        )}
       </div>
     </div>
   );
 };
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
-const Sidebar: React.FC = () => {
-  const [tasks, setTasks] = useState([
-    { id: 1, label: 'Atteindre 15K€ MRR', priority: 'high', done: false },
-    { id: 2, label: 'Recruter un Head of Sales', priority: 'high', done: false },
-    { id: 3, label: 'Finaliser le pitch deck Série A', priority: 'medium', done: true },
-    { id: 4, label: 'Contacter 5 investisseurs Série A', priority: 'medium', done: false },
-    { id: 5, label: 'Réduire le churn sous 4%', priority: 'low', done: false },
-  ]);
+// ─── Sidebar ───────────────────────────────────────────────────────────────────
 
-  const toggle = (id: number) =>
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+const Sidebar: React.FC<{
+  profile: Profile;
+  score: ReturnType<typeof calculateScore>;
+  timeline: TimelineResult;
+  isPaid: boolean;
+}> = ({ profile, score, timeline, isPaid }) => {
+  const navigate = useNavigate();
+  const recommendation = getRaisupRecommendation(profile, score, timeline);
+  const isUrgent = (profile.runway ?? 12) < 6;
+  const recColor = isUrgent ? '#EF4444' : score.total < 50 ? '#FFB96D' : '#22C55E';
+  const recBg = isUrgent ? '#FFF5F5' : score.total < 50 ? '#FFFBF5' : '#F0FFF4';
+  const recBorder = isUrgent ? '#EF4444' : score.total < 50 ? '#FFB96D' : '#22C55E';
+
+  const actions = useMemo(() => {
+    const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
+    const list: { label: string; priority: 'high' | 'medium' | 'low' }[] = [];
+    if ((profile.runway ?? 12) < 6) list.push({ label: 'Sécuriser un financement pont immédiat', priority: 'high' });
+    if (mrr === 0) list.push({ label: 'Obtenir les 3 premiers clients payants', priority: 'high' });
+    if (!profile.hasCTO && (profile.businessModel ?? '').toLowerCase().includes('saas'))
+      list.push({ label: 'Recruter un CTO co-fondateur', priority: 'high' });
+    if (score.total < 60) list.push({ label: 'Compléter le profil Raisup pour améliorer le score', priority: 'medium' });
+    list.push({ label: 'Finaliser le pitch deck', priority: 'medium' });
+    list.push({ label: 'Contacter 5 investisseurs matchés', priority: 'low' });
+    return list.slice(0, 5);
+  }, [profile, score]);
 
   const priorityColor = (p: string) =>
     p === 'high' ? 'bg-red-100 text-red-600' : p === 'medium' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500';
+  const priorityLabel = (p: string) =>
+    p === 'high' ? 'Urgent' : p === 'medium' ? 'Moyen' : 'Faible';
 
   return (
     <div className="space-y-4">
       {/* Actions prioritaires */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-bold text-primary text-sm mb-4 flex items-center gap-2">
-          <Target className="h-4 w-4 text-rose-400" />
+        <h3 className="font-bold text-gray-900 text-sm mb-4 flex items-center gap-2">
+          <Target className="h-4 w-4" style={{ color: '#F4B8CC' }} />
           Prochaines actions prioritaires
         </h3>
         <ul className="space-y-3">
-          {tasks.map((t) => (
-            <li key={t.id} className="flex items-start gap-3">
-              <button
-                onClick={() => toggle(t.id)}
-                className={clsx(
-                  'mt-0.5 w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-colors',
-                  t.done ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-rose-400',
-                )}
-              >
-                {t.done && <CheckCircle className="h-3 w-3 text-white" />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className={clsx('text-xs leading-snug', t.done ? 'line-through text-gray-400' : 'text-gray-700')}>
-                  {t.label}
-                </p>
-              </div>
+          {actions.map((t, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <div className="mt-0.5 w-4 h-4 rounded border border-gray-300 flex-shrink-0" />
+              <p className="flex-1 text-xs text-gray-700 leading-snug">{t.label}</p>
               <span className={clsx('px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0', priorityColor(t.priority))}>
-                {t.priority === 'high' ? 'Urgent' : t.priority === 'medium' ? 'Moyen' : 'Faible'}
+                {priorityLabel(t.priority)}
               </span>
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Recommandation IA */}
-      <div className="bg-green-50 rounded-2xl border-l-4 border-green-500 p-5">
+      {/* Recommandation Raisup */}
+      <div className="rounded-2xl p-5" style={{ backgroundColor: recBg, borderLeft: `4px solid ${recBorder}` }}>
         <div className="flex items-center gap-2 mb-2">
-          <Zap className="h-4 w-4 text-green-600" />
-          <h3 className="font-bold text-green-800 text-sm">Recommandation Raisup</h3>
+          <Lightbulb className="h-4 w-4" style={{ color: recColor }} />
+          <h3 className="font-bold text-sm" style={{ color: recColor }}>Recommandation Raisup</h3>
         </div>
-        <p className="text-green-700 text-xs leading-relaxed mb-3">
-          À votre stade, concentrez 80% de votre énergie sur l'acquisition client. Atteindre 20K€ MRR en 4 mois déclencherait 3 conversations investisseurs supplémentaires selon nos données.
+        <p className="text-xs leading-relaxed" style={{ color: recColor }}>
+          {recommendation}
         </p>
-        <button className="text-xs font-semibold text-green-700 hover:text-green-900 flex items-center gap-1">
-          Voir le plan détaillé <ArrowRight className="h-3.5 w-3.5" />
-        </button>
       </div>
 
       {/* Raccourcis */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h3 className="font-bold text-primary text-sm mb-3">Raccourcis</h3>
+        <h3 className="font-bold text-gray-900 text-sm mb-3">Raccourcis</h3>
         <div className="flex flex-col gap-2">
           {[
-            { label: 'Générer mon deck', to: '/dashboard/generate', icon: Zap },
-            { label: 'Investisseurs matchés', to: '/dashboard/fundraising', icon: Users },
-            { label: 'Mettre à jour mes KPIs', to: '/dashboard/kpis', icon: TrendingUp },
-          ].map(({ label, to, icon: Icon }) => (
-            <Link
+            { label: 'Générer mon deck', icon: FileText, link: isPaid ? '/dashboard/documents' : '/pricing' },
+            { label: 'Investisseurs matchés', icon: Users, link: isPaid ? '/dashboard/fundraising' : '/pricing' },
+            { label: 'Mettre à jour mes KPIs', icon: TrendingUp, link: '/dashboard/kpis' },
+          ].map(({ label, icon: Icon, link }) => (
+            <button
               key={label}
-              to={to}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-gray-100 text-xs font-medium text-gray-700 hover:border-rose-300 hover:text-rose-600 hover:bg-rose-50 transition-all"
+              onClick={() => navigate(link)}
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-gray-100 text-xs font-medium text-gray-700 hover:border-rose-300 hover:text-rose-600 hover:bg-rose-50 transition-all text-left"
             >
               <Icon className="h-3.5 w-3.5" />
               {label}
-            </Link>
+              {!isPaid && link === '/pricing' && <Lock className="h-3 w-3 ml-auto text-gray-300" />}
+            </button>
           ))}
         </div>
       </div>
@@ -350,14 +406,41 @@ const Sidebar: React.FC = () => {
   );
 };
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Main page ─────────────────────────────────────────────────────────────────
+
 const FinancialJourney: React.FC = () => {
-  const { goal, current, steps, globalProgress } = mockFinancialJourney;
+  const navigate = useNavigate();
+
+  const { isPremium } = useUserProfile();
+  const isPaid = isPremium;
+
+  const profile = useMemo<Profile>(() => {
+    try {
+      const a = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
+      const b = JSON.parse(localStorage.getItem('raisupOnboardingData') || '{}');
+      return { ...b, ...a };
+    } catch { return {}; }
+  }, []);
+
+  const score = useMemo(() => calculateScore(profile), [profile]);
+  const timeline = useMemo(() => generateTimeline(profile), [profile]);
+
   const [lineHeight, setLineHeight] = useState(0);
   const timelineRef = useRef<HTMLDivElement>(null);
   const { ref: progressRef, visible: progressVisible } = useInView(0.3);
 
-  // Animate the vertical line drawing
+  const startupName = profile.startupName || profile.projectName || 'Votre startup';
+  const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
+
+  // Score display helpers
+  const scoreColor = score.total >= 70 ? '#22C55E' : score.total >= 50 ? '#FFB96D' : '#FFB3B3';
+  const scorePhrase = score.total >= 70
+    ? 'Vous êtes sur la bonne trajectoire'
+    : score.total >= 50
+    ? 'Dossier à renforcer avant de pitcher'
+    : 'Des ajustements importants sont nécessaires';
+
+  // Animated timeline line
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) {
@@ -365,7 +448,7 @@ const FinancialJourney: React.FC = () => {
         const total = timelineRef.current?.scrollHeight ?? 0;
         const animate = (ts: number) => {
           if (!start) start = ts;
-          const p = Math.min((ts - start) / 1200, 1);
+          const p = Math.min((ts - start) / 1400, 1);
           setLineHeight(p * total);
           if (p < 1) requestAnimationFrame(animate);
         };
@@ -377,115 +460,150 @@ const FinancialJourney: React.FC = () => {
     return () => obs.disconnect();
   }, []);
 
-  const runwayColor = current.runway >= 12 ? 'text-green-600' : current.runway >= 6 ? 'text-orange-500' : 'text-red-500';
+  // KPIs
+  const dilution = recommendedDilution(profile);
+  const benchmarkDilution = sectorBenchmarkDilution(profile.sector ?? '');
+  const nextValo = nextRoundValuation(profile, timeline);
+  const runway = profile.runway ?? 0;
+  const runwayColor = runway >= 12 ? '#22C55E' : runway >= 6 ? '#FFB96D' : '#FFB3B3';
+  const runwayBorder = runway >= 12 ? '#22C55E' : runway >= 6 ? '#FFB96D' : '#EF4444';
+
+  // Stage labels for progress bar
+  const stageLabels = timeline.stages.map(s => s.label).filter(l => l !== '→' && l !== '✓');
+
+  const tabs = [
+    { id: 'journey',   label: 'Ligne du temps', Icon: Map,         link: '/dashboard/financial-journey' },
+    { id: 'valuation', label: 'Ma Valorisation', Icon: TrendingUp, link: '/dashboard/valuation' },
+  ];
 
   return (
-    <div className="min-h-full bg-gray-50">
+    <div className="min-h-full" style={{ backgroundColor: '#F8F8F8' }}>
 
-      {/* ── Section 1 — Objectif final ── */}
-      <div style={{ background: 'linear-gradient(135deg, #0A0A0A 0%, #111827 100%)' }} className="px-6 py-8">
+      {/* ── Onglets de navigation ─────────────────────────────────────────── */}
+      <div className="bg-white px-6" style={{ borderBottom: '1px solid #F3F4F6' }}>
+        <div className="max-w-7xl mx-auto flex gap-8">
+          {tabs.map(({ id, label, link }) => (
+            <NavLink
+              key={id}
+              to={link}
+              end
+              className={({ isActive }) =>
+                `pb-3 pt-4 text-[14px] transition-colors duration-150 ${
+                  isActive
+                    ? 'font-semibold text-gray-900 border-b-2 -mb-px'
+                    : 'font-normal text-gray-400 hover:text-gray-600'
+                }`
+              }
+              style={({ isActive }) => isActive ? { borderBottomColor: '#F4B8CC' } : {}}
+            >
+              {label}
+            </NavLink>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bandeau objectif final ──────────────────────────────────────────── */}
+      <div style={{ backgroundColor: '#0A0A0A' }} className="px-6 py-5">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
 
-          {/* Left — goal */}
+          {/* Gauche : objectif */}
           <div>
-            <p className="text-xs font-bold tracking-widest uppercase text-rose-400 mb-2">Votre objectif</p>
-            <p className="text-4xl font-black text-white mb-2">Valorisation {goal.valuation}</p>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Horizon estimé : {goal.horizon} · Montant total à lever : {goal.totalRaise} · Dilution totale acceptée : {goal.maxDilution}
+            <p className="text-[11px] font-bold tracking-widest uppercase mb-2" style={{ color: '#F4B8CC' }}>
+              OBJECTIF FINAL
+            </p>
+            <h1 className="text-[24px] font-black text-white leading-tight mb-1">
+              {timeline.finalObjective}
+            </h1>
+            <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              Valo visée <span className="text-white font-semibold">{formatAmount(timeline.finalGoalValuation)}</span>
+              {' · '}Horizon <span className="text-white font-semibold">{timeline.estimatedTotalDuration} mois</span>
             </p>
           </div>
 
-          {/* Center — progress bar */}
-          <div className="text-center">
-            <div className="bg-white/10 rounded-full h-3 w-full overflow-hidden mb-3">
+          {/* Centre : barre de progression */}
+          <div>
+            <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
               <div
                 className="h-full rounded-full transition-all duration-1000"
-                style={{ width: `${globalProgress}%`, background: 'linear-gradient(90deg, #F4B8CC, #a855f7)' }}
+                style={{ width: `${timeline.globalProgress}%`, backgroundColor: '#F4B8CC' }}
               />
             </div>
-            <div className="flex justify-between text-xs text-gray-500 mb-3">
-              <span>Aujourd'hui</span>
-              <span>{goal.valuation}</span>
-            </div>
-            <div className="inline-block bg-rose-400/10 border border-rose-400/30 rounded-full px-4 py-1.5">
-              <p className="text-rose-300 text-xs font-medium">
-                Vous êtes ici — {current.stage} · {(current.mrr / 1000).toFixed(0)}K€ MRR · Valo estimée : {current.valuation}
-              </p>
-            </div>
+            <p className="text-[12px] text-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Étape 1 sur {timeline.stages.length - 1} · {startupName}
+            </p>
           </div>
 
-          {/* Right — score */}
-          <div className="flex flex-col items-center lg:items-end">
-            <div className="flex items-center gap-4">
-              <div className="relative w-20 h-20">
-                <svg className="-rotate-90" width="80" height="80">
-                  <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(244,184,204,0.15)" strokeWidth="8" />
-                  <circle
-                    cx="40" cy="40" r="34" fill="none" stroke="#F4B8CC" strokeWidth="8"
-                    strokeDasharray={2 * Math.PI * 34}
-                    strokeDashoffset={2 * Math.PI * 34 * (1 - current.raisupScore / 100)}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-white font-black text-lg leading-none">{current.raisupScore}</span>
-                  <span className="text-gray-500 text-xs">/100</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-gray-300 text-xs font-medium">Score Raisup</p>
-                <p className="text-rose-400 italic text-sm mt-0.5">Vous êtes sur la<br />bonne trajectoire</p>
-              </div>
+          {/* Droite : score */}
+          <div className="flex items-center justify-center lg:justify-end gap-3">
+            <CircleGauge score={score.total} size={52} />
+            <div>
+              <p className="text-white font-bold text-[18px] leading-none">{score.total}</p>
+              <p className="text-[12px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Score Raisup</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Section 2 — 3 KPIs stratégiques ── */}
+      {/* ── 3 KPIs stratégiques ─────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Dilution max */}
+
+          {/* Dilution */}
           <FadeSlide delay={0}>
-            <div className="bg-white rounded-2xl border-l-4 border-blue-400 border border-gray-100 shadow-sm p-5">
-              <p className="text-xs font-medium text-gray-400 mb-1">Dilution max recommandée</p>
-              <p className="text-3xl font-black text-primary mb-1">20%</p>
-              <p className="text-xs text-gray-400">pour votre prochaine levée Série A</p>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5" style={{ borderLeft: '4px solid #D8FFBD' }}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Target className="h-3.5 w-3.5 text-gray-400" />
+                <p className="text-xs font-medium text-gray-400">Dilution max recommandée</p>
+              </div>
+              <p className="text-3xl font-black text-gray-900 mb-1">{dilution}%</p>
+              <p className="text-xs text-gray-400">
+                Secteur {profile.sector ?? 'tech'} : {benchmarkDilution}% en moyenne
+              </p>
               <div className="mt-3 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                <div className="h-full rounded-full bg-blue-400" style={{ width: '20%' }} />
+                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${dilution}%`, backgroundColor: '#D8FFBD' }} />
               </div>
             </div>
           </FadeSlide>
 
-          {/* Valo estimée */}
+          {/* Valorisation prochaine levée */}
           <FadeSlide delay={100}>
-            <div className="bg-white rounded-2xl border-l-4 border-rose-400 border border-gray-100 shadow-sm p-5">
-              <p className="text-xs font-medium text-gray-400 mb-1">Valorisation estimée — Série A</p>
-              <p className="text-3xl font-black text-primary mb-1">12-15M€</p>
-              <p className="text-xs text-gray-400">basée sur vos métriques actuelles</p>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5" style={{ borderLeft: '4px solid #ABC5FE' }}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <TrendingUp className="h-3.5 w-3.5 text-gray-400" />
+                <p className="text-xs font-medium text-gray-400">Valorisation prochaine levée</p>
+              </div>
+              <p className="text-3xl font-black text-gray-900 mb-1">{formatAmount(nextValo)}</p>
+              <p className="text-xs text-gray-400">
+                Fourchette : {formatAmount(nextValo * 0.8)} à {formatAmount(nextValo * 1.3)}
+              </p>
               <div className="mt-3 flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-rose-400" />
-                <span className="text-xs text-rose-500 font-medium">×5 vs valo actuelle</span>
+                <TrendingUp className="h-3.5 w-3.5" style={{ color: '#ABC5FE' }} />
+                <span className="text-xs font-medium" style={{ color: '#1A3A8F' }}>
+                  ×{Math.round(nextValo / (timeline.currentValuation || 1))} vs valo actuelle
+                </span>
               </div>
             </div>
           </FadeSlide>
 
           {/* Runway */}
           <FadeSlide delay={200}>
-            <div className={clsx(
-              'bg-white rounded-2xl border-l-4 border border-gray-100 shadow-sm p-5',
-              current.runway >= 12 ? 'border-l-green-400' : current.runway >= 6 ? 'border-l-orange-400' : 'border-l-red-400',
-            )}>
-              <p className="text-xs font-medium text-gray-400 mb-1">Runway actuel</p>
-              <p className={clsx('text-3xl font-black mb-1', runwayColor)}>{current.runway} mois</p>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5" style={{ borderLeft: `4px solid ${runwayBorder}` }}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Clock className="h-3.5 w-3.5 text-gray-400" />
+                <p className="text-xs font-medium text-gray-400">Runway actuel</p>
+              </div>
+              <p className="text-3xl font-black mb-1" style={{ color: runwayColor }}>
+                {runway > 0 ? `${runway} mois` : '—'}
+              </p>
               <p className="text-xs text-gray-400">
-                {current.runway >= 12 ? 'Runway confortable — bon timing pour lever' : current.runway >= 6 ? 'À surveiller — commencez à pitcher maintenant' : 'Attention — levée urgente requise'}
+                {runway >= 12 ? 'Confortable — bonne position de négociation' : runway >= 6 ? 'Acceptable — commencez les démarches' : '⚠ Critique — levée urgente'}
               </p>
               <div className="mt-3 flex items-center gap-1.5">
-                {current.runway >= 12
-                  ? <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                  : <AlertCircle className="h-3.5 w-3.5 text-orange-500" />}
-                <span className={clsx('text-xs font-medium', runwayColor)}>
-                  {current.runway >= 12 ? 'Situation saine' : 'Action recommandée'}
+                {runway >= 6
+                  ? <CheckCircle className="h-3.5 w-3.5" style={{ color: runwayColor }} />
+                  : <AlertCircle className="h-3.5 w-3.5 text-red-500" />}
+                <span className="text-xs font-medium" style={{ color: runwayColor }}>
+                  {runway >= 12 ? 'Situation saine' : runway >= 6 ? 'Action recommandée' : 'Urgence absolue'}
                 </span>
               </div>
             </div>
@@ -493,134 +611,167 @@ const FinancialJourney: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Section 3+4 — Timeline + Sidebar ── */}
+      {/* ── Timeline + Sidebar ──────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-6 pb-16">
         <div className="flex gap-8 items-start">
 
           {/* Timeline */}
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-primary mb-8 flex items-center gap-2">
-              <Target className="h-5 w-5 text-rose-400" />
-              Votre feuille de route vers {goal.valuation}
+            <h2 className="text-lg font-bold text-gray-900 mb-8 flex items-center gap-2">
+              <Target className="h-5 w-5" style={{ color: '#F4B8CC' }} />
+              Votre feuille de route vers {formatAmount(timeline.finalGoalValuation)}
             </h2>
 
-            {/* Vertical timeline */}
             <div ref={timelineRef} className="relative">
+              {/* Background line */}
+              <div className="absolute left-6 top-0 w-0.5 bg-gray-200" style={{ height: '100%' }} />
               {/* Animated line */}
-              <div className="absolute left-6 top-0 w-0.5 bg-gray-100" style={{ height: '100%' }} />
               <div
                 className="absolute left-6 top-0 w-0.5"
                 style={{
                   height: `${lineHeight}px`,
-                  background: 'linear-gradient(to bottom, #22c55e 20%, #F4B8CC 40%, #e5e7eb 60%)',
+                  background: 'linear-gradient(to bottom, #F4B8CC 30%, #CDB4FF 60%, #e5e7eb)',
                   transition: 'height 0.05s linear',
                 }}
               />
 
               <div className="space-y-10">
-                {steps.map((step, i) => {
-                  const isRight = i % 2 === 1;
-                  const isGoal = step.id === 'series-c';
-                  const badgeBg = step.status === 'current'
-                    ? 'bg-rose-400 text-white ring-4 ring-rose-200 animate-pulse'
+                {timeline.stages.map((step, i) => {
+                  const isObjective = step.isObjective;
+                  const isCurrent = step.status === 'current';
+                  // Blur future steps if not paid (after index 1)
+                  const isLocked = !isPaid && i > 1;
+
+                  const badgeBg = isCurrent
+                    ? 'ring-4 ring-rose-100 animate-pulse'
+                    : isObjective
+                    ? ''
                     : step.status === 'completed'
                     ? 'bg-green-500 text-white'
-                    : isGoal
-                    ? 'bg-primary text-white ring-4 ring-gray-200'
-                    : 'bg-white border-2 border-gray-200 text-gray-500';
+                    : '';
 
                   return (
                     <div key={step.id} className="relative pl-16">
                       {/* Badge on the line */}
-                      <div className={clsx(
-                        'absolute left-0 w-12 h-12 rounded-full flex items-center justify-center text-xs font-black z-10',
-                        badgeBg,
-                      )}>
-                        {isGoal ? <Trophy className="h-5 w-5" /> : step.badge.slice(0, 3)}
+                      <div
+                        className={clsx('absolute left-0 w-12 h-12 rounded-full flex items-center justify-center text-xs font-black z-10', badgeBg)}
+                        style={{
+                          backgroundColor: isCurrent ? '#F4B8CC' : isObjective ? '#0A0A0A' : '#F3F4F6',
+                          color: isCurrent ? '#0A0A0A' : isObjective ? '#F4B8CC' : '#6B7280',
+                          border: isObjective ? 'none' : '2px solid #E5E7EB',
+                        }}
+                      >
+                        {isObjective ? <Trophy className="h-5 w-5" /> : step.label.slice(0, 4)}
                       </div>
 
-                      <FadeSlide from={isRight ? 'right' : 'left'} delay={i * 120}>
-                        <StepCard step={step} side={isRight ? 'right' : 'left'} />
-                      </FadeSlide>
+                      {isLocked ? (
+                        <FadeSlide from={i % 2 === 1 ? 'right' : 'left'} delay={i * 100}>
+                          <div className="relative rounded-2xl overflow-hidden">
+                            <div className="opacity-30 pointer-events-none select-none">
+                              <StepCard step={step} profile={profile} score={score} />
+                            </div>
+                            <div className="absolute inset-0 backdrop-blur-[3px] bg-white/40 flex items-center justify-center rounded-2xl">
+                              <div className="text-center p-6">
+                                <Lock className="h-6 w-6 mx-auto mb-2 text-gray-500" />
+                                <p className="text-sm font-bold text-gray-900 mb-3">
+                                  Étape verrouillée
+                                </p>
+                                <button
+                                  onClick={() => navigate('/pricing?from=journey')}
+                                  className="flex items-center gap-2 text-xs font-bold text-white px-4 py-2 rounded-full mx-auto"
+                                  style={{ backgroundColor: '#F4B8CC', color: '#0A0A0A' }}
+                                >
+                                  Débloquer le parcours complet <ArrowRight className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </FadeSlide>
+                      ) : (
+                        <FadeSlide from={i % 2 === 1 ? 'right' : 'left'} delay={i * 100}>
+                          <StepCard step={step} profile={profile} score={score} />
+                        </FadeSlide>
+                      )}
                     </div>
                   );
                 })}
-
-                {/* Final destination badge */}
-                <div className="relative pl-16">
-                  <div className="absolute left-0 w-12 h-12 rounded-full bg-rose-400 flex items-center justify-center z-10 ring-4 ring-rose-100">
-                    <Star className="h-5 w-5 text-white" />
-                  </div>
-                  <FadeSlide from="up" delay={steps.length * 120}>
-                    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 text-center">
-                      <p className="text-rose-500 font-black text-lg">OBJECTIF : {goal.valuation}</p>
-                      <p className="text-rose-400 text-sm">{goal.horizon} · {goal.totalRaise} levés</p>
-                    </div>
-                  </FadeSlide>
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar desktop */}
           <div className="hidden xl:block w-72 flex-shrink-0">
             <div className="sticky top-6">
-              <Sidebar />
+              <Sidebar profile={profile} score={score} timeline={timeline} isPaid={isPaid} />
             </div>
           </div>
         </div>
 
-        {/* Mobile sidebar */}
+        {/* Sidebar mobile */}
         <div className="xl:hidden mt-10">
-          <Sidebar />
+          <Sidebar profile={profile} score={score} timeline={timeline} isPaid={isPaid} />
         </div>
       </div>
 
-      {/* ── Section 5 — Barre de progression globale ── */}
+      {/* ── Barre de progression globale ────────────────────────────────────── */}
       <div ref={progressRef} className="max-w-7xl mx-auto px-6 pb-16">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-primary">Votre progression vers {goal.valuation}</h3>
-            <span className="text-xs text-gray-400">Étape 1 sur 4 complétée</span>
+            <h3 className="font-bold text-gray-900">Votre progression vers {formatAmount(timeline.finalGoalValuation)}</h3>
+            <span className="text-xs text-gray-400">
+              Étape 1 sur {timeline.stages.length - 1} complétée
+            </span>
           </div>
 
           {/* Thick progress bar with milestones */}
-          <div className="relative mb-3">
+          <div className="relative mb-4">
             <div className="h-3.5 rounded-full bg-gray-100 overflow-visible relative">
               <div
                 className="h-full rounded-full transition-all duration-1000 delay-300"
                 style={{
-                  width: progressVisible ? `${globalProgress}%` : '0%',
-                  background: 'linear-gradient(90deg, #F4B8CC, #a855f7)',
+                  width: progressVisible ? `${timeline.globalProgress}%` : '0%',
+                  background: 'linear-gradient(90deg, #F4B8CC, #CDB4FF)',
                 }}
               />
             </div>
-            {/* Milestone dots */}
-            {[0, 33, 66, 100].map((pct, i) => (
-              <div
-                key={i}
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
-                style={{ left: `${pct}%` }}
-              >
-                <div className={clsx(
-                  'w-4 h-4 rounded-full border-2 border-white',
-                  pct <= globalProgress ? 'bg-rose-400' : 'bg-gray-200',
-                  pct === globalProgress && 'animate-pulse ring-2 ring-rose-300',
-                )} />
-              </div>
+            {/* Milestone dots at equal intervals */}
+            {timeline.stages.map((s, i) => {
+              const pct = i === 0 ? 0 : i === timeline.stages.length - 1 ? 100 : Math.round((i / (timeline.stages.length - 1)) * 100);
+              return (
+                <div key={s.id} className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2" style={{ left: `${pct}%` }}>
+                  <div className={clsx(
+                    'w-4 h-4 rounded-full border-2 border-white transition-colors duration-700',
+                    pct <= timeline.globalProgress ? 'animate-pulse' : '',
+                  )} style={{ backgroundColor: pct <= timeline.globalProgress ? '#F4B8CC' : '#E5E7EB' }} />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-between text-xs text-gray-400 mb-4 flex-wrap gap-1">
+            {timeline.stages.map(s => (
+              <span key={s.id}>{s.label}</span>
             ))}
           </div>
 
-          <div className="flex justify-between text-xs text-gray-400 mb-4">
-            <span>Seed · {current.valuation}</span>
-            <span>Série A</span>
-            <span>Série B</span>
-            <span>{goal.valuation}</span>
-          </div>
-
           <p className="text-sm text-gray-500">
-            Valorisation actuelle estimée : <strong className="text-primary">{current.valuation}</strong> sur <strong className="text-primary">{goal.valuation}</strong> visés
+            {startupName} · {profile.stage ?? 'Pre-seed'} · Valo estimée{' '}
+            <strong className="text-gray-900">{formatAmount(timeline.currentValuation)}</strong>{' '}
+            sur <strong className="text-gray-900">{formatAmount(timeline.finalGoalValuation)}</strong> visés
           </p>
+
+          {/* CTA */}
+          {!isPaid && (
+            <button
+              onClick={() => navigate('/pricing?from=journey')}
+              className="mt-5 w-full flex items-center justify-center gap-2 font-bold text-sm py-3 rounded-full transition-opacity hover:opacity-90"
+              style={{ backgroundColor: '#F4B8CC', color: '#0A0A0A' }}
+            >
+              <Lock className="h-4 w-4" />
+              Débloquez votre parcours financier complet
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 

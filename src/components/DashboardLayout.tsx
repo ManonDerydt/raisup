@@ -1,27 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Sparkles, 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  BarChart3, 
-  Settings, 
-  Bell, 
-  Search, 
-  Menu, 
-  X, 
-  ChevronDown, 
+import {
+  Sparkles,
+  LayoutDashboard,
+  FileText,
+  Bell,
+  Search,
+  Menu,
+  X,
+  ChevronDown,
   LogOut,
   Moon,
   Sun,
   DollarSign,
   TrendingUp,
-  BarChart2,
   Star,
-  Send
+  Calculator,
+  Settings
 } from 'lucide-react';
 import clsx from 'clsx';
+import { useAuth } from '../hooks/useAuth';
+
+// Avatar : photo Google si dispo, sinon initiales sur fond rose
+const UserAvatar: React.FC<{ profile: { avatarUrl: string | null; initials: string }; size?: number }> = ({ profile, size = 40 }) => {
+  if (profile.avatarUrl) {
+    return (
+      <img
+        className="rounded-full object-cover flex-shrink-0"
+        style={{ width: size, height: size }}
+        src={profile.avatarUrl}
+        alt=""
+        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+      />
+    );
+  }
+  return (
+    <div
+      className="rounded-full flex items-center justify-center flex-shrink-0 font-bold"
+      style={{ width: size, height: size, backgroundColor: '#FFD6E5', color: '#C4728A', fontSize: size * 0.38 }}
+    >
+      {profile.initials}
+    </div>
+  );
+};
 
 const DashboardLayout: React.FC = () => {
   const location = useLocation();
@@ -30,7 +51,35 @@ const DashboardLayout: React.FC = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  
+
+  const { user, signOut } = useAuth();
+
+  // Données réelles : Supabase auth + localStorage
+  const realProfile = useMemo(() => {
+    let stored: Record<string, string> = {};
+    try {
+      const a = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
+      const b = JSON.parse(localStorage.getItem('raisupOnboardingData') || '{}');
+      stored = { ...b, ...a };
+    } catch { /* ignore */ }
+
+    // Prénom / Nom : localStorage > user_metadata Google
+    const meta = (user?.user_metadata ?? {}) as Record<string, string>;
+    const firstName = stored.firstName || meta.given_name || (meta.full_name ?? meta.name ?? '').split(' ')[0] || '';
+    const lastName  = stored.lastName  || meta.family_name || (meta.full_name ?? meta.name ?? '').split(' ').slice(1).join(' ') || '';
+    const fullName  = firstName || lastName ? `${firstName} ${lastName}`.trim() : (user?.email ?? 'Utilisateur');
+    const email     = user?.email ?? stored.email ?? '';
+    const company   = stored.startupName || stored.projectName || '';
+
+    // Photo : Google OAuth > null (on utilisera les initiales)
+    const avatarUrl: string | null = meta.avatar_url || meta.picture || null;
+
+    // Initiales pour l'avatar de remplacement
+    const initials = ((firstName[0] ?? '') + (lastName[0] ?? '')).toUpperCase() || (email[0] ?? 'U').toUpperCase();
+
+    return { fullName, firstName, email, company, avatarUrl, initials };
+  }, [user]);
+
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     if (!darkMode) {
@@ -38,14 +87,6 @@ const DashboardLayout: React.FC = () => {
     } else {
       document.documentElement.classList.remove('dark');
     }
-  };
-  
-  // Mock display data (separate from auth user)
-  const mockProfile = {
-    name: 'Marie Dupont',
-    email: 'marie.dupont@example.com',
-    company: 'MediScan SAS',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
   };
   
   // Mock notifications
@@ -75,21 +116,26 @@ const DashboardLayout: React.FC = () => {
   
   const mainNavItems = [
     { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-    { name: 'Parcours Financier', icon: TrendingUp, href: '/dashboard/financial-journey' },
-    { name: 'Levée de fonds', icon: DollarSign, href: '/dashboard/fundraising' },
-    { name: 'Analyses', icon: BarChart3, href: '/dashboard/analytics' },
+    // { name: 'Analyses', icon: BarChart3, href: '/dashboard/analytics', soon: true },
     { name: 'Générateur de Docs', icon: FileText, href: '/dashboard/generate' },
   ];
 
+  const financeNavItems = [
+    { name: 'Parcours Financier', icon: TrendingUp, href: '/dashboard/financial-journey' },
+    { name: 'Ma Valorisation', icon: Calculator, href: '/dashboard/valuation' },
+    { name: 'Levée de fonds', icon: DollarSign, href: '/dashboard/fundraising' },
+  ];
+
   const analyticsNavItems = [
-    { name: 'KPIs', icon: BarChart2, href: '/dashboard/kpis' },
+    // { name: 'KPIs', icon: BarChart2, href: '/dashboard/kpis', soon: true },
     { name: 'Score Raisup', icon: Star, href: '/dashboard/score' },
-    { name: 'Investor Update', icon: Send, href: '/dashboard/investor-update' },
+    // { name: 'Investor Update', icon: Send, href: '/dashboard/investor-update', soon: true },
+    { name: 'Paramètres', icon: Settings, href: '/dashboard/settings' },
   ];
   
-  const handleLogout = () => {
-    // In a real app, this would handle logout logic
-    navigate('/');
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
   };
   
   // Auth guard — à réactiver une fois Supabase configuré
@@ -148,6 +194,29 @@ const DashboardLayout: React.FC = () => {
 
             <div className="pt-4">
               <p className={clsx('px-3 pb-1 text-xs font-semibold uppercase tracking-wider', darkMode ? 'text-gray-500' : 'text-gray-400')}>
+                Finance & Levée
+              </p>
+              {financeNavItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={clsx(
+                    "flex items-center gap-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                    location.pathname === item.href
+                      ? "bg-[#d8ffbd] text-primary"
+                      : darkMode
+                        ? "text-gray-300 hover:bg-gray-700 hover:text-white"
+                        : "text-gray-700 hover:bg-gray-100 hover:text-primary"
+                  )}
+                >
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+
+            <div className="pt-4">
+              <p className={clsx('px-3 pb-1 text-xs font-semibold uppercase tracking-wider', darkMode ? 'text-gray-500' : 'text-gray-400')}>
                 Suivi & Analytics
               </p>
               {analyticsNavItems.map((item) => (
@@ -172,31 +241,16 @@ const DashboardLayout: React.FC = () => {
 
           <div className="px-4 py-4 mt-auto border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <img
-                className="h-10 w-10 rounded-full bg-gray-50 object-cover"
-                src={mockProfile.avatar}
-                alt=""
-              />
+              <UserAvatar profile={realProfile} size={40} />
               <div className="ml-3 min-w-0 flex-1">
-                <p className={clsx(
-                  "text-sm font-medium truncate",
-                  darkMode ? "text-white" : "text-gray-900"
-                )}>
-                  {mockProfile.name}
+                <p className={clsx("text-sm font-medium truncate", darkMode ? "text-white" : "text-gray-900")}>
+                  {realProfile.fullName}
                 </p>
-                <p className={clsx( "text-xs truncate",
-                  darkMode ? "text-gray-400" : "text-gray-500"
-                )}>
-                  {mockProfile.company}
+                <p className={clsx("text-xs truncate", darkMode ? "text-gray-400" : "text-gray-500")}>
+                  {realProfile.company || realProfile.email}
                 </p>
               </div>
-              <button
-                onClick={handleLogout}
-                className={clsx(
-                  "ml-auto p-1 rounded-full",
-                  darkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"
-                )}
-              >
+              <button onClick={handleLogout} className={clsx("ml-auto p-1 rounded-full", darkMode ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700")}>
                 <LogOut className="h-5 w-5" />
               </button>
             </div>
@@ -257,23 +311,13 @@ const DashboardLayout: React.FC = () => {
             
             <div className="mt-auto px-4 py-4 border-t border-opacity-20">
               <div className="flex items-center">
-                <img
-                  className="h-10 w-10 rounded-full bg-gray-50 object-cover"
-                  src={mockProfile.avatar}
-                  alt=""
-                />
+                <UserAvatar profile={realProfile} size={40} />
                 <div className="ml-3">
-                  <p className={clsx(
-                    "text-sm font-medium",
-                    darkMode ? "text-white" : "text-gray-900"
-                  )}>
-                    {mockProfile.name}
+                  <p className={clsx("text-sm font-medium", darkMode ? "text-white" : "text-gray-900")}>
+                    {realProfile.fullName}
                   </p>
-                  <p className={clsx(
-                    "text-xs",
-                    darkMode ? "text-gray-400" : "text-gray-500"
-                  )}>
-                    {mockProfile.email}
+                  <p className={clsx("text-xs", darkMode ? "text-gray-400" : "text-gray-500")}>
+                    {realProfile.email}
                   </p>
                 </div>
               </div>
@@ -467,56 +511,33 @@ const DashboardLayout: React.FC = () => {
                   className="flex items-center gap-x-2"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                 >
-                  <img
-                    className="h-8 w-8 rounded-full bg-gray-50 object-cover"
-                    src={mockProfile.avatar}
-                    alt=""
-                  />
-                  <span className={clsx(
-                    "hidden text-sm font-medium lg:block",
-                    darkMode ? "text-white" : "text-gray-900"
-                  )}>
-                    {mockProfile.name}
+                  <UserAvatar profile={realProfile} size={32} />
+                  <span className={clsx("hidden text-sm font-medium lg:block", darkMode ? "text-white" : "text-gray-900")}>
+                    {realProfile.fullName}
                   </span>
-                  <ChevronDown className={clsx(
-                    "h-4 w-4 hidden lg:block",
-                    darkMode ? "text-gray-400" : "text-gray-500"
-                  )} />
+                  <ChevronDown className={clsx("h-4 w-4 hidden lg:block", darkMode ? "text-gray-400" : "text-gray-500")} />
                 </button>
-                
+
                 {userMenuOpen && (
                   <div className={clsx(
                     "absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md shadow-lg ring-1 ring-opacity-5 focus:outline-none",
-                    darkMode 
-                      ? "bg-gray-800 ring-gray-700" 
-                      : "bg-white ring-gray-200"
+                    darkMode ? "bg-gray-800 ring-gray-700" : "bg-white ring-gray-200"
                   )}>
                     <div className="py-3 px-4 border-b border-opacity-20">
-                      <div className="flex items-center">
-                        <img
-                          className="h-10 w-10 rounded-full bg-gray-50 object-cover"
-                          src={mockProfile.avatar}
-                          alt=""
-                        />
-                        <div className="ml-3">
-                          <p className={clsx(
-                            "text-sm font-medium",
-                            darkMode ? "text-white" : "text-gray-900"
-                          )}>
-                            {mockProfile.name}
+                      <div className="flex items-center gap-3">
+                        <UserAvatar profile={realProfile} size={40} />
+                        <div className="min-w-0">
+                          <p className={clsx("text-sm font-medium truncate", darkMode ? "text-white" : "text-gray-900")}>
+                            {realProfile.fullName}
                           </p>
-                          <p className={clsx(
-                            "text-xs",
-                            darkMode ? "text-gray-400" : "text-gray-500"
-                          )}>
-                            {mockProfile.email}
+                          <p className={clsx("text-xs truncate", darkMode ? "text-gray-400" : "text-gray-500")}>
+                            {realProfile.email}
                           </p>
-                          <p className={clsx(
-                            "text-xs font-medium",
-                            darkMode ? "text-raisup-pink-dark" : "text-primary"
-                          )}>
-                            {mockProfile.company}
-                          </p>
+                          {realProfile.company && (
+                            <p className={clsx("text-xs font-medium truncate", darkMode ? "text-raisup-pink-dark" : "text-primary")}>
+                              {realProfile.company}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

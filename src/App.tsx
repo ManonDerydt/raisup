@@ -30,7 +30,6 @@ import ValidationForm from './pages/b2b/ValidationForm';
 import PitchDeckGenerator from "./pages/pitch_generator.tsx";
 import DocumentGeneratorPage from './pages/DocumentGeneratorPage';
 import KPIsPage from './pages/KPIsPage';
-import ScorePage from './pages/ScorePage';
 import InvestorUpdatePage from './pages/InvestorUpdatePage';
 import B2BDashboardLayout from './components/B2BDashboardLayout';
 import B2BDashboard from './pages/B2BDashboard';
@@ -41,6 +40,8 @@ import SimplifiedOnboardingForm from './pages/SimplifiedOnboardingForm';
 import RaisupOnboardingForm from './pages/RaisupOnboardingForm';
 import RaisupSuccessPage from './pages/RaisupSuccessPage';
 import LoadingStrategy from './pages/LoadingStrategy';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ValuationPage from './pages/ValuationPage';
 
 function App() {
   return (
@@ -61,6 +62,7 @@ function App() {
         <Route path="/onboarding/raisup" element={<RaisupOnboardingForm />} />
         <Route path="/onboarding/raisup/success" element={<RaisupSuccessPage />} />
         <Route path="/loading-strategy" element={<LoadingStrategy />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/onboarding" element={<OnboardingLayout />}>
@@ -86,8 +88,9 @@ function App() {
           <Route path="fundraising" element={<FundraisingPage />} />
           <Route path="analytics" element={<AnalysisPage />} />
           <Route path="kpis" element={<KPIsPage />} />
-          <Route path="score" element={<ScorePage />} />
+          <Route path="score" element={<DashboardWelcome />} />
           <Route path="investor-update" element={<InvestorUpdatePage />} />
+          <Route path="valuation" element={<ValuationPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
         

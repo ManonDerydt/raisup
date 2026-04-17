@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../hooks/useAuth';
 
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -16,12 +16,30 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [segment, setSegment] = useState<'B2B' | 'B2C'>('B2B');
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
 
   // Check if dark mode is enabled
   React.useEffect(() => {
     const isDarkMode = document.documentElement.classList.contains('dark');
     setDarkMode(isDarkMode);
   }, []);
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotLoading(true);
+    const { error: err } = await resetPassword(forgotEmail || email);
+    setForgotLoading(false);
+    if (err) {
+      setForgotError(err.message);
+    } else {
+      setForgotSuccess(true);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,154 +142,176 @@ const LoginPage: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label
-                htmlFor="email"
-                className={clsx(
-                  "block text-sm font-medium mb-2",
-                  darkMode ? "text-gray-300" : "text-gray-700"
-                )}
-              >
-                Email {segment === 'B2B' ? 'structure' : 'utilisateur'}
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={clsx(
-                  "w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200",
-                  darkMode
-                    ? "bg-gray-700 border-gray-600 text-white focus:ring-raisup-pink/30 focus:border-raisup-pink"
-                    : "bg-white border-gray-200 text-gray-900 focus:ring-raisup-pink/30 focus:border-raisup-pink"
-                )}
-                placeholder={segment === 'B2B' ? "structure@email.com" : "votre@email.com"}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className={clsx(
-                  "block text-sm font-medium mb-2",
-                  darkMode ? "text-gray-300" : "text-gray-700"
-                )}
-              >
-                Mot de passe
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={clsx(
-                    "w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200",
-                    darkMode
-                      ? "bg-gray-700 border-gray-600 text-white focus:ring-raisup-pink/30 focus:border-raisup-pink"
-                      : "bg-white border-gray-200 text-gray-900 focus:ring-raisup-pink/30 focus:border-raisup-pink"
+          {/* ── Vue mot de passe oublié ── */}
+          {showForgot ? (
+            <div className="space-y-4">
+              {forgotSuccess ? (
+                <div className="rounded-xl p-4 bg-green-50 border border-green-100 flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Email envoyé !</p>
+                    <p className="text-sm text-green-700 mt-0.5">Vérifiez votre boite mail et cliquez sur le lien pour réinitialiser votre mot de passe.</p>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleForgot} className="space-y-4">
+                  <p className={clsx("text-sm", darkMode ? "text-gray-400" : "text-gray-600")}>
+                    Saisissez votre email — nous vous enverrons un lien de réinitialisation.
+                  </p>
+                  {forgotError && (
+                    <div className="rounded-lg p-3 bg-red-50 border border-red-100 text-sm text-red-700">{forgotError}</div>
                   )}
-                  placeholder="••••••••"
-                />
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail || email}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    placeholder="vous@startup.com"
+                    className={clsx(
+                      "w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200",
+                      darkMode
+                        ? "bg-gray-700 border-gray-600 text-white focus:ring-raisup-pink/30 focus:border-raisup-pink"
+                        : "bg-white border-gray-200 text-gray-900 focus:ring-raisup-pink/30 focus:border-raisup-pink"
+                    )}
+                  />
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className={clsx(
+                      "w-full py-3 px-4 rounded-full font-medium flex items-center justify-center space-x-2 transition-all duration-200",
+                      darkMode ? "bg-raisup-black text-white" : "bg-primary text-white",
+                      forgotLoading && "opacity-70 cursor-not-allowed"
+                    )}
+                  >
+                    {forgotLoading
+                      ? <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      : <span>Envoyer le lien de réinitialisation</span>}
+                  </button>
+                </form>
+              )}
+              <button
+                type="button"
+                onClick={() => { setShowForgot(false); setForgotSuccess(false); setForgotError(null); }}
+                className={clsx("text-sm hover:underline", darkMode ? "text-gray-400" : "text-gray-500")}
+              >
+                ← Retour à la connexion
+              </button>
+            </div>
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label
+                    htmlFor="email"
+                    className={clsx("block text-sm font-medium mb-2", darkMode ? "text-gray-300" : "text-gray-700")}
+                  >
+                    Email {segment === 'B2B' ? 'structure' : 'utilisateur'}
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={clsx(
+                      "w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200",
+                      darkMode
+                        ? "bg-gray-700 border-gray-600 text-white focus:ring-raisup-pink/30 focus:border-raisup-pink"
+                        : "bg-white border-gray-200 text-gray-900 focus:ring-raisup-pink/30 focus:border-raisup-pink"
+                    )}
+                    placeholder={segment === 'B2B' ? "structure@email.com" : "votre@email.com"}
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label
+                      htmlFor="password"
+                      className={clsx("block text-sm font-medium", darkMode ? "text-gray-300" : "text-gray-700")}
+                    >
+                      Mot de passe
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => { setShowForgot(true); setForgotEmail(email); }}
+                      className={clsx("text-xs hover:underline", darkMode ? "text-gray-400" : "text-gray-500")}
+                    >
+                      Mot de passe oublié ?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={clsx(
+                        "w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all duration-200",
+                        darkMode
+                          ? "bg-gray-700 border-gray-600 text-white focus:ring-raisup-pink/30 focus:border-raisup-pink"
+                          : "bg-white border-gray-200 text-gray-900 focus:ring-raisup-pink/30 focus:border-raisup-pink"
+                      )}
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className={clsx("absolute right-3 top-1/2 transform -translate-y-1/2", darkMode ? "text-gray-400" : "text-gray-500")}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  <input id="remember-me" type="checkbox" checked={rememberMe} onChange={() => setRememberMe(!rememberMe)} className="sr-only" />
+                  <div
+                    className={clsx(
+                      "w-5 h-5 rounded border flex items-center justify-center mr-2 cursor-pointer",
+                      rememberMe
+                        ? darkMode ? "border-raisup-pink bg-raisup-pink/20" : "border-raisup-pink bg-raisup-pink-pale"
+                        : darkMode ? "border-gray-600" : "border-gray-300"
+                    )}
+                    onClick={() => setRememberMe(!rememberMe)}
+                  >
+                    {rememberMe && (
+                      <svg className={clsx("h-3 w-3", darkMode ? "text-raisup-pink-dark" : "text-primary")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <label htmlFor="remember-me" className={clsx("text-sm cursor-pointer", darkMode ? "text-gray-300" : "text-gray-600")}>
+                    Se souvenir de moi
+                  </label>
+                </div>
+
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  type="submit"
+                  disabled={loading}
                   className={clsx(
-                    "absolute right-3 top-1/2 transform -translate-y-1/2",
-                    darkMode ? "text-gray-400" : "text-gray-500"
+                    "w-full py-3 px-4 rounded-full font-medium flex items-center justify-center space-x-2 transition-all duration-200",
+                    darkMode ? "bg-raisup-black hover:bg-raisup-black/80 text-white" : "bg-primary hover:bg-primary-dark text-white",
+                    loading && "opacity-70 cursor-not-allowed"
                   )}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
+                  <span>Se connecter</span>
+                  {loading ? (
+                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
                   ) : (
-                    <Eye className="h-5 w-5" />
+                    <ArrowRight className="h-5 w-5" />
                   )}
                 </button>
+              </form>
+
+              <div className={clsx("mt-8 pt-6 text-center border-t", darkMode ? "border-gray-700" : "border-gray-100")}>
+                <p className={clsx("text-sm mb-4", darkMode ? "text-gray-400" : "text-gray-600")}>
+                  Vous n'avez pas encore de compte ?{' '}
+                  <Link to="/register" className={clsx("font-medium hover:underline", darkMode ? "text-raisup-pink-dark" : "text-primary")}>
+                    Créer mon compte
+                  </Link>
+                </p>
               </div>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={() => setRememberMe(!rememberMe)}
-                className="sr-only"
-              />
-              <div
-                className={clsx(
-                  "w-5 h-5 rounded border flex items-center justify-center mr-2 cursor-pointer",
-                  rememberMe
-                    ? darkMode
-                      ? "border-raisup-pink bg-raisup-pink/20"
-                      : "border-raisup-pink bg-raisup-pink-pale"
-                    : darkMode
-                      ? "border-gray-600"
-                      : "border-gray-300"
-                )}
-                onClick={() => setRememberMe(!rememberMe)}
-              >
-                {rememberMe && (
-                  <svg className={clsx(
-                    "h-3 w-3",
-                    darkMode ? "text-raisup-pink-dark" : "text-primary"
-                  )} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </div>
-              <label
-                htmlFor="remember-me"
-                className={clsx(
-                  "text-sm cursor-pointer",
-                  darkMode ? "text-gray-300" : "text-gray-600"
-                )}
-              >
-                Se souvenir de moi
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className={clsx(
-                "w-full py-3 px-4 rounded-full font-medium flex items-center justify-center space-x-2 transition-all duration-200",
-                darkMode
-                  ? "bg-raisup-black hover:bg-raisup-black/80 text-white"
-                  : "bg-primary hover:bg-primary-dark text-white",
-                loading && "opacity-70 cursor-not-allowed"
-              )}
-            >
-              <span>Se connecter</span>
-              {loading ? (
-                <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-              ) : (
-                <ArrowRight className="h-5 w-5" />
-              )}
-            </button>
-          </form>
-
-          <div className={clsx(
-            "mt-8 pt-6 text-center border-t",
-            darkMode ? "border-gray-700" : "border-gray-100"
-          )}>
-            <p className={clsx(
-              "text-sm mb-4",
-              darkMode ? "text-gray-400" : "text-gray-600"
-            )}>
-              Vous n'avez pas encore de compte ?{' '}
-              <Link
-                to="/register"
-                className={clsx(
-                  "font-medium hover:underline",
-                  darkMode ? "text-raisup-pink-dark" : "text-primary"
-                )}
-              >
-                Créer mon compte
-              </Link>
-            </p>
-          </div>
+            </>
+          )}
         </div>
       </main>
     </div>

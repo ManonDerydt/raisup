@@ -109,7 +109,7 @@ const DashboardHeader: React.FC<Props> = ({ darkMode, profile }) => {
           </div>
           {needsCompletion && (
             <Link
-              to="/register/startup"
+              to="/onboarding/raisup"
               className="inline-flex items-center text-xs font-semibold hover:underline"
               style={{ color: '#C4728A' }}
             >

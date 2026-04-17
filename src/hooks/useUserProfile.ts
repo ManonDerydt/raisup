@@ -67,6 +67,8 @@ export interface RaisupScore {
   traction: number;
   team: number;
   market: number;
+  defensibility: number;
+  financialCoherence: number;
 }
 
 export interface ProfileKPI {
@@ -115,6 +117,13 @@ function calcProfileCompletion(p: Partial<UserProfile>): number {
 function calcScore(p: Partial<UserProfile>): RaisupScore {
   const mrr = p.mrr ?? 0;
 
+  // Pitch (0-25) — même algo que DashboardWelcome
+  let pitch = 0;
+  if ((p.problem?.length ?? 0) > 50) pitch += 7; else if ((p.problem?.length ?? 0) > 20) pitch += 4;
+  if ((p.solution?.length ?? 0) > 50) pitch += 7; else if ((p.solution?.length ?? 0) > 20) pitch += 4;
+  if ((p.competitiveAdvantage?.length ?? 0) > 30) pitch += 6; else if ((p.competitiveAdvantage?.length ?? 0) > 10) pitch += 3;
+  if ((p.description?.length ?? 0) > 50) pitch += 5; else if ((p.description?.length ?? 0) > 20) pitch += 2;
+
   // Traction (0-25)
   let traction = 0;
   if (!p.isPreRevenue && mrr > 0) {
@@ -129,19 +138,12 @@ function calcScore(p: Partial<UserProfile>): RaisupScore {
   const teamArr = p.team ?? [];
   if (p.hasCTO || teamArr.some(m => m.role.includes('CTO'))) team += 5;
   if (teamArr.some(m => m.hadExit)) team += 7;
-  else if (teamArr.some(m => m.hasPreviousStartup)) team += 4;
+  else if (teamArr.some(m => m.hasPreviousStartup)) team += 5;
   if (teamArr.length >= 2) team += 4;
   const bestExp = teamArr.find(m => m.experience.includes('10') || m.experience.includes('expert'));
-  if (bestExp) team += 5;
-  else if (teamArr.some(m => m.experience.includes('3') || m.experience.includes('5'))) team += 3;
+  if (bestExp) team += 4;
+  else if (teamArr.some(m => m.experience.includes('3') || m.experience.includes('5'))) team += 2;
   if ((p.teamSize ?? 0) >= 3) team += 4;
-
-  // Pitch (0-25)
-  let pitch = 0;
-  if ((p.problem?.length ?? 0) > 50) pitch += 8; else if ((p.problem?.length ?? 0) > 20) pitch += 4;
-  if ((p.solution?.length ?? 0) > 50) pitch += 8; else if ((p.solution?.length ?? 0) > 20) pitch += 4;
-  if ((p.competitiveAdvantage?.length ?? 0) > 30) pitch += 6; else if ((p.competitiveAdvantage?.length ?? 0) > 10) pitch += 3;
-  if ((p.description?.length ?? 0) > 50) pitch += 3;
 
   // Market (0-25)
   let market = 0;
@@ -151,12 +153,35 @@ function calcScore(p: Partial<UserProfile>): RaisupScore {
   if (p.ambition) market += 5;
   if (p.fundingPreference) market += 5;
 
+  // Défendabilité (0-10) — proxy via competitiveAdvantage
+  let defensibility = 0;
+  if ((p.competitiveAdvantage?.length ?? 0) > 50) defensibility += 5;
+  else if ((p.competitiveAdvantage?.length ?? 0) > 20) defensibility += 2;
+  if ((p.businessModel ?? '').toLowerCase().includes('saas')) defensibility += 3;
+  if (teamArr.some(m => m.hadExit)) defensibility += 2;
+
+  // Cohérence financière (0-10)
+  let financialCoherence = 0;
+  const goal = p.fundraisingGoal ?? 0;
+  const stageStr = '';
+  if (goal > 0 && mrr === 0 && goal <= 500000) financialCoherence += 4;
+  else if (goal > 0 && mrr > 0) financialCoherence += 4;
+  if ((p.runway ?? 0) >= 6) financialCoherence += 3;
+  if (p.burnRate && p.burnRate > 0) financialCoherence += 3;
+  if (goal > 2000000 && mrr === 0 && stageStr.includes('pre')) financialCoherence = Math.max(0, financialCoherence - 4);
+
+  const total =
+    Math.min(25, pitch) + Math.min(25, traction) + Math.min(25, team) +
+    Math.min(25, market) + Math.min(10, defensibility) + Math.min(10, financialCoherence);
+
   return {
-    total: Math.min(25, traction) + Math.min(25, team) + Math.min(25, pitch) + Math.min(25, market),
+    total,
+    pitch: Math.min(25, pitch),
     traction: Math.min(25, traction),
     team: Math.min(25, team),
-    pitch: Math.min(25, pitch),
     market: Math.min(25, market),
+    defensibility: Math.min(10, defensibility),
+    financialCoherence: Math.min(10, financialCoherence),
   };
 }
 
@@ -302,7 +327,13 @@ export function useUserProfile() {
 
   const score = useMemo(() => calcScore(profile), [profile]);
   const kpis = useMemo(() => buildKPIs(profile), [profile]);
-  const isPremium = useMemo(() => localStorage.getItem('raisup_is_premium') === 'true', []);
+  // Tout utilisateur authentifié est considéré premium (demo)
+  // Sinon : fallback sur les clés localStorage posées par PricingPage
+  const isPremium = useMemo(() =>
+    !!user
+    || localStorage.getItem('raisup_paid') === 'true'
+    || localStorage.getItem('raisup_is_premium') === 'true'
+  , [user]);
 
   return { profile, score, kpis, isPremium, user };
 }
