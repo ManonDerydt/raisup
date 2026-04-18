@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   Sparkles, ArrowRight, ArrowLeft, Upload, CheckCircle, X,
   Mail, MapPin, User, Building2, Plus, Camera, Users, Check,
-  TrendingUp, DollarSign, AlertTriangle, Eye, EyeOff,
+  TrendingUp, DollarSign, AlertTriangle, Eye, EyeOff, Search,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../hooks/useAuth';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { calculateScore } from '../services/generateTimeline';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,13 @@ export type OnboardingFormData = {
   fundUsage: string[];
   finalObjective: string;
   freeText: string;
+
+  // Partner
+  partnerId: string | null;
+  partnerName: string | null;
+  partnerEmail: string | null;
+  partnerOnRaisup: boolean;
+  partnerConfirmed: boolean;
 };
 
 type LiveInsight = { icon: string; color: string; textColor: string; text: string };
@@ -131,6 +139,8 @@ const DEFAULT: OnboardingFormData = {
   fundraisingGoal: null, fundingTimeline: '', maxDilution: null,
   fundingPreference: '', finalGoalValuation: null,
   fundUsage: [], finalObjective: '', freeText: '',
+  partnerId: null, partnerName: null, partnerEmail: null,
+  partnerOnRaisup: false, partnerConfirmed: false,
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -949,6 +959,45 @@ const SimplifiedOnboardingForm: React.FC = () => {
   const [photoTargetIdx, setPhotoTargetIdx] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Partner search state ─────────────────────────────────────────────────────
+  const [hasPartner, setHasPartner] = useState(!!form.partnerConfirmed);
+  const [partnerSearch, setPartnerSearch] = useState(form.partnerName ?? '');
+  const [allPartners, setAllPartners] = useState<{ id: string; name: string; type: string; email: string }[]>([]);
+  const [partnerResults, setPartnerResults] = useState<{ id: string; name: string; type: string; email: string }[]>([]);
+  const [partnerSearchLoading, setPartnerSearchLoading] = useState(false);
+  const [partnerPending, setPartnerPending] = useState<{ id: string; name: string; type: string; email: string } | null>(null);
+  const [showPartnerDropdown, setShowPartnerDropdown] = useState(false);
+  const partnerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Charger toutes les agences une seule fois
+  const loadAllPartners = useCallback(async () => {
+    if (allPartners.length > 0) return;
+    setPartnerSearchLoading(true);
+    try {
+      const { data } = await supabase
+        .from('agency_accounts')
+        .select('id, name, type, email')
+        .order('name', { ascending: true })
+        .limit(50);
+      setAllPartners(data ?? []);
+    } catch {
+      // ignore
+    } finally {
+      setPartnerSearchLoading(false);
+    }
+  }, [allPartners.length]);
+
+  // Filtrer localement selon la saisie
+  useEffect(() => {
+    if (!hasPartner || form.partnerConfirmed) return;
+    const term = partnerSearch.trim().toLowerCase();
+    if (!term) {
+      setPartnerResults(allPartners);
+    } else {
+      setPartnerResults(allPartners.filter(a => a.name.toLowerCase().includes(term)));
+    }
+  }, [partnerSearch, allPartners, hasPartner, form.partnerConfirmed]);
+
   // Persist on change (debounced, exclude blobs)
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -1028,19 +1077,102 @@ const SimplifiedOnboardingForm: React.FC = () => {
     setTimeout(() => photoInputRef.current?.click(), 0);
   };
 
-  const saveAndNavigate = () => {
+  const handleFinalSubmit = async () => {
     localStorage.setItem('raisup_profile', JSON.stringify(form));
-    navigate('/loading-strategy');
+    try {
+      const score = calculateScore({
+        startupName: form.startupName,
+        mrr: form.mrr,
+        momGrowth: form.momGrowth,
+        activeClients: form.activeClients,
+        runway: form.runway,
+        burnRate: form.burnRate,
+        hasCTO: form.hasCTO,
+        advisors: form.hasAdvisors ? 1 : 0,
+        problem: form.problem,
+        solution: form.solution,
+        competitiveAdvantage: form.competitiveAdvantage,
+        team: form.team?.map(m => ({ name: `${m.firstName} ${m.lastName}`, role: m.role, hadExit: m.hadExit })),
+      });
+
+      const { data: savedProfile, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          startup_name: form.startupName || '',
+          founder_name: `${form.firstName || ''} ${form.lastName || ''}`.trim(),
+          one_liner: form.oneLiner || '',
+          ambition: form.finalObjective || '',
+          business_model: form.businessModel || '',
+          sector: form.sector || '',
+          client_type: form.clientType || '',
+          country: form.country || 'France',
+          region: form.region || '',
+          city: form.city || '',
+          has_revenue: (form.mrr || 0) > 0,
+          mrr: Number(form.mrr) || 0,
+          growth_mom: Number(form.momGrowth) || 0,
+          active_clients: Number(form.activeClients) || 0,
+          runway: Number(form.runway) || 12,
+          burn_rate: Number(form.burnRate) || 0,
+          fundraising_goal: Number(form.fundraisingGoal) || 0,
+          max_dilution: Number(form.maxDilution) || 20,
+          funding_preference: form.fundingPreference || '',
+          final_goal_valuation: Number(form.finalGoalValuation) || 0,
+          fundraising_timeline: form.fundingTimeline || '',
+          raisup_score: score.total,
+          has_cto: form.hasCTO || false,
+          problem: form.problem || '',
+          solution: form.solution || '',
+          competitive_advantage: form.competitiveAdvantage || '',
+          has_advisors: form.hasAdvisors || false,
+          has_previous_startup: form.team?.some(m => m.hasPreviousStartup) || false,
+          had_exit: form.team?.some(m => m.hadExit) || false,
+          sector_experience: '',
+          team_size: form.teamSize || form.team?.length || 0,
+          existing_funding: form.previousFunding || [],
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('Erreur profil Supabase:', profileError);
+      } else {
+        console.log('Profil sauvegardé Supabase id:', savedProfile.id);
+        localStorage.setItem('raisup_profile', JSON.stringify({ ...form, supabase_id: savedProfile.id }));
+
+        if (form.partnerId && form.partnerConfirmed && savedProfile.id) {
+          const { error: reqError } = await supabase
+            .from('partner_requests')
+            .insert({
+              startup_profile_id: savedProfile.id,
+              startup_name: form.startupName || '',
+              founder_name: `${form.firstName || ''} ${form.lastName || ''}`.trim(),
+              founder_email: form.email || '',
+              agency_id: form.partnerId,
+              agency_name: form.partnerName || '',
+              agency_email: form.partnerEmail || '',
+              status: 'pending',
+              raisup_score: score.total,
+            });
+          if (reqError) console.error('Erreur partner_request:', reqError);
+          else console.log('Demande partenaire envoyée à:', form.partnerName);
+        }
+      }
+    } catch (e) {
+      console.error('Erreur handleFinalSubmit:', e);
+    } finally {
+      navigate('/loading-strategy');
+    }
   };
 
-  const handleSubmit = () => {
-    // Always persist profile first (survives Google OAuth redirect)
-    localStorage.setItem('raisup_profile', JSON.stringify(form));
+  const saveAndNavigate = async () => {
+    await handleFinalSubmit();
+  };
+
+  const handleSubmit = async () => {
     if (user) {
-      // Already authenticated — go straight to results
-      navigate('/loading-strategy');
+      await handleFinalSubmit();
     } else {
-      // Show auth modal
       setShowAuthModal(true);
     }
   };
@@ -1167,6 +1299,217 @@ const SimplifiedOnboardingForm: React.FC = () => {
                     </Select>
                   </div>
                 )}
+
+                {/* ── SECTION PARTENAIRE ─────────────────────────────────────── */}
+                <div>
+                  {/* Separateur */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-1 h-px bg-gray-100" />
+                    <span className="text-[11px] font-semibold tracking-widest text-gray-400 uppercase">
+                      Votre accompagnement (optionnel)
+                    </span>
+                    <div className="flex-1 h-px bg-gray-100" />
+                  </div>
+
+                  {/* Toggle */}
+                  <div
+                    className="flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-colors"
+                    style={{ border: '1.5px solid #E5E7EB', backgroundColor: hasPartner ? '#F8F8F8' : '#FFFFFF' }}
+                    onClick={() => {
+                      const next = !hasPartner;
+                      setHasPartner(next);
+                      if (next) {
+                        loadAllPartners();
+                      }
+                      if (!next) {
+                        setPartnerSearch('');
+                        setPartnerResults([]);
+                        setPartnerPending(null);
+                        setShowPartnerDropdown(false);
+                        set('partnerId', null);
+                        set('partnerName', null);
+                        set('partnerEmail', null);
+                        set('partnerOnRaisup', false);
+                        set('partnerConfirmed', false);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-700">
+                        Êtes-vous accompagné par une structure ?
+                      </span>
+                    </div>
+                    <div
+                      className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
+                      style={{ backgroundColor: hasPartner ? '#F4B8CC' : '#D1D5DB' }}
+                    >
+                      <span
+                        className="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform"
+                        style={{ transform: hasPartner ? 'translateX(18px)' : 'translateX(3px)' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Si togglé ON */}
+                  {hasPartner && (
+                    <div className="mt-3 space-y-3">
+
+                      {/* Partenaire confirmé */}
+                      {form.partnerConfirmed && form.partnerName ? (
+                        <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#F0FFF4', border: '1.5px solid #D8FFBD' }}>
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
+                            style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
+                            {form.partnerName.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm text-gray-900">{form.partnerName}</p>
+                            {form.partnerOnRaisup && (
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
+                                Sur Raisup ✓
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              set('partnerId', null); set('partnerName', null);
+                              set('partnerEmail', null); set('partnerOnRaisup', false);
+                              set('partnerConfirmed', false);
+                              setPartnerSearch(''); setPartnerPending(null);
+                            }}
+                            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            Changer
+                          </button>
+                        </div>
+
+                      /* Card de confirmation */
+                      ) : partnerPending ? (
+                        <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: '#FFFBEB', border: '1.5px solid #FEF3C7' }}>
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0"
+                              style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                              {partnerPending.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm text-gray-900">{partnerPending.name}</p>
+                              <p className="text-xs text-gray-500">{partnerPending.type}</p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-700">
+                            Faites-vous bien partie de <strong>{partnerPending.name}</strong> ?
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                set('partnerId', partnerPending.id);
+                                set('partnerName', partnerPending.name);
+                                set('partnerEmail', partnerPending.email);
+                                set('partnerOnRaisup', true);
+                                set('partnerConfirmed', true);
+                                setPartnerPending(null);
+                                setShowPartnerDropdown(false);
+                              }}
+                              className="flex-1 py-2 text-sm font-semibold rounded-full transition-opacity hover:opacity-80"
+                              style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}
+                            >
+                              Oui, confirmer ✓
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setPartnerPending(null); setPartnerSearch(''); }}
+                              className="flex-1 py-2 text-sm font-medium rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                            >
+                              Non, changer
+                            </button>
+                          </div>
+                        </div>
+
+                      /* Champ de recherche */
+                      ) : (
+                        <div className="relative">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <input
+                              type="text"
+                              value={partnerSearch}
+                              onChange={e => { setPartnerSearch(e.target.value); setShowPartnerDropdown(false); }}
+                              placeholder="Ex: Fundherz, Station F, Wilco..."
+                              className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm outline-none transition-colors"
+                              style={{ borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' }}
+                              onFocus={() => partnerResults.length > 0 && setShowPartnerDropdown(true)}
+                            />
+                            {partnerSearchLoading && (
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                            )}
+                          </div>
+
+                          {/* Dropdown résultats */}
+                          {showPartnerDropdown && (
+                            <div className="absolute top-full left-0 right-0 mt-1 rounded-xl shadow-lg z-20 overflow-hidden"
+                              style={{ border: '1.5px solid #E5E7EB', backgroundColor: '#FFFFFF' }}>
+                              {partnerResults.map(agency => (
+                                <button
+                                  key={agency.id}
+                                  type="button"
+                                  onClick={() => { setPartnerPending(agency); setShowPartnerDropdown(false); }}
+                                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                                >
+                                  <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0"
+                                    style={{ backgroundColor: '#FFD6E5', color: '#C4728A' }}>
+                                    {agency.name.slice(0, 2).toUpperCase()}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-sm text-gray-900">{agency.name}</p>
+                                    <p className="text-xs text-gray-500 truncate">{agency.type}</p>
+                                  </div>
+                                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full flex-shrink-0"
+                                    style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
+                                    Sur Raisup
+                                  </span>
+                                </button>
+                              ))}
+
+                              {/* Pas trouvé */}
+                              {partnerSearch.length >= 2 && (
+                                <div className="flex items-center gap-3 px-4 py-3 border-t" style={{ borderColor: '#F3F4F6' }}>
+                                  <Mail className="h-4 w-4 flex-shrink-0" style={{ color: '#F59E0B' }} />
+                                  <p className="text-xs text-gray-500">
+                                    <span className="font-semibold text-gray-700">"{partnerSearch}"</span> n'est pas encore sur Raisup — on les préviendra
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Partenaire hors Raisup confirmé manuellement */}
+                          {!showPartnerDropdown && partnerSearch.length >= 2 && partnerResults.length === 0 && !partnerSearchLoading && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                set('partnerName', partnerSearch);
+                                set('partnerOnRaisup', false);
+                                set('partnerConfirmed', true);
+                                set('partnerId', null);
+                                set('partnerEmail', null);
+                              }}
+                              className="mt-2 w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm text-left transition-colors"
+                              style={{ border: '1.5px dashed #E5E7EB', color: '#6B7280' }}
+                            >
+                              <Mail className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                              <span>
+                                Confirmer <strong className="text-gray-800">"{partnerSearch}"</strong> — on les préviendra de votre démarche
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* ── FIN SECTION PARTENAIRE ──────────────────────────────────── */}
 
                 <NavButtons canNext={step1Valid} />
               </div>

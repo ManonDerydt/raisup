@@ -42,6 +42,9 @@ import RaisupSuccessPage from './pages/RaisupSuccessPage';
 import LoadingStrategy from './pages/LoadingStrategy';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ValuationPage from './pages/ValuationPage';
+import AgencyOnboarding from './pages/AgencyOnboarding';
+import AgencySuccessPage from './pages/AgencySuccessPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -63,6 +66,8 @@ function App() {
         <Route path="/onboarding/raisup/success" element={<RaisupSuccessPage />} />
         <Route path="/loading-strategy" element={<LoadingStrategy />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/onboarding/agency" element={<AgencyOnboarding />} />
+        <Route path="/onboarding/agency/success" element={<AgencySuccessPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/onboarding" element={<OnboardingLayout />}>
@@ -92,8 +97,9 @@ function App() {
           <Route path="investor-update" element={<InvestorUpdatePage />} />
           <Route path="valuation" element={<ValuationPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
-        
+
         <Route path="/dashboard/b2b" element={<B2BDashboardLayout />}>
           <Route index element={<B2BDashboard />} />
           <Route path="portfolio" element={<PortfolioPage />} />

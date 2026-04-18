@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   User, Mail, Lock, Bell, CreditCard, LogOut, Check, X, Save, Edit,
-  Shield, Smartphone, Moon, Sun, Camera,
+  Shield, Smartphone, Moon, Sun, Camera, Building2,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import clsx from 'clsx';
@@ -73,26 +73,57 @@ const SettingsPage: React.FC = () => {
   const [pwdError, setPwdError] = useState('');
 
   // ── Build initial profile from Supabase auth + localStorage
+  const isAgency = localStorage.getItem('raisup_user_type') === 'agency';
+
   const initialProfile = useMemo(() => {
     let stored: Record<string, string> = {};
+    let agency: Record<string, string> = {};
     try {
       const a = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
       const b = JSON.parse(localStorage.getItem('raisupOnboardingData') || '{}');
+      const c = JSON.parse(localStorage.getItem('raisup_agency_profile') || '{}');
       stored = { ...b, ...a };
+      agency = c;
     } catch { /* ignore */ }
 
     const meta = (user?.user_metadata ?? {}) as Record<string, string>;
-    const firstName = stored.firstName || meta.given_name || (meta.full_name ?? meta.name ?? '').split(' ')[0] || '';
-    const lastName  = stored.lastName  || meta.family_name || (meta.full_name ?? meta.name ?? '').split(' ').slice(1).join(' ') || '';
+
+    // Agency profile: use responsable field split into first/last name
+    if (isAgency && agency.responsable) {
+      const parts = (agency.responsable as string).split(' ');
+      const firstName = parts[0] ?? '';
+      const lastName  = parts.slice(1).join(' ');
+      const email     = agency.email || user?.email || '';
+      const company   = agency.name || '';
+      const phone     = stored.phone || '';
+      const position  = agency.type || 'Partenaire';
+      const avatarUrl: string | null = meta.avatar_url || meta.picture || null;
+      const initials  = ((firstName[0] ?? '') + (lastName[0] ?? '')).toUpperCase() || (email[0] ?? 'U').toUpperCase();
+      return { firstName, lastName, email, company, phone, position, avatarUrl, initials, plan: agency.plan || 'Growth Agency', partnerName: '', partnerOnRaisup: false, partnerConfirmed: false };
+    }
+
+    // Standard (founder) profile
+    // RaisupOnboardingForm saves `founderName` (single field) — split it
+    const founderNameParts = (stored.founderName ?? '').trim().split(' ');
+    const founderFirst = founderNameParts[0] ?? '';
+    const founderLast  = founderNameParts.slice(1).join(' ');
+
+    const firstName = stored.firstName || founderFirst || meta.given_name || (meta.full_name ?? meta.name ?? '').split(' ')[0] || '';
+    const lastName  = stored.lastName  || founderLast  || meta.family_name || (meta.full_name ?? meta.name ?? '').split(' ').slice(1).join(' ') || '';
     const email     = user?.email ?? stored.email ?? '';
-    const company   = stored.startupName || stored.projectName || '';
+    // Both onboardings use `startupName` — RaisupOnboarding also has it directly
+    const company   = stored.startupName || stored.projectName || stored.startup_name || '';
     const phone     = stored.phone || '';
     const position  = stored.position || stored.role || 'Fondateur(rice)';
     const avatarUrl: string | null = meta.avatar_url || meta.picture || null;
     const initials  = ((firstName[0] ?? '') + (lastName[0] ?? '')).toUpperCase() || (email[0] ?? 'U').toUpperCase();
 
-    return { firstName, lastName, email, company, phone, position, avatarUrl, initials };
-  }, [user]);
+    const partnerName      = stored.partnerName      || '';
+    const partnerOnRaisup  = stored.partnerOnRaisup  === 'true' || stored.partnerOnRaisup === true;
+    const partnerConfirmed = stored.partnerConfirmed === 'true' || stored.partnerConfirmed === true;
+
+    return { firstName, lastName, email, company, phone, position, avatarUrl, initials, plan: 'Plan Pro', partnerName, partnerOnRaisup, partnerConfirmed };
+  }, [user, isAgency]);
 
   const [profile, setProfile] = useState(initialProfile);
 
@@ -119,15 +150,26 @@ const SettingsPage: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const existing = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
-      localStorage.setItem('raisup_profile', JSON.stringify({
-        ...existing,
-        firstName: profile.firstName,
-        lastName:  profile.lastName,
-        phone:     profile.phone,
-        startupName: profile.company,
-        position:  profile.position,
-      }));
+      if (isAgency) {
+        const existing = JSON.parse(localStorage.getItem('raisup_agency_profile') || '{}');
+        localStorage.setItem('raisup_agency_profile', JSON.stringify({
+          ...existing,
+          responsable: `${profile.firstName} ${profile.lastName}`.trim(),
+          email: existing.email, // email not editable
+          name: profile.company,
+          type: profile.position,
+        }));
+      } else {
+        const existing = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
+        localStorage.setItem('raisup_profile', JSON.stringify({
+          ...existing,
+          firstName: profile.firstName,
+          lastName:  profile.lastName,
+          phone:     profile.phone,
+          startupName: profile.company,
+          position:  profile.position,
+        }));
+      }
       setEditMode(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -313,7 +355,7 @@ const SettingsPage: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className={clsx('block text-xs font-medium mb-1', dm ? 'text-gray-400' : 'text-gray-600')}>Entreprise / Projet</label>
+                        <label className={clsx('block text-xs font-medium mb-1', dm ? 'text-gray-400' : 'text-gray-600')}>{isAgency ? 'Nom de l\'agence' : 'Entreprise / Projet'}</label>
                         <input
                           type="text"
                           value={profile.company}
@@ -346,6 +388,55 @@ const SettingsPage: React.FC = () => {
                     </div>
                   )}
                 </form>
+
+                {/* ── Partner badge (founders only) ─────────────────────── */}
+                {!isAgency && profile.partnerName && (
+                  <div className={clsx('mt-6 pt-6 border-t', dm ? 'border-gray-700' : 'border-gray-200')}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building2 className={clsx('h-4 w-4', dm ? 'text-gray-400' : 'text-gray-500')} />
+                      <h3 className={clsx('text-sm font-medium', dm ? 'text-gray-300' : 'text-gray-700')}>Structure partenaire</h3>
+                    </div>
+                    <div className={clsx(
+                      'inline-flex items-center gap-3 px-4 py-3 rounded-xl border',
+                      profile.partnerConfirmed
+                        ? dm ? 'border-green-700 bg-green-900/20' : 'border-green-200 bg-green-50'
+                        : dm ? 'border-amber-700 bg-amber-900/20' : 'border-amber-200 bg-amber-50'
+                    )}>
+                      {/* Initials gomette */}
+                      <div className={clsx(
+                        'w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
+                        profile.partnerConfirmed
+                          ? 'bg-green-500 text-white'
+                          : 'bg-amber-400 text-white'
+                      )}>
+                        {profile.partnerName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className={clsx('text-sm font-semibold leading-tight', dm ? 'text-white' : 'text-gray-900')}>
+                          {profile.partnerName}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {profile.partnerOnRaisup ? (
+                            <span className={clsx(
+                              'text-xs font-medium px-1.5 py-0.5 rounded-full',
+                              'bg-[#F4B8CC] text-[#8B3A52]'
+                            )}>
+                              Sur Raisup ✓
+                            </span>
+                          ) : null}
+                          <span className={clsx(
+                            'text-xs',
+                            profile.partnerConfirmed
+                              ? dm ? 'text-green-400' : 'text-green-600'
+                              : dm ? 'text-amber-400' : 'text-amber-600'
+                          )}>
+                            {profile.partnerConfirmed ? 'Partenariat confirmé' : 'En attente de confirmation'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               {/* ── Sécurité ───────────────────────────────────────────────── */}
@@ -485,7 +576,7 @@ const SettingsPage: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className={clsx('text-xl font-semibold', dm ? 'text-white' : 'text-gray-900')}>Plan Pro</h3>
+                        <h3 className={clsx('text-xl font-semibold', dm ? 'text-white' : 'text-gray-900')}>{profile.plan ?? 'Plan Pro'}</h3>
                         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-[#F4B8CC]/30 text-[#C4728A]">Actif</span>
                       </div>
                       <p className={clsx('mt-1 text-sm', dm ? 'text-gray-300' : 'text-gray-700')}>99 €/mois · Facturation mensuelle</p>

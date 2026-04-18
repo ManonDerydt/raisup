@@ -59,7 +59,8 @@ const ResetPasswordPage: React.FC = () => {
       setError(err.message);
     } else {
       setSuccess(true);
-      setTimeout(() => navigate('/dashboard/welcome'), 2500);
+      const isAgency = localStorage.getItem('raisup_user_type') === 'agency';
+      setTimeout(() => navigate(isAgency ? '/dashboard/b2b' : '/dashboard/welcome'), 2500);
     }
   };
 

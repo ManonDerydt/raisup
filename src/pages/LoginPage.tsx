@@ -55,8 +55,10 @@ const LoginPage: React.FC = () => {
     }
 
     if (segment === 'B2B') {
+      localStorage.setItem('raisup_user_type', 'agency');
       navigate('/dashboard/b2b');
     } else {
+      localStorage.removeItem('raisup_user_type');
       navigate('/dashboard');
     }
   };
