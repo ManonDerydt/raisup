@@ -1079,8 +1079,13 @@ const SimplifiedOnboardingForm: React.FC = () => {
 
   const handleFinalSubmit = async () => {
     localStorage.setItem('raisup_profile', JSON.stringify(form));
+
+    let profileId: string | null = null;
+    let score = { total: 0 };
+
+    // ── 1. Save profile ───────────────────────────────────────────────────────
     try {
-      const score = calculateScore({
+      score = calculateScore({
         startupName: form.startupName,
         mrr: form.mrr,
         momGrowth: form.momGrowth,
@@ -1137,32 +1142,41 @@ const SimplifiedOnboardingForm: React.FC = () => {
       if (profileError) {
         console.error('Erreur profil Supabase:', profileError);
       } else {
-        console.log('Profil sauvegardé Supabase id:', savedProfile.id);
-        localStorage.setItem('raisup_profile', JSON.stringify({ ...form, supabase_id: savedProfile.id }));
-
-        if (form.partnerId && form.partnerConfirmed && savedProfile.id) {
-          const { error: reqError } = await supabase
-            .from('partner_requests')
-            .insert({
-              startup_profile_id: savedProfile.id,
-              startup_name: form.startupName || '',
-              founder_name: `${form.firstName || ''} ${form.lastName || ''}`.trim(),
-              founder_email: form.email || '',
-              agency_id: form.partnerId,
-              agency_name: form.partnerName || '',
-              agency_email: form.partnerEmail || '',
-              status: 'pending',
-              raisup_score: score.total,
-            });
-          if (reqError) console.error('Erreur partner_request:', reqError);
-          else console.log('Demande partenaire envoyée à:', form.partnerName);
-        }
+        profileId = savedProfile.id;
+        console.log('Profil sauvegardé Supabase id:', profileId);
+        localStorage.setItem('raisup_profile', JSON.stringify({ ...form, supabase_id: profileId }));
       }
     } catch (e) {
-      console.error('Erreur handleFinalSubmit:', e);
-    } finally {
-      navigate('/loading-strategy');
+      console.error('Erreur save profile:', e);
     }
+
+    // ── 2. Save partner request (independent of profile success) ─────────────
+    if (form.partnerId && form.partnerConfirmed) {
+      try {
+        const { error: reqError } = await supabase
+          .from('partner_requests')
+          .insert({
+            startup_profile_id: profileId,
+            startup_name: form.startupName || '',
+            founder_name: `${form.firstName || ''} ${form.lastName || ''}`.trim(),
+            founder_email: form.email || '',
+            agency_id: form.partnerId,
+            agency_name: form.partnerName || '',
+            agency_email: form.partnerEmail || '',
+            status: 'pending',
+            raisup_score: score.total,
+          });
+        if (reqError) {
+          console.error('Erreur partner_request:', reqError);
+        } else {
+          console.log('Demande partenaire envoyée à:', form.partnerName, '| agency_id:', form.partnerId);
+        }
+      } catch (e) {
+        console.error('Erreur save partner_request:', e);
+      }
+    }
+
+    navigate('/loading-strategy');
   };
 
   const saveAndNavigate = async () => {
@@ -1173,6 +1187,10 @@ const SimplifiedOnboardingForm: React.FC = () => {
     if (user) {
       await handleFinalSubmit();
     } else {
+      // Save to localStorage immediately so Google OAuth redirect doesn't lose data
+      const toSave = { ...form, deckBase64: null, team: form.team.map(m => ({ ...m, photo: null })) };
+      localStorage.setItem('raisup_onboarding_v2', JSON.stringify(toSave));
+      localStorage.setItem('raisup_profile', JSON.stringify(toSave));
       setShowAuthModal(true);
     }
   };
@@ -1454,7 +1472,15 @@ const SimplifiedOnboardingForm: React.FC = () => {
                                 <button
                                   key={agency.id}
                                   type="button"
-                                  onClick={() => { setPartnerPending(agency); setShowPartnerDropdown(false); }}
+                                  onClick={() => {
+                                    set('partnerId', agency.id);
+                                    set('partnerName', agency.name);
+                                    set('partnerEmail', agency.email);
+                                    set('partnerOnRaisup', true);
+                                    set('partnerConfirmed', true);
+                                    setPartnerPending(null);
+                                    setShowPartnerDropdown(false);
+                                  }}
                                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
                                 >
                                   <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0"

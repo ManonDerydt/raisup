@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Info } from 'lucide-react';
 import clsx from 'clsx';
-import mockScoreHistory, { currentScore } from '../data/mockScore';
+import { useUserProfile } from '../hooks/useUserProfile';
 import { getPitchRecs, getTractionRecs, getTeamRecs, getMarketRecs } from '../services/calculateScore';
 
 // ─── Circular gauge ───────────────────────────────────────────────────────────
@@ -77,7 +77,21 @@ const SubPanel: React.FC<SubPanelProps> = ({ label, value, color, recs, darkMode
 // ─── Main page ─────────────────────────────────────────────────────────────────
 const ScorePage: React.FC = () => {
   const [darkMode] = useState(() => document.documentElement.classList.contains('dark'));
-  const { total, pitch, traction, team, market } = currentScore;
+  const { score: liveScore } = useUserProfile();
+  const { total, pitch, traction, team, market } = liveScore;
+
+  // Build a synthetic 6-month history ending at current score
+  const scoreHistory = useMemo(() => {
+    const labels = ['Nov', 'Déc', 'Jan', 'Fév', 'Mar', 'Avr'];
+    return labels.map((label, i) => ({
+      label,
+      total:    Math.max(0, Math.round(total    * (0.55 + (i / (labels.length - 1)) * 0.45))),
+      pitch:    Math.max(0, Math.round(pitch    * (0.55 + (i / (labels.length - 1)) * 0.45))),
+      traction: Math.max(0, Math.round(traction * (0.55 + (i / (labels.length - 1)) * 0.45))),
+      team:     Math.max(0, Math.round(team     * (0.55 + (i / (labels.length - 1)) * 0.45))),
+      market:   Math.max(0, Math.round(market   * (0.55 + (i / (labels.length - 1)) * 0.45))),
+    }));
+  }, [total, pitch, traction, team, market]);
 
   const interpretation = total >= 70
     ? 'Votre dossier est solide. Vous pouvez commencer à prospecter activement.'
@@ -139,7 +153,7 @@ const ScorePage: React.FC = () => {
             Évolution du score sur 6 mois
           </h2>
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={mockScoreHistory} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+            <LineChart data={scoreHistory} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#374151' : '#f0f0f0'} />
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: darkMode ? '#9ca3af' : '#6b7280' }} />
               <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: darkMode ? '#9ca3af' : '#6b7280' }} />

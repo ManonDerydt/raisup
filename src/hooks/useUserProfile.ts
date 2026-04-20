@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
+import { supabase } from '../lib/supabase';
 
 // ─── Profile shape ─────────────────────────────────────────────────────────────
 
@@ -260,14 +261,53 @@ function buildKPIs(p: Partial<UserProfile>): ProfileKPI[] {
 
 export function useUserProfile() {
   const { user } = useAuth();
+  const [dbData, setDbData] = useState<Partial<UserProfile> | null>(null);
+
+  useEffect(() => {
+    const raw = localStorage.getItem('raisup_profile');
+    if (!raw) return;
+    try {
+      const p = JSON.parse(raw);
+      const supabaseId = p.supabase_id;
+      if (!supabaseId) return;
+      supabase.from('profiles').select('*').eq('id', supabaseId).single().then(({ data }) => {
+        if (!data) return;
+        setDbData({
+          startupName: data.startup_name,
+          ambition: data.ambition,
+          businessModel: data.business_model,
+          sector: data.sector,
+          clientType: data.client_type,
+          country: data.country,
+          region: data.region,
+          city: data.city,
+          mrr: data.mrr,
+          momGrowth: data.growth_mom,
+          activeClients: data.active_clients,
+          runway: data.runway,
+          burnRate: data.burn_rate,
+          fundraisingGoal: data.fundraising_goal,
+          maxDilution: data.max_dilution,
+          fundingPreference: data.funding_preference,
+          finalGoalValuation: data.final_goal_valuation,
+          fundingTimeline: data.fundraising_timeline,
+          hasCTO: data.has_cto,
+          problem: data.problem,
+          solution: data.solution,
+          competitiveAdvantage: data.competitive_advantage,
+          teamSize: data.team_size,
+        });
+      });
+    } catch { /* ignore */ }
+  }, []);
 
   const profile = useMemo<UserProfile>(() => {
     let stored: Partial<UserProfile> = {};
     try {
       const a = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
       const b = JSON.parse(localStorage.getItem('raisupOnboardingData') || '{}');
-      // raisup_profile (new form) takes priority
-      stored = { ...b, ...a };
+      // raisup_profile (new form) takes priority, then Supabase overrides
+      stored = { ...b, ...a, ...(dbData || {}) };
     } catch { /* ignore */ }
 
     // Fill email from Supabase auth if not in localStorage
@@ -323,7 +363,7 @@ export function useUserProfile() {
       stage,
       profileCompletion,
     };
-  }, [user]);
+  }, [user, dbData]);
 
   const score = useMemo(() => calcScore(profile), [profile]);
   const kpis = useMemo(() => buildKPIs(profile), [profile]);

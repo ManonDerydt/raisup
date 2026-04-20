@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../hooks/useUserProfile';
 import jsPDF from 'jspdf';
@@ -1062,13 +1063,54 @@ const DashboardWelcome: React.FC = () => {
   const { isPremium } = useUserProfile();
   const isPaid = isPremium;
 
+  const [dbProfile, setDbProfile] = useState<Partial<Profile> | null>(null);
+
+  useEffect(() => {
+    const raw = localStorage.getItem('raisup_profile');
+    if (!raw) return;
+    try {
+      const p = JSON.parse(raw);
+      const supabaseId = p.supabase_id;
+      if (!supabaseId) return;
+      supabase.from('profiles').select('*').eq('id', supabaseId).single().then(({ data }) => {
+        if (!data) return;
+        setDbProfile({
+          startupName: data.startup_name,
+          oneLiner: data.one_liner,
+          ambition: data.ambition,
+          businessModel: data.business_model,
+          sector: data.sector,
+          clientType: data.client_type,
+          country: data.country,
+          region: data.region,
+          city: data.city,
+          mrr: data.mrr,
+          momGrowth: data.growth_mom,
+          activeClients: data.active_clients,
+          runway: data.runway,
+          burnRate: data.burn_rate,
+          fundraisingGoal: data.fundraising_goal,
+          maxDilution: data.max_dilution,
+          fundingPreference: data.funding_preference,
+          finalGoalValuation: data.final_goal_valuation,
+          fundingTimeline: data.fundraising_timeline,
+          hasCTO: data.has_cto,
+          problem: data.problem,
+          solution: data.solution,
+          competitiveAdvantage: data.competitive_advantage,
+          teamSize: data.team_size,
+        });
+      });
+    } catch { /* ignore */ }
+  }, []);
+
   const profile = useMemo<Profile>(() => {
     try {
       const a = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
       const b = JSON.parse(localStorage.getItem('raisupOnboardingData') || '{}');
-      return { ...b, ...a };
-    } catch { return {}; }
-  }, []);
+      return { ...b, ...a, ...(dbProfile || {}) };
+    } catch { return dbProfile || {}; }
+  }, [dbProfile]);
 
   const score = useMemo(() => calculateScore(profile), [profile]);
   const level = useMemo(() => getLevel(score.total), [score]);

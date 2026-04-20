@@ -34,6 +34,7 @@ import InvestorUpdatePage from './pages/InvestorUpdatePage';
 import B2BDashboardLayout from './components/B2BDashboardLayout';
 import B2BDashboard from './pages/B2BDashboard';
 import PortfolioPage from './pages/b2b/PortfolioPage';
+import B2BDossierDetail from './pages/b2b/B2BDossierDetail';
 import FundingSynthesisPage from './pages/b2b/FundingSynthesisPage';
 import StrategicReportsPage from './pages/b2b/StrategicReportsPage';
 import SimplifiedOnboardingForm from './pages/SimplifiedOnboardingForm';
@@ -103,6 +104,7 @@ function App() {
         <Route path="/dashboard/b2b" element={<B2BDashboardLayout />}>
           <Route index element={<B2BDashboard />} />
           <Route path="portfolio" element={<PortfolioPage />} />
+          <Route path="dossier/:id" element={<B2BDossierDetail />} />
           <Route path="funding-synthesis" element={<FundingSynthesisPage />} />
           <Route path="reports" element={<StrategicReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />

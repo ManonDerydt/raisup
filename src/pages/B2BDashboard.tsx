@@ -147,19 +147,42 @@ const B2BDashboard: React.FC = () => {
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [agencyName, setAgencyName] = useState('Mon espace partenaire');
   const [pendingRequests, setPendingRequests] = useState<PartnerRequest[]>([]);
+  const [allRequests, setAllRequests] = useState<PartnerRequest[]>([]);
 
   useEffect(() => {
-    try {
-      const profile = JSON.parse(localStorage.getItem('raisup_agency_profile') || '{}');
-      if (profile.name) setAgencyName(profile.name);
-      if (profile.id) {
-        setAgencyId(profile.id);
-      } else {
+    const init = async () => {
+      try {
+        const raw = localStorage.getItem('raisup_agency_profile');
+        let profile: Record<string, string> = raw ? JSON.parse(raw) : {};
+        if (profile.name) setAgencyName(profile.name);
+
+        // Toujours vérifier Supabase par email pour avoir l'id canonique
+        const email = profile.email || null;
+        const { data: dbAgency } = await (
+          email
+            ? supabase.from('agency_accounts').select('*').eq('email', email).single()
+            : supabase.from('agency_accounts').select('*').order('created_at', { ascending: false }).limit(1).single()
+        );
+
+        console.log('[B2BDashboard] dbAgency from Supabase:', dbAgency);
+
+        if (dbAgency) {
+          const id = dbAgency.id;
+          setAgencyName(dbAgency.name || profile.name || 'Mon agence');
+          localStorage.setItem('raisup_agency_profile', JSON.stringify({ ...profile, ...dbAgency, id }));
+          setAgencyId(id);
+        } else {
+          // Dernier recours : id local
+          const localId = profile.id || profile.supabase_id || null;
+          console.warn('[B2BDashboard] agency not found in Supabase, using local id:', localId);
+          if (localId) setAgencyId(localId);
+          else setLoading(false);
+        }
+      } catch {
         setLoading(false);
       }
-    } catch {
-      setLoading(false);
-    }
+    };
+    init();
   }, []);
 
   useEffect(() => {
@@ -171,29 +194,69 @@ const B2BDashboard: React.FC = () => {
       .catch(() => setSyncError(true))
       .finally(() => setLoading(false));
 
+    // Fetch all partner_requests for real KPIs
     supabase
       .from('partner_requests')
-      .select('id, startup_name, founder_name, founder_email, raisup_score, created_at')
+      .select('id, startup_name, founder_name, founder_email, raisup_score, created_at, status')
       .eq('agency_id', agencyId)
-      .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .then(({ data: reqs }) => {
-        if (reqs) setPendingRequests(reqs);
+        if (reqs) {
+          setAllRequests(reqs as PartnerRequest[]);
+          setPendingRequests(reqs.filter(r => r.status === 'pending') as PartnerRequest[]);
+        }
       });
   }, [agencyId]);
 
-  // Performance chart data (historical illustration)
-  const getPerformanceData = () => {
-    switch (selectedPeriod) {
-      case 'monthly':
-        return { labels: ['Oct', 'Nov', 'Déc', 'Jan'], amountsRaised: [850000, 1200000, 950000, 1100000], newStartups: [2, 3, 1, 4], maxAmount: 1500000 };
-      case 'quarterly':
-        return { labels: ['Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024'], amountsRaised: [2800000, 3200000, 2900000, 3400000], newStartups: [6, 8, 5, 9], maxAmount: 4000000 };
-      case 'annual':
-        return { labels: ['2021', '2022', '2023', '2024'], amountsRaised: [8500000, 11200000, 9800000, 12300000], newStartups: [18, 22, 19, 28], maxAmount: 15000000 };
-    }
+  // Real stats computed from partner_requests
+  const realStats = {
+    totalDossiers: allRequests.filter(r => r.status === 'confirmed').length,
+    dossiersActifs: allRequests.filter(r => ['pending', 'confirmed'].includes(r.status)).length,
+    montantLeveTotal: data?.stats?.montantLeveTotal ?? 0,
+    tauxSucces: data?.stats?.tauxSucces ?? 0,
+    alertesCritiques: data?.stats?.alertesCritiques ?? 0,
+    scoreMoyen: allRequests.length > 0
+      ? Math.round(allRequests.filter(r => r.raisup_score).reduce((s, r) => s + (r.raisup_score ?? 0), 0) / allRequests.filter(r => r.raisup_score).length) || 0
+      : 0,
   };
-  const performanceData = getPerformanceData();
+
+  // Performance chart data computed from real agency_dossiers
+  const performanceData = React.useMemo(() => {
+    const dossiers = data?.dossiers ?? [];
+    if (dossiers.length === 0) return null;
+
+    const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const groups: Record<string, { label: string; count: number; amount: number }> = {};
+
+    dossiers.forEach(d => {
+      const date = new Date(d.created_at);
+      let key: string;
+      let label: string;
+      if (selectedPeriod === 'monthly') {
+        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        label = `${MONTH_LABELS[date.getMonth()]} ${String(date.getFullYear()).slice(2)}`;
+      } else if (selectedPeriod === 'quarterly') {
+        const q = Math.floor(date.getMonth() / 3) + 1;
+        key = `${date.getFullYear()}-${q}`;
+        label = `Q${q} ${date.getFullYear()}`;
+      } else {
+        key = `${date.getFullYear()}`;
+        label = `${date.getFullYear()}`;
+      }
+      if (!groups[key]) groups[key] = { label, count: 0, amount: 0 };
+      groups[key].count += 1;
+      groups[key].amount += d.montant_leve ?? 0;
+    });
+
+    const keys = Object.keys(groups).sort().slice(-6);
+    if (keys.length === 0) return null;
+
+    const labels = keys.map(k => groups[k].label);
+    const amountsRaised = keys.map(k => groups[k].amount);
+    const newStartups = keys.map(k => groups[k].count);
+    const maxAmount = Math.max(...amountsRaised, 1);
+    return { labels, amountsRaised, newStartups, maxAmount };
+  }, [data?.dossiers, selectedPeriod]);
 
   const handleInviteStartup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,22 +310,30 @@ const B2BDashboard: React.FC = () => {
 
       {/* ── Demandes partenaires en attente ──────────────────────────────────── */}
       {pendingRequests.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Bell className="h-4 w-4 text-amber-600" />
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">{pendingRequests.length}</span>
+            </div>
             <span className="text-sm font-semibold text-amber-800">
-              {pendingRequests.length} demande{pendingRequests.length > 1 ? 's' : ''} en attente
+              {pendingRequests.length} demande{pendingRequests.length > 1 ? 's' : ''} en attente de confirmation
             </span>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {pendingRequests.map(req => (
-              <div key={req.id} className="flex items-center gap-3 bg-white rounded-lg p-3 border border-amber-100">
-                <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center text-xs font-bold text-pink-600 flex-shrink-0">
-                  {req.startup_name.substring(0, 2).toUpperCase()}
+              <div key={req.id} className="flex items-center gap-4 bg-white rounded-xl p-4 border border-amber-100">
+                <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-sm font-bold text-pink-600 flex-shrink-0">
+                  {req.startup_name?.substring(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{req.startup_name}</p>
-                  <p className="text-xs text-gray-500">{req.founder_name} · Score {req.raisup_score}/100</p>
+                  <p className="text-sm font-semibold text-gray-900">{req.startup_name}</p>
+                  <p className="text-xs text-gray-500">
+                    {req.founder_name} · {req.founder_email}
+                    {req.raisup_score ? ` · Score Raisup ${req.raisup_score}/100` : ''}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Demande reçue le {new Date(req.created_at).toLocaleDateString('fr-FR')}
+                  </p>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button
@@ -277,15 +348,14 @@ const B2BDashboard: React.FC = () => {
                         fondateur: req.founder_name,
                         raisup_score: req.raisup_score,
                         statut: 'Dossier prêt',
+                        derniere_action: 'Liaison confirmée depuis Raisup',
                       });
                       setPendingRequests(prev => prev.filter(r => r.id !== req.id));
-                      if (agencyId) {
-                        getAgencyDashboardData(agencyId).then(setData).catch(() => {});
-                      }
+                      if (agencyId) getAgencyDashboardData(agencyId).then(setData).catch(() => {});
                     }}
-                    className="px-3 py-1.5 bg-green-100 text-green-700 text-xs font-medium rounded-full hover:bg-green-200"
+                    className="px-4 py-2 bg-green-100 text-green-700 text-sm font-medium rounded-full hover:bg-green-200 transition-colors"
                   >
-                    Confirmer
+                    Confirmer ✓
                   </button>
                   <button
                     onClick={async () => {
@@ -295,7 +365,7 @@ const B2BDashboard: React.FC = () => {
                         .eq('id', req.id);
                       setPendingRequests(prev => prev.filter(r => r.id !== req.id));
                     }}
-                    className="px-3 py-1.5 text-red-400 text-xs font-medium hover:text-red-600"
+                    className="px-4 py-2 text-red-400 text-sm font-medium hover:text-red-600 transition-colors"
                   >
                     Refuser
                   </button>
@@ -317,8 +387,8 @@ const B2BDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 mb-2">Startups accompagnées</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats?.totalDossiers ?? 0}</p>
-                  <p className="text-sm text-gray-400 mt-1">{stats?.dossiersActifs ?? 0} actives</p>
+                  <p className="text-3xl font-bold text-gray-900">{realStats.totalDossiers}</p>
+                  <p className="text-sm text-gray-400 mt-1">{realStats.dossiersActifs} actives</p>
                 </div>
                 <div className="bg-secondary-light p-4 rounded-full">
                   <Building2 className="h-6 w-6 text-primary" />
@@ -332,12 +402,12 @@ const B2BDashboard: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-500 mb-2">Montant levé total</p>
                   <p className="text-3xl font-bold text-gray-900">
-                    {formatCurrency(stats?.montantLeveTotal ?? 0)}
+                    {formatCurrency(realStats.montantLeveTotal)}
                   </p>
-                  {(stats?.tauxSucces ?? 0) > 0 && (
+                  {realStats.tauxSucces > 0 && (
                     <div className="flex items-center mt-1">
                       <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
-                      <span className="text-sm text-green-500">{stats!.tauxSucces}% de taux de succès</span>
+                      <span className="text-sm text-green-500">{realStats.tauxSucces}% de taux de succès</span>
                     </div>
                   )}
                 </div>
@@ -352,7 +422,7 @@ const B2BDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 mb-2">Score moyen portfolio</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats?.scoreMoyen ?? '—'}</p>
+                  <p className="text-3xl font-bold text-gray-900">{realStats.scoreMoyen > 0 ? realStats.scoreMoyen : '—'}</p>
                   <p className="text-sm text-gray-400 mt-1">/ 100 · score Raisup</p>
                 </div>
                 <div className="bg-blue-100 p-4 rounded-full">
@@ -366,13 +436,13 @@ const B2BDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 mb-2">Alertes runway</p>
-                  <p className={clsx('text-3xl font-bold', (stats?.alertesCritiques ?? 0) > 0 ? 'text-orange-500' : 'text-gray-900')}>
-                    {stats?.alertesCritiques ?? 0}
+                  <p className={clsx('text-3xl font-bold', realStats.alertesCritiques > 0 ? 'text-orange-500' : 'text-gray-900')}>
+                    {realStats.alertesCritiques}
                   </p>
                   <p className="text-sm text-gray-400 mt-1">Runway ≤ 4 mois</p>
                 </div>
-                <div className={clsx('p-4 rounded-full', (stats?.alertesCritiques ?? 0) > 0 ? 'bg-orange-100' : 'bg-gray-100')}>
-                  <AlertTriangle className={clsx('h-6 w-6', (stats?.alertesCritiques ?? 0) > 0 ? 'text-orange-500' : 'text-gray-400')} />
+                <div className={clsx('p-4 rounded-full', realStats.alertesCritiques > 0 ? 'bg-orange-100' : 'bg-gray-100')}>
+                  <AlertTriangle className={clsx('h-6 w-6', realStats.alertesCritiques > 0 ? 'text-orange-500' : 'text-gray-400')} />
                 </div>
               </div>
             </div>
@@ -399,50 +469,65 @@ const B2BDashboard: React.FC = () => {
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          <div>
-            <h3 className="text-xl font-semibold mb-6 text-gray-900">Montants levés</h3>
-            <div className="space-y-4">
-              {performanceData.labels.map((label, i) => (
-                <div key={label} className="flex items-center">
-                  <div className="w-20 text-sm font-medium text-gray-700">{label}</div>
-                  <div className="flex-1 mx-4">
-                    <div className="h-8 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[#ff99d8] transition-all duration-1000 ease-out flex items-center justify-end pr-3"
-                        style={{ width: `${(performanceData.amountsRaised[i] / performanceData.maxAmount) * 100}%` }}
-                      >
-                        <span className="text-white text-xs font-semibold">{formatCurrency(performanceData.amountsRaised[i])}</span>
+
+        {!performanceData ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+              <BarChart3 size={28} className="text-gray-400" />
+            </div>
+            <p className="text-gray-500 text-sm font-medium mb-2">Aucune donnée de performance encore</p>
+            <p className="text-gray-400 text-xs max-w-xs">
+              Les graphiques apparaîtront dès que vos startups auront des dossiers enregistrés
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div>
+              <h3 className="text-xl font-semibold mb-6 text-gray-900">Montants levés</h3>
+              <div className="space-y-4">
+                {performanceData.labels.map((label, i) => (
+                  <div key={label} className="flex items-center">
+                    <div className="w-20 text-sm font-medium text-gray-700">{label}</div>
+                    <div className="flex-1 mx-4">
+                      <div className="h-8 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#ff99d8] transition-all duration-1000 ease-out flex items-center justify-end pr-3"
+                          style={{ width: `${(performanceData.amountsRaised[i] / performanceData.maxAmount) * 100}%` }}
+                        >
+                          {performanceData.amountsRaised[i] > 0 && (
+                            <span className="text-white text-xs font-semibold">{formatCurrency(performanceData.amountsRaised[i])}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    <div className="w-24 text-right text-sm font-semibold text-gray-900">{formatCurrency(performanceData.amountsRaised[i])}</div>
                   </div>
-                  <div className="w-24 text-right text-sm font-semibold text-gray-900">{formatCurrency(performanceData.amountsRaised[i])}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-6 text-gray-900">Nouvelles startups accompagnées</h3>
-            <div className="space-y-4">
-              {performanceData.labels.map((label, i) => (
-                <div key={label} className="flex items-center">
-                  <div className="w-20 text-sm font-medium text-gray-700">{label}</div>
-                  <div className="flex-1 mx-4">
-                    <div className="h-8 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[#acc5ff] transition-all duration-1000 ease-out flex items-center justify-end pr-3"
-                        style={{ width: `${(performanceData.newStartups[i] / Math.max(...performanceData.newStartups)) * 100}%` }}
-                      >
-                        <span className="text-primary text-xs font-semibold">{performanceData.newStartups[i]}</span>
+            <div>
+              <h3 className="text-xl font-semibold mb-6 text-gray-900">Nouvelles startups accompagnées</h3>
+              <div className="space-y-4">
+                {performanceData.labels.map((label, i) => (
+                  <div key={label} className="flex items-center">
+                    <div className="w-20 text-sm font-medium text-gray-700">{label}</div>
+                    <div className="flex-1 mx-4">
+                      <div className="h-8 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#acc5ff] transition-all duration-1000 ease-out flex items-center justify-end pr-3"
+                          style={{ width: `${(performanceData.newStartups[i] / Math.max(...performanceData.newStartups, 1)) * 100}%` }}
+                        >
+                          <span className="text-primary text-xs font-semibold">{performanceData.newStartups[i]}</span>
+                        </div>
                       </div>
                     </div>
+                    <div className="w-24 text-right text-sm font-semibold text-gray-900">{performanceData.newStartups[i]} startup{performanceData.newStartups[i] > 1 ? 's' : ''}</div>
                   </div>
-                  <div className="w-24 text-right text-sm font-semibold text-gray-900">{performanceData.newStartups[i]} startups</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Quick actions */}

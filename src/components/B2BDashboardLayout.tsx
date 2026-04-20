@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
@@ -39,7 +40,15 @@ const B2BDashboardLayout: React.FC = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  
+  const [agencyProfile, setAgencyProfile] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('raisup_agency_profile');
+      if (raw) setAgencyProfile(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, []);
+
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
     if (!darkMode) {
@@ -48,70 +57,76 @@ const B2BDashboardLayout: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   };
-  
-  // Mock user data for B2B structure
-  const user = {
-    name: 'Jean Martin',
-    email: 'jean.martin@techincubator.com',
-    structure: 'Tech Incubator Paris',
-    role: 'Directeur des Investissements',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-  };
-  
-  // Enhanced notifications for B2B with different types and priorities
-  const notifications = [
-    {
-      id: 1,
-      title: 'Aide BPI France expire bientôt',
-      message: 'L\'aide pour MediScan expire dans 15 jours.',
-      time: '2 heures',
-      unread: true,
-      type: 'deadline',
-      priority: 'high',
-      category: 'Échéances'
-    },
-    {
-      id: 2,
-      title: 'Startup à risque détectée',
-      message: 'PropTech Innovations: runway critique (< 3 mois).',
-      time: '3 heures',
-      unread: true,
-      type: 'risk',
-      priority: 'high',
-      category: 'Alertes'
-    },
-    {
-      id: 3,
-      title: 'Nouvel appel à projets',
-      message: 'France 2030 - Santé Numérique ouvert jusqu\'au 30 juin.',
-      time: '5 heures',
-      unread: true,
-      type: 'opportunity',
-      priority: 'medium',
-      category: 'Opportunités'
-    },
-    {
-      id: 4,
-      title: 'Diagnostic IA terminé',
-      message: 'GreenTech Solutions: nouveau diagnostic disponible.',
-      time: '8 heures',
-      unread: true,
-      type: 'info',
-      priority: 'medium',
-      category: 'Diagnostics'
-    },
-    {
-      id: 5,
-      title: 'Rapport mensuel généré',
-      message: 'Le rapport de performance de votre portefeuille est prêt.',
-      time: '1 jour',
-      unread: false,
-      type: 'success',
-      priority: 'low',
-      category: 'Rapports'
-    }
-  ];
-  
+
+  const agencyName = agencyProfile.name || agencyProfile.agencyName || 'Mon agence';
+  const responsableName =
+    agencyProfile.responsable_first_name && agencyProfile.responsable_last_name
+      ? `${agencyProfile.responsable_first_name} ${agencyProfile.responsable_last_name}`
+      : agencyProfile.firstName && agencyProfile.lastName
+      ? `${agencyProfile.firstName} ${agencyProfile.lastName}`
+      : agencyProfile.responsable || 'Responsable';
+  const agencyEmail = agencyProfile.email || '';
+  const agencyType = agencyProfile.type || agencyProfile.agencyType || 'Structure partenaire';
+  const initials = agencyName.substring(0, 2).toUpperCase();
+
+  const [notifications, setNotifications] = useState<{
+    id: string; title: string; message: string; time: string;
+    unread: boolean; type: string; priority: string; category: string;
+  }[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      // Resolve agency id: try local first, then email lookup, then most recent
+      let agencyId: string | null =
+        agencyProfile.id || agencyProfile.supabase_id || null;
+
+      if (!agencyId) {
+        const email = agencyProfile.email;
+        const query = email
+          ? supabase.from('agency_accounts').select('id').eq('email', email).single()
+          : supabase.from('agency_accounts').select('id').order('created_at', { ascending: false }).limit(1).single();
+        const { data: agency } = await query;
+        if (agency) {
+          agencyId = agency.id;
+          // Persist so next render is instant
+          localStorage.setItem('raisup_agency_profile',
+            JSON.stringify({ ...agencyProfile, id: agency.id }));
+        }
+      }
+
+      console.log('[Notifs] agencyId resolved:', agencyId);
+      if (!agencyId) return;
+
+      const { data: reqs, error } = await supabase
+        .from('partner_requests')
+        .select('id, startup_name, founder_name, created_at')
+        .eq('agency_id', agencyId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      console.log('[Notifs] partner_requests:', reqs, error);
+      if (!reqs?.length) return;
+
+      setNotifications(reqs.map(r => {
+        const diffH = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 3600000);
+        const timeLabel = diffH < 1 ? 'À l\'instant' : diffH < 24 ? `${diffH}h` : `${Math.floor(diffH / 24)}j`;
+        return {
+          id: r.id,
+          title: 'Nouvelle demande d\'accompagnement',
+          message: `${r.startup_name} (${r.founder_name}) souhaite rejoindre votre structure.`,
+          time: timeLabel,
+          unread: true,
+          type: 'new_request',
+          priority: 'high',
+          category: 'Demandes',
+        };
+      }));
+    };
+
+    // Run once profile is loaded (has at least a name)
+    if (agencyProfile.name || agencyProfile.email || agencyProfile.id) load();
+  }, [agencyProfile.id, agencyProfile.email, agencyProfile.name]);
+
   const mainNavItems = [
     { 
       name: 'Vue d\'ensemble', 
@@ -151,6 +166,8 @@ const B2BDashboardLayout: React.FC = () => {
   
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      case 'new_request':
+        return <UserPlus className="h-4 w-4" />;
       case 'deadline':
         return <Calendar className="h-4 w-4" />;
       case 'risk':
@@ -244,29 +261,27 @@ const B2BDashboardLayout: React.FC = () => {
           
           <div className="px-4 py-4 mt-auto border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <img
-                className="h-10 w-10 rounded-full bg-gray-50 object-cover"
-                src={user.avatar}
-                alt=""
-              />
+              <div className="h-10 w-10 rounded-full bg-pink-100 flex items-center justify-center text-sm font-bold text-pink-600 flex-shrink-0">
+                {initials}
+              </div>
               <div className="ml-3 min-w-0 flex-1">
                 <p className={clsx(
                   "text-sm font-medium truncate",
                   darkMode ? "text-white" : "text-gray-900"
                 )}>
-                  {user.name}
+                  {responsableName}
                 </p>
                 <p className={clsx(
                   "text-xs truncate",
                   darkMode ? "text-gray-400" : "text-gray-500"
                 )}>
-                  {user.structure}
+                  {agencyName}
                 </p>
                 <p className={clsx(
                   "text-xs truncate",
                   darkMode ? "text-gray-500" : "text-gray-400"
                 )}>
-                  {user.role}
+                  {agencyType}
                 </p>
               </div>
               <button
@@ -361,23 +376,21 @@ const B2BDashboardLayout: React.FC = () => {
             
             <div className="mt-auto px-4 py-4 border-t border-opacity-20">
               <div className="flex items-center">
-                <img
-                  className="h-10 w-10 rounded-full bg-gray-50 object-cover"
-                  src={user.avatar}
-                  alt=""
-                />
+                <div className="h-10 w-10 rounded-full bg-pink-100 flex items-center justify-center text-sm font-bold text-pink-600 flex-shrink-0">
+                  {initials}
+                </div>
                 <div className="ml-3">
                   <p className={clsx(
                     "text-sm font-medium",
                     darkMode ? "text-white" : "text-gray-900"
                   )}>
-                    {user.name}
+                    {responsableName}
                   </p>
                   <p className={clsx(
                     "text-xs",
                     darkMode ? "text-gray-400" : "text-gray-500"
                   )}>
-                    {user.email}
+                    {agencyEmail}
                   </p>
                 </div>
               </div>
@@ -457,10 +470,10 @@ const B2BDashboardLayout: React.FC = () => {
                   "text-sm font-medium",
                   darkMode ? "text-gray-300" : "text-gray-700"
                 )}>
-                  {user.structure}
+                  {agencyName}
                 </span>
               </div>
-              
+
               {/* Dark mode toggle */}
               <button
                 type="button"
@@ -636,16 +649,14 @@ const B2BDashboardLayout: React.FC = () => {
                   className="flex items-center gap-x-2"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                 >
-                  <img
-                    className="h-8 w-8 rounded-full bg-gray-50 object-cover"
-                    src={user.avatar}
-                    alt=""
-                  />
+                  <div className="h-8 w-8 rounded-full bg-pink-100 flex items-center justify-center text-xs font-bold text-pink-600">
+                    {initials}
+                  </div>
                   <span className={clsx(
                     "hidden text-sm font-medium lg:block",
                     darkMode ? "text-white" : "text-gray-900"
                   )}>
-                    {user.name}
+                    {responsableName}
                   </span>
                   <ChevronDown className={clsx(
                     "h-4 w-4 hidden lg:block",
@@ -662,35 +673,33 @@ const B2BDashboardLayout: React.FC = () => {
                   )}>
                     <div className="py-3 px-4 border-b border-opacity-20">
                       <div className="flex items-center">
-                        <img
-                          className="h-10 w-10 rounded-full bg-gray-50 object-cover"
-                          src={user.avatar}
-                          alt=""
-                        />
+                        <div className="h-10 w-10 rounded-full bg-pink-100 flex items-center justify-center text-sm font-bold text-pink-600 flex-shrink-0">
+                          {initials}
+                        </div>
                         <div className="ml-3">
                           <p className={clsx(
                             "text-sm font-medium",
                             darkMode ? "text-white" : "text-gray-900"
                           )}>
-                            {user.name}
+                            {responsableName}
                           </p>
                           <p className={clsx(
                             "text-xs",
                             darkMode ? "text-gray-400" : "text-gray-500"
                           )}>
-                            {user.email}
+                            {agencyEmail}
                           </p>
                           <p className={clsx(
                             "text-xs font-medium",
                             darkMode ? "text-purple-400" : "text-primary"
                           )}>
-                            {user.structure}
+                            {agencyName}
                           </p>
                           <p className={clsx(
                             "text-xs",
                             darkMode ? "text-gray-400" : "text-gray-500"
                           )}>
-                            {user.role}
+                            {agencyType}
                           </p>
                         </div>
                       </div>
