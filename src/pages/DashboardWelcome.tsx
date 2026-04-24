@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { calculateScore as calculateScoreService, getScoreLevel, ScoreResult } from '../services/calculateScore';
 import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../hooks/useUserProfile';
 import jsPDF from 'jspdf';
@@ -75,80 +76,7 @@ interface Profile {
   churnRate?: number | null;
 }
 
-interface ExtendedScore {
-  total: number;
-  pitch: number;
-  traction: number;
-  team: number;
-  market: number;
-  defensibility: number;
-  financialCoherence: number;
-}
-
-// ─── Score calculation ────────────────────────────────────────────────────────
-
-function calculateScore(p: Profile): ExtendedScore {
-  const mrr = p.mrr ?? p.currentRevenue ?? 0;
-
-  let pitch = 0;
-  if ((p.problem?.length ?? 0) > 50) pitch += 7; else if ((p.problem?.length ?? 0) > 20) pitch += 4;
-  if ((p.solution?.length ?? 0) > 50) pitch += 7; else if ((p.solution?.length ?? 0) > 20) pitch += 4;
-  if ((p.competitiveAdvantage?.length ?? 0) > 30) pitch += 6; else if ((p.competitiveAdvantage?.length ?? 0) > 10) pitch += 3;
-  const descLen = p.oneLiner?.length ?? p.description?.length ?? 0;
-  if (descLen > 50) pitch += 5; else if (descLen > 20) pitch += 2;
-
-  let traction = 0;
-  if (!p.isPreRevenue && mrr > 0) {
-    traction += mrr >= 50000 ? 9 : mrr >= 10000 ? 7 : mrr >= 1000 ? 4 : 2;
-  }
-  const mom = p.momGrowth ?? p.growthMoM ?? 0;
-  if (mom) traction += mom >= 20 ? 7 : mom >= 10 ? 5 : mom >= 5 ? 3 : 1;
-  if (p.activeClients) traction += p.activeClients >= 100 ? 5 : p.activeClients >= 20 ? 3 : 1;
-  if (p.runway) traction += p.runway >= 12 ? 4 : p.runway >= 6 ? 2 : 0;
-
-  let team = 0;
-  if (p.hasCTO) team += 5;
-  if (p.previousStartup === 'oui') team += 5;
-  if (p.hadExit === 'oui') team += 7;
-  if (p.advisors) team += p.advisors >= 3 ? 4 : 2;
-  const exp = p.sectorExperience ?? '';
-  if (exp.includes('10') || exp.includes('5+') || exp.includes('15')) team += 4;
-  else if (exp.includes('2-5') || exp.includes('3')) team += 2;
-  else if (exp.includes('1')) team += 1;
-  if ((p.foundersCount ?? 1) >= 2) team += 4;
-
-  let market = 0;
-  if (p.businessModel) market += 5;
-  if (p.sector) market += 5;
-  if (p.clientType) market += 5;
-  if (p.ambition || (p.ambitions?.length ?? 0) > 0) market += 5;
-  if (p.fundingPreference || (p.fundingTypes?.length ?? 0) > 0) market += 5;
-
-  let defensibility = 0;
-  if (p.intellectualProperty && p.intellectualProperty !== 'Aucun') defensibility += 4;
-  if ((p.moat?.length ?? 0) > 20) defensibility += 3;
-  if ((p.barriers?.length ?? 0) > 20) defensibility += 3;
-
-  let financialCoherence = 0;
-  const goal = p.fundraisingGoal ?? p.fundingNeeded ?? 0;
-  const stage = (p.stage ?? '').toLowerCase();
-  if (goal > 0 && mrr === 0 && goal <= 500000) financialCoherence += 4;
-  else if (goal > 0 && mrr > 0) financialCoherence += 4;
-  if ((p.runway ?? 0) >= 6) financialCoherence += 3;
-  if (p.burnRate && p.burnRate > 0) financialCoherence += 3;
-  if (goal > 2000000 && mrr === 0 && (stage.includes('pre') || stage.includes('idéat')))
-    financialCoherence = Math.max(0, financialCoherence - 4);
-
-  return {
-    total: Math.min(25, pitch) + Math.min(25, traction) + Math.min(25, team) + Math.min(25, market) + Math.min(10, defensibility) + Math.min(10, financialCoherence),
-    pitch: Math.min(25, pitch),
-    traction: Math.min(25, traction),
-    team: Math.min(25, team),
-    market: Math.min(25, market),
-    defensibility: Math.min(10, defensibility),
-    financialCoherence: Math.min(10, financialCoherence),
-  };
-}
+// ScoreResult is imported from ../services/calculateScore
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -194,52 +122,8 @@ function getStageBadge(stage?: string): { bg: string; color: string; label: stri
   return { bg: '#F3F4F6', color: '#374151', label: stage ?? 'Démarrage' };
 }
 
-function getLevel(score: number): { label: string; color: string; advice: string } {
-  if (score < 30) return { label: 'Dossier insuffisant', color: '#FFB3B3', advice: "Votre dossier manque d'éléments fondamentaux avant tout contact investisseur." };
-  if (score < 50) return { label: 'Dossier en construction', color: '#FFB96D', advice: 'Votre projet a du potentiel mais nécessite plus de structure et de validation.' };
-  if (score < 70) return { label: 'Dossier prometteur', color: '#ABC5FE', advice: "Bonne base. Votre dossier intéressera des angels et fonds early-stage." };
-  if (score < 85) return { label: 'Dossier solide', color: '#0A0A0A', advice: "Dossier solide. Vous êtes prêt à pitcher des fonds institutionnels." };
-  return { label: 'Dossier excellent', color: '#CDB4FF', advice: "Excellent dossier. Concentrez-vous sur la qualité de vos pitchs." };
-}
+// getLevel is imported as getScoreLevel from ../services/calculateScore
 
-function getPitchAnalysis(v: number): string {
-  if (v < 10) return 'Problème, solution et différenciation mal définis';
-  if (v < 18) return 'Pitch correct mais manque de précision sur le marché';
-  return 'Pitch clair et convaincant';
-}
-
-function getTractionAnalysis(v: number, p: Profile): string {
-  const mrr = p.mrr ?? p.currentRevenue ?? 0;
-  if (mrr === 0) return 'Pre-revenue — aucune preuve de marché encore';
-  if (v < 10) return "Traction faible — accélérez l'acquisition";
-  if (v < 18) return `${formatAmount(mrr)} MRR — continuez à croître`;
-  return 'Traction solide — argument fort';
-}
-
-function getTeamAnalysis(v: number, p: Profile): string {
-  if (!p.hasCTO && (p.businessModel ?? '').toLowerCase().includes('saas')) return 'Pas de CTO identifié — risque perçu par les investisseurs';
-  if (v < 10) return 'Équipe incomplète';
-  if (v < 18) return 'Équipe correcte mais peut être renforcée';
-  return 'Équipe complète et expérimentée';
-}
-
-function getMarketAnalysis(v: number): string {
-  if (v < 10) return 'Marché et go-to-market peu définis';
-  if (v < 18) return 'Marché identifié mais objectifs à affiner';
-  return 'Vision marché claire et ambitieuse';
-}
-
-function getDefensibilityAnalysis(v: number): string {
-  if (v < 4) return "Pas de barrière à l'entrée identifiée — risque de copie";
-  if (v < 7) return 'Quelques avantages compétitifs à renforcer';
-  return 'Moat solide et défendable';
-}
-
-function getFinancialCoherenceAnalysis(v: number): string {
-  if (v < 4) return 'Incohérences entre ambition et moyens disponibles';
-  if (v < 7) return 'Stratégie financière à affiner';
-  return 'Stratégie financière cohérente et réaliste';
-}
 
 // ─── Investors ────────────────────────────────────────────────────────────────
 
@@ -862,7 +746,7 @@ const ScoreModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
 
 // ─── PDF Export ───────────────────────────────────────────────────────────────
 
-function downloadScorePDF(profile: Profile, score: ExtendedScore) {
+function downloadScorePDF(profile: Profile, score: ScoreResult) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = 210;
   const pink = [244, 184, 204] as const;
@@ -873,7 +757,7 @@ function downloadScorePDF(profile: Profile, score: ExtendedScore) {
   const firstName = profile.firstName || profile.founderName || 'Fondateur';
   const lastName = profile.lastName ?? '';
   const startupName = profile.startupName || profile.projectName || 'Votre startup';
-  const level = getLevel(score.total);
+  const level = getScoreLevel(score.total);
   const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   // ── Header band
@@ -939,12 +823,11 @@ function downloadScorePDF(profile: Profile, score: ExtendedScore) {
   y += 7;
 
   const subScoreData = [
-    { label: 'Pitch',               value: score.pitch,             max: 25, color: [171, 197, 254] as const },
-    { label: 'Traction',            value: score.traction,          max: 25, color: [216, 255, 189] as const },
-    { label: 'Équipe',              value: score.team,              max: 25, color: [205, 180, 255] as const },
-    { label: 'Marché',              value: score.market,            max: 25, color: [255, 185, 109] as const },
-    { label: 'Défendabilité',       value: score.defensibility,     max: 10, color: [244, 184, 204] as const },
-    { label: 'Cohérence financière', value: score.financialCoherence, max: 10, color: [255, 232, 194] as const },
+    { label: 'Fintech & Data',       value: score.pilier1_fintech,   max: 25, color: [171, 197, 254] as const },
+    { label: 'Tech & IP',            value: score.pilier2_tech,      max: 20, color: [205, 180, 255] as const },
+    { label: 'Marché & Momentum',    value: score.pilier3_marche,    max: 20, color: [216, 255, 189] as const },
+    { label: 'Risque & Conformité',  value: score.pilier4_risque,    max: 20, color: [255, 185, 109] as const },
+    { label: 'Liquidité & Exit',     value: score.pilier5_liquidite, max: 15, color: [244, 184, 204] as const },
   ];
 
   for (const ss of subScoreData) {
@@ -1112,8 +995,8 @@ const DashboardWelcome: React.FC = () => {
     } catch { return dbProfile || {}; }
   }, [dbProfile]);
 
-  const score = useMemo(() => calculateScore(profile), [profile]);
-  const level = useMemo(() => getLevel(score.total), [score]);
+  const score = useMemo(() => calculateScoreService(profile), [profile]);
+  const level = useMemo(() => getScoreLevel(score.total), [score]);
   const investors = useMemo(() => matchInvestors(profile), [profile]);
   const vigilances = useMemo(() => getVigilances(profile), [profile]);
   const opportunities = useMemo(() => getOpportunities(profile), [profile]);
@@ -1151,21 +1034,54 @@ const DashboardWelcome: React.FC = () => {
   const displayedAvatars = avatarList.slice(0, 4);
 
   const subScores = [
-    { label: 'Pitch',              value: score.pitch,             max: 25, color: '#ABC5FE', analysis: getPitchAnalysis(score.pitch) },
-    { label: 'Traction',           value: score.traction,          max: 25, color: '#D8FFBD', analysis: getTractionAnalysis(score.traction, profile) },
-    { label: 'Équipe',             value: score.team,              max: 25, color: '#CDB4FF', analysis: getTeamAnalysis(score.team, profile) },
-    { label: 'Marché',             value: score.market,            max: 25, color: '#FFB96D', analysis: getMarketAnalysis(score.market) },
-    { label: 'Défendabilité',      value: score.defensibility,     max: 10, color: '#F4B8CC', analysis: getDefensibilityAnalysis(score.defensibility) },
-    { label: 'Cohérence financière', value: score.financialCoherence, max: 10, color: '#FFE8C2', analysis: getFinancialCoherenceAnalysis(score.financialCoherence) },
+    {
+      label: 'Fintech & Data',
+      sublabel: 'MRR · Croissance · Burn Multiple · LTV/CAC',
+      value: score.pilier1_fintech,
+      max: 25,
+      color: '#ABC5FE',
+      analysis: score.pilier1_fintech >= 18 ? 'Métriques financières solides' : score.pilier1_fintech >= 10 ? 'Traction en cours, accélérez la croissance MRR' : 'Revenus et métriques financières à construire',
+    },
+    {
+      label: 'Tech & IP',
+      sublabel: 'Propriété intellectuelle · Données uniques · Moat',
+      value: score.pilier2_tech,
+      max: 20,
+      color: '#CDB4FF',
+      analysis: score.pilier2_tech >= 15 ? 'Moat technologique défendable' : score.pilier2_tech >= 8 ? 'Quelques avantages tech à renforcer' : 'Pas de barrière technologique identifiée',
+    },
+    {
+      label: 'Marché & Momentum',
+      sublabel: 'TAM · Croissance du marché · Timing sectoriel',
+      value: score.pilier3_marche,
+      max: 20,
+      color: '#D8FFBD',
+      analysis: score.pilier3_marche >= 15 ? 'Marché large et porteur' : score.pilier3_marche >= 8 ? 'Marché identifié, TAM à documenter' : 'Taille de marché à justifier',
+    },
+    {
+      label: 'Risque & Conformité',
+      sublabel: 'Équipe · AI Act 2026 · RGPD · Runway',
+      value: score.pilier4_risque,
+      max: 20,
+      color: '#FFB96D',
+      analysis: score.pilier4_risque >= 15 ? 'Profil de risque maîtrisé' : score.pilier4_risque >= 8 ? 'Quelques risques à adresser' : 'Risques structurels importants',
+    },
+    {
+      label: 'Liquidité & Exit',
+      sublabel: 'Stratégie de sortie · Partenaires · Valorisation',
+      value: score.pilier5_liquidite,
+      max: 15,
+      color: '#F4B8CC',
+      analysis: score.pilier5_liquidite >= 11 ? 'Stratégie de liquidité claire' : score.pilier5_liquidite >= 5 ? 'Exit envisagé, à formaliser' : 'Stratégie de sortie à définir',
+    },
   ];
 
   const radarData = [
-    { axis: 'Pitch',       current: Math.round((score.pitch / 25) * 100),             median: 52 },
-    { axis: 'Traction',    current: Math.round((score.traction / 25) * 100),          median: 40 },
-    { axis: 'Équipe',      current: Math.round((score.team / 25) * 100),              median: 55 },
-    { axis: 'Marché',      current: Math.round((score.market / 25) * 100),            median: 60 },
-    { axis: 'Défendabilité', current: Math.round((score.defensibility / 10) * 100),  median: 35 },
-    { axis: 'Cohérence',   current: Math.round((score.financialCoherence / 10) * 100), median: 50 },
+    { axis: 'Fintech & Data', current: Math.round((score.pilier1_fintech / 25) * 100), median: 40 },
+    { axis: 'Tech & IP',      current: Math.round((score.pilier2_tech / 20) * 100),    median: 35 },
+    { axis: 'Marché',         current: Math.round((score.pilier3_marche / 20) * 100),  median: 50 },
+    { axis: 'Risque',         current: Math.round((score.pilier4_risque / 20) * 100),  median: 45 },
+    { axis: 'Exit',           current: Math.round((score.pilier5_liquidite / 15) * 100), median: 30 },
   ];
 
   return (

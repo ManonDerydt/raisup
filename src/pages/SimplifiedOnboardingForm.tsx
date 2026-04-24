@@ -99,6 +99,47 @@ export type OnboardingFormData = {
   partnerEmail: string | null;
   partnerOnRaisup: boolean;
   partnerConfirmed: boolean;
+
+  // MVP & commercialisation
+  hasMVP: boolean;
+  mvpStatus: 'en_cours' | 'sorti' | 'commercialise' | '';
+  mvpDate: string;
+  isCommercializable: boolean;
+
+  // Métriques détaillées (si commercialisable)
+  arr: number | null;
+  mrr: number | null;
+  mrrGrowthMoM: number | null;
+  burnMultiple: number | null;
+  cac: number | null;
+  ltv: number | null;
+  ltvCacRatio: number | null;
+
+  // Propriété intellectuelle
+  hasProprietaryTech: boolean;
+  techDependency: 'openai_wrapper' | 'proprietary' | 'mixed' | '';
+  hasUniqueData: boolean;
+  hasPatent: boolean;
+
+  // Marché
+  tamSize: number | null;
+  samSize: number | null;
+  marketGrowthRate: number | null;
+
+  // Conformité AI Act 2026
+  usesAI: boolean;
+  aiActCompliant: boolean;
+  hasGDPRCompliance: boolean;
+  hasLegalCounsel: boolean;
+
+  // Structure et risque
+  founderDependency: 'high' | 'medium' | 'low' | '';
+  hasC_suite: boolean;
+  hasBoard: boolean;
+
+  // Liquidité et exit
+  exitStrategy: 'ipo' | 'acquisition' | 'secondary' | 'organic' | '';
+  hasStrategicPartners: boolean;
 };
 
 type LiveInsight = { icon: string; color: string; textColor: string; text: string };
@@ -141,6 +182,28 @@ const DEFAULT: OnboardingFormData = {
   fundUsage: [], finalObjective: '', freeText: '',
   partnerId: null, partnerName: null, partnerEmail: null,
   partnerOnRaisup: false, partnerConfirmed: false,
+
+  // MVP & commercialisation
+  hasMVP: false, mvpStatus: '', mvpDate: '', isCommercializable: false,
+
+  // Métriques détaillées
+  arr: null, mrr: null, mrrGrowthMoM: null, burnMultiple: null,
+  cac: null, ltv: null, ltvCacRatio: null,
+
+  // Propriété intellectuelle
+  hasProprietaryTech: false, techDependency: '', hasUniqueData: false, hasPatent: false,
+
+  // Marché
+  tamSize: null, samSize: null, marketGrowthRate: null,
+
+  // Conformité
+  usesAI: false, aiActCompliant: false, hasGDPRCompliance: false, hasLegalCounsel: false,
+
+  // Structure et risque
+  founderDependency: '', hasC_suite: false, hasBoard: false,
+
+  // Exit
+  exitStrategy: '', hasStrategicPartners: false,
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -169,7 +232,8 @@ const SECTORS = [
   { value: 'E-commerce', emoji: '🛍️' }, { value: 'IA & Data', emoji: '🤖' },
   { value: 'Marketplace', emoji: '🔄' }, { value: 'Deeptech', emoji: '🔬' },
   { value: 'Legaltech', emoji: '⚖️' }, { value: 'Foodtech', emoji: '🍔' },
-  { value: 'Autre', emoji: '📦' },
+  { value: 'Retail / Commerce', emoji: '🏪' }, { value: 'Cybersécurité', emoji: '🔒' },
+  { value: 'HRTech / RH', emoji: '👥' }, { value: 'Autre', emoji: '📦' },
 ];
 
 const BUSINESS_MODELS = [
@@ -334,6 +398,76 @@ function calcLiveScore(f: OnboardingFormData): number {
   if (f.potentialCustomers > 0 && f.averagePrice > 0) score += 7;
 
   return Math.min(100, score);
+}
+
+// ─── Auto Market Sizing ───────────────────────────────────────────────────────
+
+interface MarketSizing {
+  tam: number;
+  sam: number;
+  som: number;
+  geoCoeff: number;
+  penetrationRate: number;
+  tamLabel: string;
+  samLabel: string;
+  somLabel: string;
+  methodology: string[];
+  isReliable: boolean;
+}
+
+function calcMarketSizing(f: OnboardingFormData): MarketSizing | null {
+  if (f.potentialCustomers === 0 || f.averagePrice === 0) return null;
+
+  const tam = f.potentialCustomers * f.averagePrice;
+
+  // Coefficient géographique (SAM = part du marché accessible selon les marchés cibles)
+  const markets = f.targetMarkets ?? [];
+  let geoCoeff: number;
+  if (markets.includes('Monde entier')) geoCoeff = 1.0;
+  else if (markets.includes('USA') && markets.includes('Europe')) geoCoeff = 0.55;
+  else if (markets.includes('USA')) geoCoeff = 0.30;
+  else if (markets.includes('Europe')) geoCoeff = 0.20;
+  else if (markets.includes('Asie')) geoCoeff = 0.25;
+  else if (markets.includes('France')) geoCoeff = 0.06;
+  else geoCoeff = 0.10; // défaut
+
+  // Coefficient d'accessibilité selon le modèle (B2B SaaS plus concentré = SAM plus restreint)
+  const bm = (f.businessModel ?? '').toLowerCase();
+  const ct = (f.clientType ?? '').toLowerCase();
+  let accessCoeff = 1.0;
+  if (bm.includes('saas') && ct.includes('b2b')) accessCoeff = 0.6; // segment entreprises spécifique
+  else if (bm.includes('marketplace')) accessCoeff = 0.7;
+  else if (ct.includes('b2c')) accessCoeff = 0.8;
+
+  const sam = tam * geoCoeff * accessCoeff;
+
+  // Taux de pénétration réaliste pour le SOM (ce qu'on peut capturer à 3-5 ans)
+  const mrr = f.mrr ?? 0;
+  const growth = f.momGrowth ?? f.mrrGrowthMoM ?? 0;
+  let penetrationRate: number;
+  if (mrr > 50_000 && growth > 15)       penetrationRate = 0.030; // forte traction
+  else if (mrr > 20_000 && growth > 10)  penetrationRate = 0.015;
+  else if (mrr > 5_000)                  penetrationRate = 0.008;
+  else if (mrr > 0)                      penetrationRate = 0.004;
+  else if (f.hasLOI && f.loiCount && f.loiCount > 0) penetrationRate = 0.002; // LOI = signal
+  else penetrationRate = 0.001; // pre-revenue, estimation conservatrice
+
+  const som = sam * penetrationRate;
+
+  const methodology: string[] = [
+    `TAM = ${(f.potentialCustomers).toLocaleString('fr-FR')} clients × ${fmtAmount(f.averagePrice)}/an`,
+    `SAM = TAM × ${Math.round(geoCoeff * 100)}% géo (${markets.length > 0 ? markets.join(', ') : 'non précisé'}) × ${Math.round(accessCoeff * 100)}% accessibilité`,
+    `SOM = SAM × ${(penetrationRate * 100).toFixed(1)}% pénétration réaliste à 3-5 ans${mrr > 0 ? ` (basé sur votre MRR de ${fmtAmount(mrr)})` : ''}`,
+  ];
+
+  return {
+    tam, sam, som, geoCoeff, penetrationRate,
+    tamLabel: tam >= 5e9 ? 'Massif' : tam >= 1e9 ? 'Grand' : tam >= 100e6 ? 'Significatif' : 'De niche',
+    samLabel: sam >= 500e6 ? '✓ Suffisant VC Seed' : sam >= 100e6 ? 'Correct' : 'Restreint',
+    somLabel: som >= 10e6 ? 'Objectif crédible' : som >= 1e6 ? 'Démarrage réaliste' : 'Niche initiale',
+    methodology,
+    isReliable: f.potentialCustomers >= 1000 && f.averagePrice >= 100 && markets.length > 0,
+  };
 }
 
 function analyzeFormDataLive(f: OnboardingFormData): LiveAnalysis {
@@ -1835,6 +1969,229 @@ const SimplifiedOnboardingForm: React.FC = () => {
                         </button>
                       );
                     })}
+                  </div>
+                </div>
+
+                {/* ── MVP & Commercialisation ── */}
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">MVP & Commercialisation</p>
+                  <div className="p-4 rounded-xl" style={{ backgroundColor: '#F8F8F8' }}>
+                    <Toggle value={form.hasMVP} onChange={v => set('hasMVP', v)} label="Votre boîte a-t-elle un MVP ?" />
+                  </div>
+                  {form.hasMVP && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Statut du produit</Label>
+                        <div className="flex gap-2 flex-wrap mt-1">
+                          {([['en_cours', 'En cours'], ['sorti', 'Sorti'], ['commercialise', 'Commercialisé']] as const).map(([v, l]) => (
+                            <button key={v} type="button"
+                              onClick={() => set('mvpStatus', v)}
+                              className={clsx('px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all',
+                                form.mvpStatus === v ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400')}>
+                              {l}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <Label optional>Date de sortie du MVP (réelle ou prévue)</Label>
+                        <Input type="date" value={form.mvpDate} onChange={e => set('mvpDate', e.target.value)} />
+                      </div>
+                    </div>
+                  )}
+                  <div className="p-4 rounded-xl" style={{ backgroundColor: '#F8F8F8' }}>
+                    <Toggle value={form.isCommercializable} onChange={v => set('isCommercializable', v)} label="Votre projet est-il commercialisable aujourd'hui ?" />
+                  </div>
+                </div>
+
+                {/* ── Métriques avancées (si commercialisable) ── */}
+                {form.isCommercializable && (
+                  <div className="space-y-4 pt-2 border-t border-gray-100">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Métriques commerciales</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label optional>MRR mensuel (€)</Label>
+                        <Input type="number" min={0} placeholder="Ex: 15 000"
+                          value={form.mrr ?? ''}
+                          onChange={e => {
+                            const v = numOrNull(e.target.value);
+                            set('mrr', v);
+                            set('arr', v !== null ? v * 12 : null);
+                          }} />
+                      </div>
+                      <div>
+                        <Label optional>Croissance MRR MoM (%)</Label>
+                        <Input type="number" min={0} placeholder="Ex: 15"
+                          value={form.mrrGrowthMoM ?? ''}
+                          onChange={e => {
+                            const g = numOrNull(e.target.value);
+                            set('mrrGrowthMoM', g);
+                            const br = form.burnRate ?? 0;
+                            const m = form.mrr ?? 0;
+                            if (g && m) set('burnMultiple', br / ((g / 100) * m) || null);
+                          }} />
+                      </div>
+                      <div>
+                        <Label optional>Coût d'acquisition client — CAC (€)</Label>
+                        <Input type="number" min={0} placeholder="Ex: 150"
+                          value={form.cac ?? ''}
+                          onChange={e => {
+                            const c = numOrNull(e.target.value);
+                            set('cac', c);
+                            const l = form.ltv ?? 0;
+                            if (c && l) set('ltvCacRatio', l / c);
+                          }} />
+                      </div>
+                      <div>
+                        <Label optional>Lifetime Value client — LTV (€)</Label>
+                        <Input type="number" min={0} placeholder="Ex: 900"
+                          value={form.ltv ?? ''}
+                          onChange={e => {
+                            const l = numOrNull(e.target.value);
+                            set('ltv', l);
+                            const c = form.cac ?? 0;
+                            if (c && l) set('ltvCacRatio', l / c);
+                          }} />
+                      </div>
+                    </div>
+                    {form.ltvCacRatio !== null && form.ltvCacRatio > 0 && (
+                      <p className="text-xs" style={{ color: form.ltvCacRatio >= 3 ? '#2D6A00' : '#7A3D00' }}>
+                        LTV/CAC = {form.ltvCacRatio.toFixed(1)}× {form.ltvCacRatio >= 3 ? '— excellent signal investisseur' : '— objectif : > 3×'}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Propriété intellectuelle ── */}
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Propriété intellectuelle</p>
+                  <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: '#F8F8F8' }}>
+                    <Toggle value={form.hasProprietaryTech} onChange={v => set('hasProprietaryTech', v)} label="Votre technologie est-elle propriétaire ?" />
+                    <Toggle value={form.hasUniqueData} onChange={v => set('hasUniqueData', v)} label="Utilisez-vous des données uniques / exclusives ?" />
+                    <Toggle value={form.hasPatent} onChange={v => set('hasPatent', v)} label="Avez-vous des brevets ou dépôts en cours ?" />
+                  </div>
+                  {form.hasProprietaryTech && (
+                    <div>
+                      <Label>Nature de la dépendance technologique</Label>
+                      <div className="flex gap-2 flex-wrap mt-1">
+                        {([['openai_wrapper', 'Habillage IA (wrapper)'], ['mixed', 'Mixte'], ['proprietary', 'Entièrement propriétaire']] as const).map(([v, l]) => (
+                          <button key={v} type="button"
+                            onClick={() => set('techDependency', v)}
+                            className={clsx('px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all',
+                              form.techDependency === v ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400')}>
+                            {l}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Marché (TAM/SAM/SOM calculés) ── */}
+                {(() => {
+                  const sizing = calcMarketSizing(form);
+                  return (
+                    <div className="space-y-4 pt-2 border-t border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Taille de marché</p>
+                        {sizing && (
+                          <span className="text-[10px] text-gray-400 italic">
+                            {sizing.isReliable ? 'Calcul fiable' : "Estimation approximative — précisez l’étape Marché"}
+                          </span>
+                        )}
+                      </div>
+
+                      {!sizing ? (
+                        <div className="rounded-xl p-4 text-sm text-gray-500 italic" style={{ backgroundColor: '#F8F8F8' }}>
+                          Renseignez le nombre de clients potentiels et le prix moyen à l'étape Marché pour obtenir votre TAM/SAM/SOM automatiquement.
+                        </div>
+                      ) : (
+                        <>
+                          {/* Trois métriques */}
+                          <div className="grid grid-cols-3 gap-3">
+                            {[
+                              { label: 'TAM', sublabel: 'Marché total', value: sizing.tam, tag: sizing.tamLabel, color: '#ABC5FE', textColor: '#1A3A8F' },
+                              { label: 'SAM', sublabel: 'Marché adressable', value: sizing.sam, tag: sizing.samLabel, color: '#D8FFBD', textColor: '#2D6A00' },
+                              { label: 'SOM', sublabel: 'Part capturable', value: sizing.som, tag: sizing.somLabel, color: '#FFB96D', textColor: '#7A3D00' },
+                            ].map(m => (
+                              <div key={m.label} className="rounded-xl p-3 text-center" style={{ backgroundColor: '#F8F8F8' }}>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{m.label}</p>
+                                <p className="text-lg font-black text-gray-900">{fmtAmount(m.value)}</p>
+                                <p className="text-[10px] text-gray-400 mb-2">{m.sublabel}</p>
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                                  style={{ backgroundColor: m.color, color: m.textColor }}>
+                                  {m.tag}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Méthodologie transparente */}
+                          <div className="rounded-xl p-3 space-y-1" style={{ backgroundColor: '#F0F4FF' }}>
+                            <p className="text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-2">Méthodologie de calcul</p>
+                            {sizing.methodology.map((line, i) => (
+                              <p key={i} className="text-[11px] text-blue-700 leading-snug">{line}</p>
+                            ))}
+                          </div>
+
+                          {/* Croissance du marché (reste manuel car source externe) */}
+                          <div>
+                            <Label optional>Croissance annuelle du marché (%) — source externe</Label>
+                            <Input type="number" min={0} placeholder="Ex: 25 (Gartner, IDC, étude sectorielle)"
+                              value={form.marketGrowthRate ?? ''} onChange={e => set('marketGrowthRate', numOrNull(e.target.value))} />
+                            <p className="text-xs text-gray-400 mt-1">Ce chiffre doit venir d'une source externe (Gartner, IDC, rapport sectoriel). Il impacte directement le score Marché & Momentum.</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* ── Conformité AI Act & RGPD ── */}
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Conformité réglementaire</p>
+                  <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: '#F8F8F8' }}>
+                    <Toggle value={form.usesAI} onChange={v => set('usesAI', v)} label="Votre produit utilise-t-il de l'IA ?" />
+                    {form.usesAI && (
+                      <Toggle value={form.aiActCompliant} onChange={v => set('aiActCompliant', v)} label="Êtes-vous conforme à l'AI Act européen ?" />
+                    )}
+                    <Toggle value={form.hasGDPRCompliance} onChange={v => set('hasGDPRCompliance', v)} label="Êtes-vous conforme au RGPD ?" />
+                    <Toggle value={form.hasLegalCounsel} onChange={v => set('hasLegalCounsel', v)} label="Avez-vous un conseil juridique ?" />
+                  </div>
+                </div>
+
+                {/* ── Structure & Exit ── */}
+                <div className="space-y-4 pt-2 border-t border-gray-100">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Structure & Exit</p>
+                  <div>
+                    <Label optional>Dépendance au fondateur</Label>
+                    <div className="flex gap-2 flex-wrap mt-1">
+                      {([['high', 'Forte — tout repose sur moi'], ['medium', 'Moyenne — équipe partielle'], ['low', 'Faible — équipe autonome']] as const).map(([v, l]) => (
+                        <button key={v} type="button"
+                          onClick={() => set('founderDependency', v)}
+                          className={clsx('px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all',
+                            form.founderDependency === v ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400')}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: '#F8F8F8' }}>
+                    <Toggle value={form.hasBoard} onChange={v => set('hasBoard', v)} label="Avez-vous un conseil d'administration ou des advisors formels ?" />
+                    <Toggle value={form.hasStrategicPartners} onChange={v => set('hasStrategicPartners', v)} label="Avez-vous des partenaires stratégiques potentiels acquéreurs ?" />
+                  </div>
+                  <div>
+                    <Label optional>Stratégie de sortie visée</Label>
+                    <div className="flex gap-2 flex-wrap mt-1">
+                      {([['ipo', 'IPO'], ['acquisition', 'Acquisition'], ['secondary', 'Secondaire'], ['organic', 'Croissance organique']] as const).map(([v, l]) => (
+                        <button key={v} type="button"
+                          onClick={() => set('exitStrategy', v)}
+                          className={clsx('px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all',
+                            form.exitStrategy === v ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400')}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 

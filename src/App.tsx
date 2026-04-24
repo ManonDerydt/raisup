@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { RequireB2C, RequireB2B } from './components/RouteGuards';
 import HomePage from './pages/HomePage'; 
 import LoginPage from './pages/LoginPage';
 import OnboardingLayout from './components/OnboardingLayout';
@@ -82,7 +83,7 @@ function App() {
           <Route path="success" element={<SuccessPage />} />
         </Route>
 
-        <Route path="/dashboard" element={<DashboardLayout />}>
+        <Route path="/dashboard" element={<RequireB2C><DashboardLayout /></RequireB2C>}>
           <Route index element={<Dashboard />} />
           <Route path="welcome" element={<DashboardWelcome />} />
           <Route path="financial-journey" element={<FinancialJourney />} />
@@ -101,7 +102,7 @@ function App() {
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 
-        <Route path="/dashboard/b2b" element={<B2BDashboardLayout />}>
+        <Route path="/dashboard/b2b" element={<RequireB2B><B2BDashboardLayout /></RequireB2B>}>
           <Route index element={<B2BDashboard />} />
           <Route path="portfolio" element={<PortfolioPage />} />
           <Route path="dossier/:id" element={<B2BDossierDetail />} />
