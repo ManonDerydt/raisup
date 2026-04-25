@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { calculateScore as calculateScoreService, getScoreLevel, ScoreResult } from '../services/calculateScore';
 import { useNavigate } from 'react-router-dom';
@@ -306,6 +306,8 @@ function getVigilances(profile: Profile): Vigilance[] {
 
 // ─── Opportunités ─────────────────────────────────────────────────────────────
 
+type OpportunityCategory = 'financement' | 'marche' | 'structure' | 'actualite';
+
 interface Opportunity {
   title: string;
   message: string;
@@ -313,6 +315,8 @@ interface Opportunity {
   timeline?: string;
   icon?: string;
   fromFreeText?: boolean;
+  category: OpportunityCategory;
+  tag?: string;
 }
 
 function getOpportunities(profile: Profile): Opportunity[] {
@@ -321,127 +325,286 @@ function getOpportunities(profile: Profile): Opportunity[] {
   const sec = (profile.sector ?? '').toLowerCase();
   const bm = (profile.businessModel ?? '').toLowerCase();
   const stage = (profile.stage ?? '').toLowerCase();
-
-  // ── BPI Bourse French Tech (toujours disponible en France)
-  if (profile.country === 'France') {
-    opportunities.push({
-      title: 'Bourse French Tech — BPI',
-      message: `Subvention non-remboursable de 30 à 90K€ pour les startups en phase de développement. Accessible dès le stade pre-seed. Taux de succès moyen : 40% des dossiers soumis. Délai de réponse : 8 semaines.`,
-      amount: 90_000,
-      timeline: '8 semaines',
-      icon: '🏛️',
-    });
-  }
-
-  // ── JEI / Jeune Entreprise Innovante
-  if (profile.country === 'France' && (sec.includes('ia') || sec.includes('saas') || sec.includes('deeptech') || sec.includes('healthtech') || sec.includes('fintech'))) {
-    opportunities.push({
-      title: 'Statut JEI — Jeune Entreprise Innovante',
-      message: "Exonération de charges sociales sur les salaires R&D (jusqu'à 70% d'économies) + impôt sur les bénéfices. Applicable si vous avez < 8 ans et que vos dépenses R&D représentent > 15% de vos charges totales.",
-      amount: 30_000,
-      timeline: 'Immédiat (sur déclaration)',
-      icon: '⚡',
-    });
-  }
-
-  // ── CIR — Crédit Impôt Recherche
-  if (profile.country === 'France') {
-    const cir = Math.round((profile.burnRate ?? 10_000) * 12 * 0.30);
-    opportunities.push({
-      title: 'CIR — Crédit Impôt Recherche',
-      message: `30% de vos dépenses R&D remboursées par l'État. Sur votre burn rate actuel, cela représente ${formatAmount(cir)} récupérables par an. Encaissable en année N+1 ou en avance de trésorerie via BPI.`,
-      amount: cir,
-      timeline: '6 mois (via BPI)',
-      icon: '💡',
-    });
-  }
-
-  // ── EIC Accelerator
+  const freeText = (profile.freeText ?? '').toLowerCase();
   const euCountries = ['France', 'Irlande', 'Belgique', 'Allemagne', 'Espagne'];
   const deepSectors = ['deeptech', 'ia', 'healthtech', 'greentech', 'intelligence artificielle'];
+
+  // ── FINANCEMENT ───────────────────────────────────────────────────────────────
+
+  if (profile.country === 'France') {
+    opportunities.push({
+      category: 'financement', icon: '🏛️',
+      title: 'Bourse French Tech — BPI',
+      message: 'Subvention non-remboursable de 30 à 90K€ pour les startups en développement. Accessible dès le pre-seed. Taux de succès moyen : 40%. Délai de réponse : 8 semaines.',
+      amount: 90_000, timeline: '8 semaines',
+    });
+
+    const cir = Math.round((profile.burnRate ?? 10_000) * 12 * 0.30);
+    opportunities.push({
+      category: 'financement', icon: '💡',
+      title: 'CIR — Crédit Impôt Recherche',
+      message: `30% de vos dépenses R&D remboursées par l'État. Sur votre burn rate actuel, cela représente ${formatAmount(cir)} récupérables par an. Encaissable via BPI en 6 mois.`,
+      amount: cir, timeline: '6 mois (via BPI)',
+    });
+  }
+
+  if (profile.country === 'France' && (sec.includes('ia') || sec.includes('saas') || sec.includes('deeptech') || sec.includes('healthtech') || sec.includes('fintech'))) {
+    opportunities.push({
+      category: 'financement', icon: '⚡',
+      title: 'Statut JEI — Jeune Entreprise Innovante',
+      message: "Exonération de charges sociales sur les salaires R&D (jusqu'à 70% d'économies) + impôt sur les bénéfices. Applicable si < 8 ans et dépenses R&D > 15% des charges totales.",
+      amount: 30_000, timeline: 'Immédiat (sur déclaration)',
+    });
+  }
+
   if (euCountries.includes(profile.country ?? '') && deepSectors.some(s => sec.includes(s))) {
     opportunities.push({
+      category: 'financement', icon: '🇪🇺',
       title: 'EIC Accelerator — Commission Européenne',
-      message: `Financement européen mixte (subvention jusqu'à 2.5M€ + equity jusqu'à 15M€) pour les deeptech à fort potentiel. Votre secteur est éligible. Prochaine fenêtre de dépôt : mars 2026. Taux d'acceptation : 5%.`,
-      amount: 2_500_000,
-      timeline: '6–9 mois',
-      icon: '🇪🇺',
-      fromFreeText: false,
+      message: `Financement mixte (subvention jusqu'à 2.5M€ + equity jusqu'à 15M€) pour les deeptech à fort potentiel. Votre secteur est éligible. Prochaine fenêtre : mars 2026. Taux d'acceptation : 5%.`,
+      amount: 2_500_000, timeline: '6–9 mois',
     });
   }
 
-  // ── Innov'up IDF
   if (profile.country === 'France' && profile.region === 'Île-de-France') {
     opportunities.push({
+      category: 'financement', icon: '📍',
       title: "Innov'up IDF — Région Île-de-France",
-      message: "Aide régionale de 50 à 200K€ pour les startups franciliennes innovantes. Votre localisation en IDF vous rend éligible. Instruction en 3 mois, décaissement rapide.",
-      amount: 200_000,
-      timeline: '3 mois',
-      icon: '📍',
+      message: 'Aide régionale de 50 à 200K€ pour les startups franciliennes. Instruction en 3 mois, décaissement rapide.',
+      amount: 200_000, timeline: '3 mois',
     });
   }
 
-  // ── MRR fort pour le stade
-  const mrrPercentile = getMRRPercentile(mrr, profile.stage ?? '');
-  if (mrr > 10_000 && mrrPercentile >= 70)
+  if (profile.country === 'France' && (sec.includes('deeptech') || sec.includes('ia'))) {
     opportunities.push({
-      title: `${formatAmount(mrr)} MRR — top ${100 - mrrPercentile}% de votre stade`,
-      message: `Vous êtes au ${mrrPercentile}e percentile des startups ${profile.stage ?? ''} en termes de MRR. C'est votre argument commercial le plus fort — mettez-le systématiquement en avant dans vos pitchs et term sheets.`,
-      icon: '📈',
-    });
-
-  // ── Exit précédent
-  if (profile.team?.some(m => m.hadExit) || profile.hadExit === 'oui')
-    opportunities.push({
-      title: "Exit précédent dans l'équipe — signal investisseur fort",
-      message: "Un fondateur avec exit multiplie par 3 la probabilité de closer un tour selon les études PitchBook. C'est le signal de qualité n°1 pour les fonds early-stage. Mentionnez-le dès la première ligne de vos cold emails.",
-      icon: '🏆',
-    });
-
-  // ── Pivot B2B
-  if (bm.includes('saas') && profile.clientType === 'B2C')
-    opportunities.push({
-      title: 'Pivot B2B — multiple de valorisation ×3 à ×5',
-      message: "Les SaaS B2B se valorisent 8–12× l'ARR contre 2–4× pour le B2C. Une version entreprise avec contrats annuels multiplierait votre valorisation et réduirait votre churn. Avez-vous testé une offre B2B2C ?",
-      icon: '🔄',
-    });
-
-  // ── Plan DeepTech
-  if (profile.country === 'France' && (sec.includes('deeptech') || sec.includes('ia')))
-    opportunities.push({
+      category: 'financement', icon: '🔬',
       title: 'Plan DeepTech BPI — financement prioritaire',
-      message: "Votre profil correspond au Plan DeepTech BPI : financement de 1 à 5M€ pour les technologies de rupture. Instruction accélérée (4 mois) et accompagnement opérationnel BPI dédié.",
-      amount: 5_000_000,
-      timeline: '4 mois',
-      icon: '🔬',
+      message: 'Financement de 1 à 5M€ pour les technologies de rupture. Instruction accélérée (4 mois) et accompagnement BPI dédié.',
+      amount: 5_000_000, timeline: '4 mois',
     });
+  }
 
-  // ── Détection depuis le free text
-  const freeText = (profile.freeText ?? '').toLowerCase();
-  if (freeText.includes('entreprise') || freeText.includes('grand compte') || freeText.includes('corporate'))
+  if (!stage.includes('serie')) {
     opportunities.push({
-      title: 'Clients corporate détectés — CVC accessible',
-      message: "Vous mentionnez des clients corporate ou grands comptes. Les Corporate Venture Capital (Orange Ventures, LVMH Luxury Ventures, Bouygues Telecom Initiatives) investissent en priorité dans leurs fournisseurs stratégiques.",
-      icon: '🏢',
-      fromFreeText: true,
-    });
-
-  if (freeText.includes('brevet') || freeText.includes('ip') || freeText.includes('propriété intellectuelle'))
-    opportunities.push({
-      title: 'Propriété intellectuelle détectée — valorisation +40%',
-      message: "Vous mentionnez des brevets ou de la PI. Les actifs immatériels certifiés augmentent la valorisation de 30 à 50% dans les due diligences. Pensez à valoriser votre IP dans votre cap table.",
-      icon: '🔒',
-      fromFreeText: true,
-    });
-
-  // Garantir au moins 5 opportunités même avec un profil minimal
-  if (opportunities.length < 5 && !stage.includes('serie')) {
-    opportunities.push({
+      category: 'financement', icon: '💰',
       title: 'Prêt Amorçage BPI — 50 à 300K€',
-      message: "Le prêt amorçage BPI est un prêt à taux zéro sans garantie personnelle pour les startups innovantes. Cumulable avec tous les autres dispositifs. Réponse en 6 semaines.",
-      amount: 300_000,
-      timeline: '6 semaines',
-      icon: '💰',
+      message: 'Prêt à taux zéro sans garantie personnelle pour les startups innovantes. Cumulable avec tous les autres dispositifs. Réponse en 6 semaines.',
+      amount: 300_000, timeline: '6 semaines',
+    });
+  }
+
+  if (freeText.includes('entreprise') || freeText.includes('grand compte') || freeText.includes('corporate')) {
+    opportunities.push({
+      category: 'financement', icon: '🏢',
+      title: 'Clients corporate détectés — CVC accessible',
+      message: 'Vous mentionnez des clients corporate. Les Corporate VC (Orange Ventures, LVMH Ventures, Bouygues Telecom Initiatives) investissent en priorité dans leurs fournisseurs stratégiques.',
+      fromFreeText: true,
+    });
+  }
+
+  // ── MARCHÉ ────────────────────────────────────────────────────────────────────
+
+  if (sec.includes('ia') || sec.includes('intelligence artificielle') || sec.includes('ia & data')) {
+    opportunities.push({
+      category: 'marche', icon: '🤖',
+      title: 'Marché IA générative : +40% en 2025–2026',
+      message: `Le marché mondial de l'IA atteindra 1 200Md$ d'ici 2030 (Goldman Sachs). En Europe, la demande B2B pour des solutions IA sectorielles explose. Votre positionnement en ${profile.sector ?? 'IA'} est dans le segment le plus recherché par les investisseurs.`,
+      tag: 'Tendance 2026',
+    });
+  }
+
+  if (sec.includes('saas') || sec.includes('saas-b2b') || sec.includes('saas b2b')) {
+    opportunities.push({
+      category: 'marche', icon: '☁️',
+      title: 'SaaS B2B : le segment préféré des VCs européens',
+      message: `Le SaaS B2B représente 45% des deals early-stage en Europe en 2025. Les multiples de valorisation tiennent (8–15× ARR) pour les startups avec un NRR > 110%. ${mrr > 0 ? `Votre MRR de ${formatAmount(mrr)} vous positionne dans le peloton de tête.` : 'Obtenez vos premiers clients payants pour bénéficier de ces multiples.'}`,
+      tag: 'Marché porteur',
+    });
+  }
+
+  if (sec.includes('fintech') || sec.includes('finance')) {
+    opportunities.push({
+      category: 'marche', icon: '🏦',
+      title: 'Open Banking & DORA : nouvelles opportunités fintech',
+      message: `La directive DORA (entrée en vigueur jan. 2025) oblige les banques à renforcer leur résilience opérationnelle. Cela crée un marché B2B massif pour les solutions de conformité fintech. L'Open Banking ouvre également de nouveaux canaux de distribution.`,
+      tag: 'Réglementation 2025',
+    });
+  }
+
+  if (sec.includes('healthtech') || sec.includes('santé') || sec.includes('medic')) {
+    opportunities.push({
+      category: 'marche', icon: '🏥',
+      title: 'Healthtech : remboursement ETAPES et virage digital',
+      message: `Le programme ETAPES (expérimentations télésoin) ouvre la voie au remboursement des solutions numériques de santé. Le marché français du numérique en santé atteindra 4Md€ en 2027. Les hôpitaux investissent massivement en solutions digitales.`,
+      tag: 'Remboursement possible',
+    });
+  }
+
+  if (sec.includes('greentech') || sec.includes('climat') || sec.includes('energ')) {
+    opportunities.push({
+      category: 'marche', icon: '🌱',
+      title: 'Green Deal européen : 1 000Md€ alloués',
+      message: `Le Green Deal européen injecte 1 000Md€ sur 10 ans dans la transition énergétique. Les solutions cleantech / greentech sont prioritaires dans les appels à projets EU, BPI et ADEME. Votre secteur capte une part croissante des capitaux institutionnels.`,
+      tag: 'Fonds EU disponibles',
+    });
+  }
+
+  if (sec.includes('cybersec') || sec.includes('cyber') || sec.includes('sécurité')) {
+    opportunities.push({
+      category: 'marche', icon: '🛡️',
+      title: 'Cybersécurité : marché en croissance de 15%/an',
+      message: `Le marché européen de la cybersécurité croît de 15% par an. La directive NIS2 (octobre 2024) oblige 35 000 entreprises françaises supplémentaires à se conformer. Ce contexte réglementaire crée une demande structurelle pour votre secteur.`,
+      tag: 'NIS2 — 2024',
+    });
+  }
+
+  if (bm.includes('marketplace')) {
+    opportunities.push({
+      category: 'marche', icon: '🔄',
+      title: 'Effet réseau : votre principal levier de croissance',
+      message: `Les marketplaces avec un effet réseau fort se valorisent 3 à 5× plus que les SaaS équivalents. Documentez votre liquidity ratio (acheteurs/vendeurs actifs) et le GMV par cohorte — ce sont les KPIs clés que les VCs regardent en priorité.`,
+      tag: 'Avantage concurrentiel',
+    });
+  }
+
+  const mrrPercentile = getMRRPercentile(mrr, profile.stage ?? '');
+  if (mrr > 10_000 && mrrPercentile >= 70) {
+    opportunities.push({
+      category: 'marche', icon: '📈',
+      title: `${formatAmount(mrr)} MRR — top ${100 - mrrPercentile}% de votre stade`,
+      message: `Vous êtes au ${mrrPercentile}e percentile des startups ${profile.stage ?? ''} en MRR. C'est votre argument commercial n°1 — mettez-le en tête de tous vos pitchs et cold emails investisseurs.`,
+      tag: 'Argument différenciant',
+    });
+  }
+
+  if (profile.team?.some(m => m.hadExit) || profile.hadExit === 'oui') {
+    opportunities.push({
+      category: 'marche', icon: '🏆',
+      title: "Exit précédent dans l'équipe — signal investisseur fort",
+      message: "Un fondateur avec exit multiplie par 3 la probabilité de closer un tour (PitchBook 2025). C'est le signal de qualité n°1 pour les fonds early-stage. Mentionnez-le dès la première ligne de vos cold emails.",
+      tag: 'Signal fort',
+    });
+  }
+
+  // ── STRUCTURE ─────────────────────────────────────────────────────────────────
+
+  if (!profile.hasCTO && bm.includes('saas')) {
+    opportunities.push({
+      category: 'structure', icon: '👨‍💻',
+      title: 'Recrutez un CTO co-fondateur — condition bloquante',
+      message: "83% des fonds VC refusent de financer un SaaS sans associé technique. Explorez les plateformes cofounder (CoFoundersLab, Founder Dating, Station F) et les communautés tech locales. Un CTO avec 5% d'equity peut doubler votre valorisation perçue.",
+      tag: 'Priorité haute',
+    });
+  }
+
+  if ((profile.foundersCount ?? 1) === 1) {
+    opportunities.push({
+      category: 'structure', icon: '🤝',
+      title: 'Associez-vous — solo founder à risque élevé',
+      message: "72% des fonds privilégient les équipes de 2–3 fondateurs. Les raisons : résilience face au burnout, complémentarité des compétences, credibilité accrue. Un co-fondateur bien choisi peut faire passer votre valorisation de ×2 à ×4.",
+      tag: 'Signal de risque',
+    });
+  }
+
+  if (!profile.advisors || (profile.advisors ?? 0) < 2) {
+    opportunities.push({
+      category: 'structure', icon: '🎓',
+      title: 'Recrutez 2–3 advisors stratégiques',
+      message: `Les advisors reconnus dans votre secteur augmentent le score de crédibilité des term sheets. Visez un expert sectoriel, un ex-fondateur avec exit, et un profil réseau investisseurs. Rémunérez à 0,1–0,5% BSPCE.`,
+      tag: 'Levier de crédibilité',
+    });
+  }
+
+  if ((profile.runway ?? 12) < 18) {
+    opportunities.push({
+      category: 'structure', icon: '⏱️',
+      title: 'Rallongez votre runway avant de pitcher',
+      message: `Avec ${profile.runway ?? '?'} mois de runway, votre position de négociation est faible. Les VCs proposent systématiquement des conditions moins favorables aux startups en urgence. Visez 18 mois minimum avant d'entrer en processus — réduisez le burn ou levez un pont non-dilutif.`,
+      tag: 'Gouvernance',
+    });
+  }
+
+  if (bm.includes('saas') && profile.clientType === 'B2C') {
+    opportunities.push({
+      category: 'structure', icon: '🔄',
+      title: 'Pivot B2B — multiple de valorisation ×3 à ×5',
+      message: "Les SaaS B2B se valorisent 8–12× l'ARR contre 2–4× pour le B2C. Une offre entreprise avec contrats annuels multiplierait votre valorisation et réduirait votre churn drastiquement. Testez d'abord sur 5 PME.",
+      tag: 'Levier valorisation',
+    });
+  }
+
+  if (freeText.includes('brevet') || freeText.includes('ip') || freeText.includes('propriété intellectuelle')) {
+    opportunities.push({
+      category: 'structure', icon: '🔒',
+      title: 'Protégez votre IP — valorisation +30 à 50%',
+      message: "Vous mentionnez des brevets ou de la PI. Les actifs immatériels certifiés augmentent la valorisation de 30 à 50% en due diligence. Déposez un brevet provisoire BPI dans les 12 mois pour sécuriser votre antériorité.",
+      fromFreeText: true,
+      tag: 'Valorisation',
+    });
+  }
+
+  if (!stage.includes('serie')) {
+    opportunities.push({
+      category: 'structure', icon: '📋',
+      title: 'Mettez en place un pacte d\'associés',
+      message: "Sans pacte d'associés formalisé, les investisseurs peuvent bloquer votre levée ou imposer des conditions défavorables. Un pacte bien rédigé inclut : clause de préemption, bad leaver / good leaver, drag-along. Budget : 3 à 8K€ chez un avocat spécialisé.",
+      tag: 'Juridique',
+    });
+  }
+
+  // ── ACTUALITÉS ────────────────────────────────────────────────────────────────
+
+  if (sec.includes('ia') || sec.includes('intelligence artificielle')) {
+    opportunities.push({
+      category: 'actualite', icon: '📰',
+      title: "EU AI Act — en vigueur depuis août 2024",
+      message: "L'AI Act européen classe les usages IA par niveau de risque. Les systèmes à risque élevé (santé, recrutement, crédit) nécessitent une conformité documentée. Les startups IA conformes bénéficieront d'un avantage concurrentiel majeur dès 2026. Anticipez maintenant.",
+      tag: 'Réglementation',
+    });
+  }
+
+  if (sec.includes('fintech') || sec.includes('finance')) {
+    opportunities.push({
+      category: 'actualite', icon: '📰',
+      title: 'DORA & NIS2 : fenêtre de marché pour les compliance tech',
+      message: "Les directives DORA (résilience opérationnelle) et NIS2 (cybersécurité) créent une demande urgente de mise en conformité dans les secteurs financier et des infrastructures critiques. Les fintechs spécialisées compliance voient leur valorisation doubler en 2025.",
+      tag: 'Actualité réglementaire',
+    });
+  }
+
+  if (profile.country === 'France') {
+    opportunities.push({
+      category: 'actualite', icon: '🇫🇷',
+      title: "French Tech 2030 — 10 nouvelles licornes visées",
+      message: "Le programme French Tech 2030 sélectionne 125 startups pour un accompagnement accéléré vers le stade licorne. La candidature est ouverte aux startups avec un fort potentiel de croissance internationale. Prochaine session : juin 2026.",
+      tag: 'Programme gouvernemental',
+    });
+  }
+
+  if (euCountries.includes(profile.country ?? '')) {
+    opportunities.push({
+      category: 'actualite', icon: '🌍',
+      title: 'Venture debt en hausse en Europe — alternative à l\'equity',
+      message: "Les prêts venture debt ont augmenté de 60% en Europe en 2025, offrant une alternative non-dilutive entre deux levées. Les principaux acteurs : Kreos Capital, TriplePoint, BPI Prêt Innovation. Idéal pour financer 12–18 mois sans dilution supplémentaire.",
+      tag: 'Tendance financement',
+    });
+  }
+
+  if (sec.includes('healthtech') || sec.includes('santé')) {
+    opportunities.push({
+      category: 'actualite', icon: '📰',
+      title: 'Plan France 2030 Santé numérique — 650M€ alloués',
+      message: "Le volet Santé numérique de France 2030 finance les solutions de prévention, diagnostic IA, et télémédecine. Les appels à projets ANR et BPI sont ouverts. Financement jusqu'à 5M€ pour les projets sélectionnés.",
+      tag: 'France 2030',
+    });
+  }
+
+  if (sec.includes('saas') || sec.includes('b2b')) {
+    opportunities.push({
+      category: 'actualite', icon: '📊',
+      title: 'Taux de rejet VC en hausse — focus sur la preuve',
+      message: "En 2025, le taux de refus des dossiers seed a augmenté de 30% en Europe. Les fonds exigent désormais une preuve de traction plus solide (3 mois de MRR croissant, NPS > 50, LTV/CAC > 3). Documentez chaque métrique soigneusement avant de pitcher.",
+      tag: 'Marché investissement',
     });
   }
 
@@ -460,7 +623,7 @@ interface NextAction {
   link: string;
 }
 
-function getNextActions(profile: Profile, score: ExtendedScore, isPaid: boolean): NextAction[] {
+function getNextActions(profile: Profile, score: ScoreResult, isPaid: boolean): NextAction[] {
   const actions: NextAction[] = [];
   const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
 
@@ -485,7 +648,7 @@ function getNextActions(profile: Profile, score: ExtendedScore, isPaid: boolean)
     actions.push({
       urgency: 3, borderColor: '#F4B8CC', iconName: 'Star',
       title: 'Améliorez votre score Raisup',
-      description: `Score actuel : ${score.total}/100. ${score.pitch < 15 ? 'Commencez par affiner votre pitch.' : score.traction < 15 ? 'Documentez mieux votre traction.' : 'Complétez votre profil.'}`,
+      description: `Score actuel : ${score.total}/100. ${score.pilier1_fintech < 10 ? 'Documentez mieux votre traction MRR.' : score.pilier3_marche < 10 ? 'Renforcez votre analyse de marché.' : 'Complétez votre profil.'}`,
       cta: 'Voir les recommandations', link: '/dashboard/score',
     });
 
@@ -937,11 +1100,369 @@ function downloadScorePDF(profile: Profile, score: ScoreResult) {
   doc.save(`score-raisup-${startupName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
 }
 
+// ─── Opportunities section with tabs ──────────────────────────────────────────
+
+const OPPORTUNITY_TABS: { id: OpportunityCategory; label: string; color: string; bg: string }[] = [
+  { id: 'marche',    label: '📈 Marché',    color: '#1A3A8F',  bg: '#ABC5FE' },
+  { id: 'structure', label: '🏗️ Structure', color: '#3D0D8F',  bg: '#CDB4FF' },
+  { id: 'actualite', label: '📰 Actus',     color: '#92520A',  bg: '#FFE8C2' },
+];
+
+const CATEGORY_STYLES: Record<OpportunityCategory, { border: string; bg: string; tagBg: string; tagColor: string }> = {
+  financement: { border: '#D8FFBD', bg: '#F0FFF4', tagBg: '#D8FFBD', tagColor: '#2D6A00' },
+  marche:      { border: '#ABC5FE', bg: '#F0F5FF', tagBg: '#ABC5FE', tagColor: '#1A3A8F' },
+  structure:   { border: '#CDB4FF', bg: '#F5F0FF', tagBg: '#CDB4FF', tagColor: '#3D0D8F' },
+  actualite:   { border: '#FFE8C2', bg: '#FFFBF5', tagBg: '#FFE8C2', tagColor: '#92520A' },
+};
+
+const OpportunitiesSection: React.FC<{
+  opportunities: Opportunity[];
+  formatAmount: (n?: number | null) => string;
+}> = ({ opportunities, formatAmount }) => {
+  const [activeTab, setActiveTab] = useState<OpportunityCategory>('marche');
+
+  const filtered = opportunities.filter(o => o.category === activeTab);
+  const counts: Record<string, number> = { all: opportunities.length };
+  for (const cat of ['financement', 'marche', 'structure', 'actualite'] as OpportunityCategory[]) {
+    counts[cat] = opportunities.filter(o => o.category === cat).length;
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <Lightbulb className="h-5 w-5" style={{ color: '#22C55E' }} />
+        <h2 className="text-base font-bold text-gray-900">Opportunités identifiées</h2>
+        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full ml-auto"
+          style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
+          {opportunities.length} détectées
+        </span>
+      </div>
+
+      {/* Category tabs */}
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        {OPPORTUNITY_TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className="px-3 py-1 rounded-full text-[11px] font-bold transition-all"
+            style={activeTab === tab.id
+              ? { backgroundColor: tab.bg, color: tab.color }
+              : { backgroundColor: '#F8F8F8', color: '#9CA3AF' }}
+          >
+            {tab.label}
+            {counts[tab.id] > 0 && (
+              <span className="ml-1 opacity-60">({counts[tab.id]})</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        {filtered.map((o, i) => {
+          const style = CATEGORY_STYLES[o.category];
+          return (
+            <div key={i} className="p-4 rounded-xl text-sm"
+              style={{ borderLeft: `4px solid ${style.border}`, backgroundColor: style.bg }}>
+              <div className="flex gap-3">
+                {o.icon && <span className="flex-shrink-0 text-[16px] mt-0.5">{o.icon}</span>}
+                <div className="flex-1">
+                  <p className="font-bold text-gray-900">{o.title}</p>
+                  <p className="text-gray-600 mt-0.5 leading-relaxed text-[13px]">{o.message}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {o.amount != null && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: style.tagBg, color: style.tagColor }}>
+                        jusqu'à {formatAmount(o.amount)}
+                      </span>
+                    )}
+                    {o.timeline && (
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                        ⏱ {o.timeline}
+                      </span>
+                    )}
+                    {o.tag && (
+                      <span className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: style.tagBg, color: style.tagColor, opacity: 0.8 }}>
+                        {o.tag}
+                      </span>
+                    )}
+                    {o.fromFreeText && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: '#FFD6E5', color: '#C4728A' }}>
+                        ✨ Détecté par IA
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ─── Profile Edit Modal ────────────────────────────────────────────────────────
+
+const SECTORS_LIST = [
+  'SaaS B2B', 'IA & Data', 'Fintech', 'Healthtech', 'Deeptech', 'Greentech',
+  'Marketplace', 'E-commerce', 'Retail / Commerce', 'Cybersécurité', 'HRTech / RH',
+];
+
+const STAGES_LIST = [
+  'Idéation / Pré-MVP', 'MVP / Prototype', 'Pre-seed', 'Seed', 'Série A', 'Série B+',
+];
+
+const BUSINESS_MODELS = ['SaaS', 'Marketplace', 'E-commerce', 'Services', 'Hardware', 'Freemium', 'API/Platform'];
+
+const ProfileEditModal: React.FC<{
+  profile: Profile;
+  onUpdate: <K extends keyof Profile>(key: K, value: Profile[K]) => void;
+  onClose: () => void;
+}> = ({ profile, onUpdate, onClose }) => {
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleNum = (key: keyof Profile, val: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onUpdate(key, (val === '' ? null : Number(val)) as Profile[typeof key]);
+    }, 300);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-h-[92vh] overflow-y-auto"
+        style={{ maxWidth: 680 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white rounded-t-2xl z-10 px-6 pt-6 pb-4 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-[20px] font-bold text-gray-900">Modifier mon profil</h3>
+              <p className="text-[13px] text-gray-400 mt-0.5">Les modifications mettent le score à jour en temps réel</p>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-6">
+
+          {/* Identité */}
+          <section>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Identité</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">Prénom</label>
+                <input
+                  type="text"
+                  defaultValue={profile.firstName ?? ''}
+                  onBlur={e => onUpdate('firstName', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 transition-colors"
+                  placeholder="Prénom"
+                />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">Nom</label>
+                <input
+                  type="text"
+                  defaultValue={profile.lastName ?? ''}
+                  onBlur={e => onUpdate('lastName', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 transition-colors"
+                  placeholder="Nom"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">Nom de la startup</label>
+                <input
+                  type="text"
+                  defaultValue={profile.startupName ?? profile.projectName ?? ''}
+                  onBlur={e => onUpdate('startupName', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 transition-colors"
+                  placeholder="Nom de votre startup"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">One-liner</label>
+                <input
+                  type="text"
+                  defaultValue={profile.oneLiner ?? profile.description ?? ''}
+                  onBlur={e => onUpdate('oneLiner', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 transition-colors"
+                  placeholder="En une phrase, ce que vous faites..."
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Positionnement */}
+          <section>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Positionnement</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">Secteur</label>
+                <select
+                  defaultValue={profile.sector ?? ''}
+                  onChange={e => onUpdate('sector', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 bg-white appearance-none"
+                >
+                  <option value="">Choisir...</option>
+                  {SECTORS_LIST.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">Stade</label>
+                <select
+                  defaultValue={profile.stage ?? ''}
+                  onChange={e => onUpdate('stage', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 bg-white appearance-none"
+                >
+                  <option value="">Choisir...</option>
+                  {STAGES_LIST.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">Modèle</label>
+                <select
+                  defaultValue={profile.businessModel ?? ''}
+                  onChange={e => onUpdate('businessModel', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 bg-white appearance-none"
+                >
+                  <option value="">Choisir...</option>
+                  {BUSINESS_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">Type de clients</label>
+                <select
+                  defaultValue={profile.clientType ?? ''}
+                  onChange={e => onUpdate('clientType', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 bg-white appearance-none"
+                >
+                  <option value="">Choisir...</option>
+                  {['B2B', 'B2C', 'B2B2C', 'Marketplace'].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* Métriques financières */}
+          <section>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Métriques financières</p>
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                { key: 'mrr',             label: 'MRR (€/mois)',         placeholder: '0' },
+                { key: 'burnRate',         label: 'Burn rate (€/mois)',   placeholder: '10000' },
+                { key: 'runway',           label: 'Runway (mois)',        placeholder: '12' },
+                { key: 'fundraisingGoal',  label: 'Objectif levée (€)',   placeholder: '500000' },
+                { key: 'finalGoalValuation', label: 'Valo cible (€)',     placeholder: '5000000' },
+                { key: 'activeClients',    label: 'Clients actifs',       placeholder: '0' },
+              ] as { key: keyof Profile; label: string; placeholder: string }[]).map(f => (
+                <div key={f.key as string}>
+                  <label className="block text-[12px] font-semibold text-gray-600 mb-1">{f.label}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    defaultValue={(profile[f.key] as number | null | undefined) ?? ''}
+                    onChange={e => handleNum(f.key, e.target.value)}
+                    placeholder={f.placeholder}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 transition-colors"
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Équipe */}
+          <section>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Équipe</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">Nombre de fondateurs</label>
+                <input
+                  type="number" min={1} max={10}
+                  defaultValue={profile.foundersCount ?? 1}
+                  onChange={e => onUpdate('foundersCount', Number(e.target.value))}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400"
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-5">
+                <input
+                  type="checkbox"
+                  id="hasCTO"
+                  defaultChecked={profile.hasCTO ?? false}
+                  onChange={e => onUpdate('hasCTO', e.target.checked)}
+                  className="w-4 h-4 accent-gray-900"
+                />
+                <label htmlFor="hasCTO" className="text-[13px] font-semibold text-gray-700">CTO co-fondateur identifié</label>
+              </div>
+            </div>
+          </section>
+
+          {/* Localisation */}
+          <section>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Localisation</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">Pays</label>
+                <select
+                  defaultValue={profile.country ?? ''}
+                  onChange={e => onUpdate('country', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 bg-white appearance-none"
+                >
+                  <option value="">Choisir...</option>
+                  {['France', 'Belgique', 'Suisse', 'Irlande', 'Allemagne', 'Espagne', 'Autre'].map(c =>
+                    <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">Région (si France)</label>
+                <select
+                  defaultValue={profile.region ?? ''}
+                  onChange={e => onUpdate('region', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-[14px] outline-none focus:border-gray-400 bg-white appearance-none"
+                >
+                  <option value="">Choisir...</option>
+                  {['Île-de-France', 'Auvergne-Rhône-Alpes', 'PACA', 'Occitanie', 'Bretagne', 'Autre'].map(r =>
+                    <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <div className="sticky bottom-0 bg-white rounded-b-2xl px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
+          <p className="text-[12px] text-gray-400">
+            ✅ Score mis à jour automatiquement à chaque modification
+          </p>
+          <button
+            onClick={onClose}
+            className="px-6 py-2.5 rounded-full font-bold text-[14px] text-white"
+            style={{ backgroundColor: '#0A0A0A' }}
+          >
+            Terminer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const DashboardWelcome: React.FC = () => {
   const navigate = useNavigate();
   const [showScoreModal, setShowScoreModal] = useState(false);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [editProfile, setEditProfile] = useState<Partial<Profile>>({});
 
   const { isPremium } = useUserProfile();
   const isPaid = isPremium;
@@ -991,9 +1512,17 @@ const DashboardWelcome: React.FC = () => {
     try {
       const a = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
       const b = JSON.parse(localStorage.getItem('raisupOnboardingData') || '{}');
-      return { ...b, ...a, ...(dbProfile || {}) };
-    } catch { return dbProfile || {}; }
-  }, [dbProfile]);
+      return { ...b, ...a, ...(dbProfile || {}), ...editProfile };
+    } catch { return { ...(dbProfile || {}), ...editProfile }; }
+  }, [dbProfile, editProfile]);
+
+  const updateProfileField = useCallback(<K extends keyof Profile>(key: K, value: Profile[K]) => {
+    setEditProfile(prev => ({ ...prev, [key]: value }));
+    try {
+      const stored = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
+      localStorage.setItem('raisup_profile', JSON.stringify({ ...stored, [key]: value }));
+    } catch { /* ignore */ }
+  }, []);
 
   const score = useMemo(() => calculateScoreService(profile), [profile]);
   const level = useMemo(() => getScoreLevel(score.total), [score]);
@@ -1085,8 +1614,8 @@ const DashboardWelcome: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen py-8 px-4" style={{ backgroundColor: '#F8F8F8' }}>
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#F8F8F8' }}>
+      <div className="max-w-7xl mx-auto">
 
         {/* Dev toggle */}
         {process.env.NODE_ENV !== 'production' && (
@@ -1139,10 +1668,11 @@ const DashboardWelcome: React.FC = () => {
                 {badge.label}
               </span>
               <button
-                onClick={() => navigate('/onboarding/raisup')}
-                className="self-start text-[12px] font-semibold border border-gray-200 rounded-full px-3 py-1 text-gray-500 hover:bg-gray-50 transition-colors"
+                onClick={() => setShowProfileEdit(true)}
+                className="self-start text-[12px] font-semibold border rounded-full px-3 py-1 transition-colors"
+                style={{ borderColor: '#F4B8CC', color: '#C4728A', backgroundColor: '#FFF5F8' }}
               >
-                Modifier mon profil
+                ✏️ Modifier mon profil
               </button>
             </div>
 
@@ -1316,48 +1846,7 @@ const DashboardWelcome: React.FC = () => {
 
             {/* Opportunités */}
             {opportunities.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 shadow-sm space-y-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Lightbulb className="h-5 w-5" style={{ color: '#22C55E' }} />
-                  <h2 className="text-base font-bold text-gray-900">Opportunités identifiées</h2>
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full ml-auto"
-                    style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
-                    {opportunities.length} détectées
-                  </span>
-                </div>
-                {opportunities.map((o, i) => (
-                  <div key={i} className="p-4 rounded-xl text-sm"
-                    style={{ borderLeft: '4px solid #D8FFBD', backgroundColor: '#F0FFF4' }}>
-                    <div className="flex gap-3">
-                      {o.icon && <span className="flex-shrink-0 text-[16px] mt-0.5">{o.icon}</span>}
-                      <div className="flex-1">
-                        <p className="font-bold text-gray-900">{o.title}</p>
-                        <p className="text-gray-600 mt-0.5 leading-relaxed">{o.message}</p>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {o.amount != null && (
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-                              style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
-                              jusqu'à {formatAmount(o.amount)}
-                            </span>
-                          )}
-                          {o.timeline && (
-                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full"
-                              style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>
-                              ⏱ {o.timeline}
-                            </span>
-                          )}
-                          {o.fromFreeText && (
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-                              style={{ backgroundColor: '#FFD6E5', color: '#C4728A' }}>
-                              ✨ Détecté par IA
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <OpportunitiesSection opportunities={opportunities} formatAmount={formatAmount} />
             )}
 
             {/* Stratégie de financement (si levée impossible/difficile) */}
@@ -1563,7 +2052,7 @@ const DashboardWelcome: React.FC = () => {
                 {actions.map((action, i) => (
                   <div key={i} className="p-3 rounded-xl border border-gray-100"
                     style={{ borderLeft: `4px solid ${action.borderColor}` }}>
-                    <div className="flex items-start gap-3 mb-2">
+                    <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-gray-800"
                         style={{ backgroundColor: action.borderColor }}>
                         {ACTION_ICON[action.iconName]}
@@ -1573,13 +2062,6 @@ const DashboardWelcome: React.FC = () => {
                         <p className="text-[12px] text-gray-500 mt-0.5 leading-snug">{action.description}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => navigate(action.link)}
-                      className="w-full text-[12px] font-bold text-white py-1.5 rounded-full border-0 cursor-pointer"
-                      style={{ backgroundColor: '#0A0A0A' }}
-                    >
-                      {action.cta}
-                    </button>
                   </div>
                 ))}
               </div>
@@ -1616,6 +2098,15 @@ const DashboardWelcome: React.FC = () => {
 
       {/* Score Modal */}
       {showScoreModal && <ScoreModal onClose={() => setShowScoreModal(false)} />}
+
+      {/* Profile Edit Modal */}
+      {showProfileEdit && (
+        <ProfileEditModal
+          profile={profile}
+          onUpdate={updateProfileField}
+          onClose={() => setShowProfileEdit(false)}
+        />
+      )}
     </div>
   );
 };

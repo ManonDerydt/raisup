@@ -7,6 +7,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { calculateScore } from '../services/generateTimeline';
 import { useAuth } from '../hooks/useAuth';
 import clsx from 'clsx';
+import { notifyProfileUpdated } from '../hooks/useUserProfile';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -210,6 +211,7 @@ const ProfilePage: React.FC = () => {
       partnerConfirmed: formData.partnerConfirmed,
     }));
     setSaveSuccess(true);
+    notifyProfileUpdated();
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 

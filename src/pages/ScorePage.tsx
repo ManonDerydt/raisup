@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Info } from 'lucide-react';
 import clsx from 'clsx';
 import { useUserProfile } from '../hooks/useUserProfile';
-import { getPitchRecs, getTractionRecs, getTeamRecs, getMarketRecs } from '../services/calculateScore';
+import { calculateScore as calculateScoreService, getPitchRecs, getTractionRecs, getTeamRecs, getMarketRecs } from '../services/calculateScore';
 
 // ─── Circular gauge ───────────────────────────────────────────────────────────
 const CircularGauge: React.FC<{ score: number; darkMode: boolean }> = ({ score, darkMode }) => {
@@ -77,8 +77,21 @@ const SubPanel: React.FC<SubPanelProps> = ({ label, value, color, recs, darkMode
 // ─── Main page ─────────────────────────────────────────────────────────────────
 const ScorePage: React.FC = () => {
   const [darkMode] = useState(() => document.documentElement.classList.contains('dark'));
+
+  // Même profile + même fonction que DashboardWelcome → score identique
+  const profile = useMemo(() => {
+    try {
+      const a = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
+      const b = JSON.parse(localStorage.getItem('raisupOnboardingData') || '{}');
+      return { ...b, ...a };
+    } catch { return {}; }
+  }, []);
+  const officialScore = useMemo(() => calculateScoreService(profile), [profile]);
+  const total = officialScore.total;
+
+  // Sub-scores pour les panels de recommandations (useUserProfile)
   const { score: liveScore } = useUserProfile();
-  const { total, pitch, traction, team, market } = liveScore;
+  const { pitch, traction, team, market } = liveScore;
 
   // Build a synthetic 6-month history ending at current score
   const scoreHistory = useMemo(() => {
@@ -101,7 +114,7 @@ const ScorePage: React.FC = () => {
 
   return (
     <div className={clsx('py-8 px-4 sm:px-6 lg:px-8 min-h-full', darkMode ? 'bg-gray-900' : 'bg-gray-50')}>
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Title */}
         <div>

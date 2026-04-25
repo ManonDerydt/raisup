@@ -35,6 +35,11 @@ export interface Profile {
   solution?: string;
   competitiveAdvantage?: string;
   team?: { name?: string; role?: string; hadExit?: boolean }[];
+  teamSize?: number | null;
+  churnRate?: number | null;
+  targetMarkets?: string[];
+  deckFileName?: string;
+  ambition?: string;
 }
 
 export interface TimelineStage {
@@ -548,9 +553,20 @@ function getStagesForObjective(
 export function generateTimeline(profile: Profile): TimelineResult {
   const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
   const currentStage = profile.stage ?? 'pre-seed';
-  const finalObjective = profile.finalObjective ?? 'Scale-up et exit';
+  const finalObjective = profile.finalObjective
+    ?? (profile.ambition?.toLowerCase().includes('licorne') ? 'Licorne'
+      : profile.ambition?.toLowerCase().includes('exit') ? 'Scale-up et exit'
+      : profile.ambition?.toLowerCase().includes('europ') ? 'Expansion européenne'
+      : profile.ambition?.toLowerCase().includes('leader') ? 'Leader du marché français'
+      : profile.ambition?.toLowerCase().includes('rentab') ? 'Rentabilité durable'
+      : 'Scale-up et exit');
+
   const fundraisingGoal = profile.fundraisingGoal ?? profile.fundingNeeded ?? 500_000;
-  const finalGoalValuation = profile.finalGoalValuation ?? 50_000_000;
+
+  // Licorne → valo forcée à 1 milliard
+  const finalGoalValuation = finalObjective === 'Licorne'
+    ? Math.max(profile.finalGoalValuation ?? 0, 1_000_000_000)
+    : (profile.finalGoalValuation ?? 50_000_000);
   const sector = profile.sector ?? '';
 
   const score = calculateScore(profile);
@@ -618,8 +634,13 @@ export function getRaisupRecommendation(profile: Profile, score: ExtendedScore, 
   if (runway < 6)
     return `Urgence trésorerie — avec ${runway} mois de runway, la priorité absolue est de sécuriser un financement pont avant de pitcher des investisseurs.`;
 
-  if (score.total < 50)
-    return `Votre score de ${score.total}/100 est en dessous du seuil recommandé pour pitcher. Concentrez-vous sur ${score.pitch < 15 ? "l'amélioration de votre pitch" : score.traction < 15 ? 'la traction commerciale' : 'le renforcement de l\'équipe'} avant de contacter des investisseurs.`;
+  if (score.total < 50) {
+    const action = mrr === 0 ? 'obtenir vos premiers clients payants'
+      : !profile.hasCTO ? 'recruter un profil technique co-fondateur'
+      : (profile.foundersCount ?? 1) < 2 ? 'vous associer à un co-fondateur complémentaire'
+      : 'compléter votre profil et documenter votre traction';
+    return `Votre score de ${score.total}/100 est en dessous du seuil recommandé pour pitcher. Concentrez-vous sur ${action} avant de contacter des investisseurs.`;
+  }
 
   if (mrr === 0)
     return 'Aucun revenu actuellement. Les investisseurs seed attendent généralement 3 à 10K€ MRR avant d\'investir. Concentrez-vous sur vos premiers clients payants.';

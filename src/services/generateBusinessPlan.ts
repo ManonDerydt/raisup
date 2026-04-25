@@ -1,7 +1,6 @@
+import { anthropic, GENERATION_MODEL, extractJSON } from './anthropicClient';
 import { supabase } from '../lib/supabase';
 import type { StartupPayload } from './generateDeck';
-
-const API_URL = import.meta.env.VITE_API_URL as string;
 
 export interface BusinessPlanSubsection {
   title: string;
@@ -22,40 +21,70 @@ export interface BusinessPlanContent {
 
 export async function generateBusinessPlan(
   startup: StartupPayload,
-  startupId?: string
+  startupId?: string,
 ): Promise<{ documentId: string; content: BusinessPlanContent }> {
-  // 1. Call FastAPI backend
-  const response = await fetch(`${API_URL}/generate/business-plan`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(startup),
+  const prompt = `Tu es un expert en stratégie d'entreprise et en rédaction de business plans pour startups.
+Génère un business plan complet et détaillé pour la startup suivante, en JSON structuré.
+
+Startup :
+- Nom : ${startup.name}
+- Secteur : ${startup.sector}
+- Stade : ${startup.stage}
+- Montant recherché : ${startup.funding_amount}
+- Description : ${startup.description}
+- Revenus actuels : ${startup.revenue || 'Non communiqué'}
+- Employés : ${startup.employees || 'Non communiqué'}
+- Problème adressé : ${startup.problem || 'À détailler'}
+- Solution proposée : ${startup.solution || 'À détailler'}
+- Marché cible : ${startup.target_market || 'À préciser'}
+
+Réponds UNIQUEMENT avec un JSON valide, sans texte autour, au format :
+{
+  "title": "Business Plan — ${startup.name}",
+  "sections": [
+    {
+      "number": 1,
+      "title": "Titre de la section",
+      "content": "Contenu détaillé (plusieurs paragraphes)",
+      "subsections": [
+        { "title": "Sous-section", "content": "Contenu" }
+      ]
+    }
+  ]
+}
+
+Sections obligatoires : 1-Résumé exécutif, 2-Présentation entreprise, 3-Analyse marché, 4-Analyse concurrentielle, 5-Stratégie produit, 6-Plan marketing, 7-Organisation équipe, 8-Plan opérationnel, 9-Projections financières 3 ans, 10-Stratégie financement.`;
+
+  const message = await anthropic.messages.create({
+    model: GENERATION_MODEL,
+    max_tokens: 8192,
+    messages: [{ role: 'user', content: prompt }],
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(error.detail ?? 'Erreur lors de la génération du business plan');
-  }
+  const raw = message.content.find(b => b.type === 'text');
+  if (!raw || raw.type !== 'text') throw new Error('Aucun contenu généré par Claude');
 
-  const result = await response.json();
+  const planJson: BusinessPlanContent = JSON.parse(extractJSON(raw.text));
 
-  // 2. Save to Supabase
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Non authentifié');
+  let documentId = crypto.randomUUID();
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data, error } = await supabase
+        .from('documents')
+        .insert({
+          user_id: user.id,
+          startup_id: startupId ?? null,
+          type: 'business_plan',
+          status: 'completed',
+          content: planJson,
+          pages: 28,
+        })
+        .select('id')
+        .single();
+      if (!error && data) documentId = data.id;
+    }
+  } catch { /* ignore */ }
 
-  const { data, error } = await supabase
-    .from('documents')
-    .insert({
-      user_id: user.id,
-      startup_id: startupId ?? null,
-      type: 'business_plan',
-      status: 'completed',
-      content: result.content,
-      pages: result.pages,
-    })
-    .select('id')
-    .single();
-
-  if (error) throw new Error(`Erreur Supabase : ${error.message}`);
-
-  return { documentId: data.id, content: result.content };
+  return { documentId, content: planJson };
 }

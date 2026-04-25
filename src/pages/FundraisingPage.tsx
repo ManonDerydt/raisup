@@ -254,9 +254,31 @@ function NonDilutifCard({ match, delay = 0 }: { match: MatchResult; delay?: numb
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
+function getFundraisingSuccessChance(
+  profile: { stage?: string; mrr?: number | null; isPreRevenue?: boolean; sector?: string; fundraisingGoal?: number | null },
+  scoreTotal: number,
+  dilutiveCount: number,
+): { pct: number; label: string; color: string; bg: string } {
+  let pct = Math.round(scoreTotal * 0.5);
+  if (!profile.isPreRevenue && profile.mrr && profile.mrr >= 10_000) pct += 20;
+  else if (!profile.isPreRevenue && profile.mrr && profile.mrr > 0) pct += 10;
+  if (dilutiveCount >= 5) pct += 15;
+  else if (dilutiveCount >= 2) pct += 8;
+  if (profile.stage === 'seed' || profile.stage === 'serie-a') pct += 10;
+  else if (profile.stage === 'pre-seed') pct += 5;
+  if (profile.fundraisingGoal && profile.fundraisingGoal <= 1_000_000) pct += 5;
+  pct = Math.min(pct, 95);
+  if (pct >= 70) return { pct, label: 'Élevées', color: '#2D6A00', bg: '#D8FFBD' };
+  if (pct >= 45) return { pct, label: 'Modérées', color: '#7A3D00', bg: '#FFB96D' };
+  return { pct, label: 'Faibles', color: '#8F1A1A', bg: '#FFB3B3' };
+}
+
+const INITIAL_DILUTIVE_COUNT = 5;
+
 export default function FundraisingPage() {
   const { profile, score, isPremium } = useUserProfile();
   const [activeTab, setActiveTab] = useState<'dilutif' | 'nonDilutif'>('dilutif');
+  const [showAllDilutive, setShowAllDilutive] = useState(false);
 
   const startup = useMemo(() => ({
     id: 'user',
@@ -272,7 +294,7 @@ export default function FundraisingPage() {
 
   const matches = useMemo(() => {
     if (!profile.sector && !profile.fundraisingGoal) return null;
-    return matchInvestors(startup, 10);
+    return matchInvestors(startup, 20);
   }, [startup, profile.sector, profile.fundraisingGoal]);
 
   const dilutiveMatches = matches?.dilutive ?? [];
@@ -280,8 +302,15 @@ export default function FundraisingPage() {
   const visibleDilutive = isPremium ? dilutiveMatches : dilutiveMatches.slice(0, 3);
   const lockedCount = isPremium ? 0 : Math.max(0, dilutiveMatches.length - 3);
 
+  const displayedDilutive = showAllDilutive
+    ? visibleDilutive
+    : visibleDilutive.slice(0, INITIAL_DILUTIVE_COUNT);
+  const hasMoreDilutive = visibleDilutive.length > INITIAL_DILUTIVE_COUNT;
+
   const hasProfile = !!(profile.sector || profile.stage);
   const isIncomplete = !profile.sector || !profile.fundraisingGoal;
+
+  const successChance = getFundraisingSuccessChance(profile, score.total, dilutiveMatches.length);
 
   const mix = getMixRecommendation(profile);
   const stageInfo = getStageLabel(profile.stage);
@@ -342,11 +371,11 @@ export default function FundraisingPage() {
               opacity: 0, transform: 'translateY(12px)', transition: 'opacity 0.45s ease 80ms, transform 0.45s ease 80ms',
             }}
           >
-            {/* 4 colonnes */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0">
+            {/* Colonnes alignées en flex */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-stretch gap-6 lg:gap-0">
 
               {/* Col 1 — Identité */}
-              <div className="flex flex-col gap-3 lg:pr-6">
+              <div className="flex-1 flex flex-col gap-3 lg:pr-6">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-[16px] shrink-0"
                     style={{ backgroundColor: '#FFD6E5', color: '#C4728A' }}>
@@ -364,21 +393,19 @@ export default function FundraisingPage() {
                 )}
               </div>
 
-              {/* Séparateur */}
-              <div className="hidden lg:block w-px self-stretch" style={{ backgroundColor: 'rgba(255,255,255,0.12)', marginRight: 24 }} />
+              <div className="hidden lg:block w-px self-stretch shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }} />
 
               {/* Col 2 — Stade */}
-              <div className="flex flex-col gap-1 lg:px-6">
+              <div className="flex-1 flex flex-col gap-1 lg:px-6">
                 <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#F4B8CC' }}>Stade</p>
                 <p className="text-[22px] font-bold text-white leading-tight">{stageInfo.label}</p>
                 <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.5)' }}>{stageInfo.desc}</p>
               </div>
 
-              {/* Séparateur */}
-              <div className="hidden lg:block w-px self-stretch" style={{ backgroundColor: 'rgba(255,255,255,0.12)', marginRight: 24 }} />
+              <div className="hidden lg:block w-px self-stretch shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }} />
 
               {/* Col 3 — Objectif */}
-              <div className="flex flex-col gap-1 lg:px-6">
+              <div className="flex-1 flex flex-col gap-1 lg:px-6">
                 <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#F4B8CC' }}>Objectif levée</p>
                 <p className="text-[22px] font-bold text-white leading-tight">
                   {profile.fundraisingGoal ? fmtMoney(profile.fundraisingGoal) : '—'}
@@ -388,11 +415,10 @@ export default function FundraisingPage() {
                 </p>
               </div>
 
-              {/* Séparateur */}
-              <div className="hidden lg:block w-px self-stretch" style={{ backgroundColor: 'rgba(255,255,255,0.12)', marginRight: 24 }} />
+              <div className="hidden lg:block w-px self-stretch shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }} />
 
               {/* Col 4 — MRR */}
-              <div className="flex flex-col gap-1 lg:px-6">
+              <div className="flex-1 flex flex-col gap-1 lg:px-6">
                 <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#F4B8CC' }}>MRR actuel</p>
                 <p className="text-[22px] font-bold text-white leading-tight">
                   {profile.isPreRevenue ? 'Pré-revenu' : profile.mrr ? fmtMoney(profile.mrr) : '—'}
@@ -401,6 +427,27 @@ export default function FundraisingPage() {
                   style={{ backgroundColor: mrrBadge.bg, color: mrrBadge.text }}>
                   {mrrBadge.label}
                 </span>
+              </div>
+
+              <div className="hidden lg:block w-px self-stretch shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }} />
+
+              {/* Col 5 — Chances de succès */}
+              <div className="flex-1 flex flex-col gap-2 lg:pl-6">
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: '#F4B8CC' }}>Chances de succès</p>
+                <div className="flex items-end gap-2">
+                  <p className="text-[22px] font-bold text-white leading-tight">{successChance.pct}%</p>
+                  <span className="mb-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: successChance.bg, color: successChance.color }}>
+                    {successChance.label}
+                  </span>
+                </div>
+                <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+                  <div className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${successChance.pct}%`, backgroundColor: successChance.bg }} />
+                </div>
+                <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Basé sur votre profil et vos matchs
+                </p>
               </div>
             </div>
 
@@ -542,6 +589,7 @@ export default function FundraisingPage() {
         {hasProfile && (
           <div className="space-y-6">
             {/* Tab switcher */}
+            <div className="flex justify-center">
             <div className="inline-flex p-1.5 rounded-xl gap-1" style={{ backgroundColor: '#F3F4F6' }}>
               <button
                 onClick={() => setActiveTab('dilutif')}
@@ -576,6 +624,7 @@ export default function FundraisingPage() {
                 </span>
               </button>
             </div>
+            </div>
 
             {/* Légende scores */}
             <div className="flex flex-wrap gap-2">
@@ -602,9 +651,26 @@ export default function FundraisingPage() {
                   </div>
                 ) : (
                   <>
-                    {visibleDilutive.map((match, i) => (
+                    {displayedDilutive.map((match, i) => (
                       <InvestorCard key={match.investor.id} match={match} isLocked={false} delay={i * 80} />
                     ))}
+
+                    {/* Voir plus / voir moins */}
+                    {hasMoreDilutive && !lockedCount && (
+                      <div className="flex justify-center">
+                        <button
+                          onClick={() => setShowAllDilutive(v => !v)}
+                          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-[13px] font-semibold border-2 transition-colors hover:bg-gray-50"
+                          style={{ borderColor: '#0A0A0A', color: '#0A0A0A' }}
+                        >
+                          {showAllDilutive
+                            ? 'Voir moins'
+                            : `Voir plus (${visibleDilutive.length - INITIAL_DILUTIVE_COUNT} autres)`}
+                          <ChevronRight className="h-4 w-4" style={{ transform: showAllDilutive ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 0.2s' }} />
+                        </button>
+                      </div>
+                    )}
+
                     {lockedCount > 0 && (
                       <div className="relative">
                         <div className="space-y-4">

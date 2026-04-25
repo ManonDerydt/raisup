@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   User, Mail, Lock, Bell, CreditCard, LogOut, Check, X, Save, Edit,
   Shield, Smartphone, Moon, Sun, Camera, Building2,
@@ -6,6 +6,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import clsx from 'clsx';
 import { useAuth } from '../hooks/useAuth';
+import { notifyProfileUpdated } from '../hooks/useUserProfile';
 import { useNavigate } from 'react-router-dom';
 
 // ─── Avatar ────────────────────────────────────────────────────────────────────
@@ -126,6 +127,28 @@ const SettingsPage: React.FC = () => {
   }, [user, isAgency]);
 
   const [profile, setProfile] = useState(initialProfile);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setProfile(p => ({ ...p, avatarUrl: dataUrl }));
+      // Persist in localStorage
+      try {
+        const key = isAgency ? 'raisup_agency_profile' : 'raisup_profile';
+        const existing = JSON.parse(localStorage.getItem(key) || '{}');
+        localStorage.setItem(key, JSON.stringify({ ...existing, avatarUrl: dataUrl }));
+        notifyProfileUpdated();
+      } catch { /* ignore */ }
+    };
+    reader.readAsDataURL(file);
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  };
 
   // Sync when user loads (async)
   useEffect(() => { setProfile(initialProfile); }, [initialProfile]);
@@ -172,6 +195,7 @@ const SettingsPage: React.FC = () => {
       }
       setEditMode(false);
       setSaveSuccess(true);
+      notifyProfileUpdated();
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch {
       setSaveError('Erreur lors de la sauvegarde.');
@@ -286,16 +310,37 @@ const SettingsPage: React.FC = () => {
 
                     {/* Avatar */}
                     <div className="flex flex-col items-center gap-3 md:w-48 flex-shrink-0">
-                      <div className="relative">
+                      <div
+                        className="relative group cursor-pointer"
+                        onClick={() => avatarInputRef.current?.click()}
+                        title="Changer la photo de profil"
+                      >
                         <UserAvatar avatarUrl={profile.avatarUrl} initials={profile.initials} size={96} />
-                        {editMode && (
-                          <div className={clsx(
-                            'absolute bottom-0 right-0 p-1.5 rounded-full cursor-pointer',
-                            dm ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-600 border border-gray-200'
-                          )}>
-                            <Camera className="h-3.5 w-3.5" />
-                          </div>
-                        )}
+                        {/* Overlay visible au hover toujours, ou en permanence en editMode */}
+                        <div className={clsx(
+                          'absolute inset-0 rounded-full flex items-center justify-center transition-opacity',
+                          editMode
+                            ? 'opacity-100 bg-black/40'
+                            : 'opacity-0 group-hover:opacity-100 bg-black/40'
+                        )}>
+                          <Camera className="h-6 w-6 text-white" />
+                        </div>
+                        {/* Badge icône coin bas-droit */}
+                        <div className={clsx(
+                          'absolute bottom-0 right-0 p-1.5 rounded-full border-2 transition-colors',
+                          dm
+                            ? 'bg-gray-700 border-gray-800 text-gray-300'
+                            : 'bg-white border-gray-100 text-gray-600'
+                        )}>
+                          <Camera className="h-3 w-3" />
+                        </div>
+                        <input
+                          ref={avatarInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleAvatarUpload}
+                        />
                       </div>
                       <div className="text-center">
                         <p className={clsx('font-semibold text-sm', dm ? 'text-white' : 'text-gray-900')}>

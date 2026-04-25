@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate, NavLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../hooks/useUserProfile';
 import {
-  ArrowRight, CheckCircle, Clock, Star, Zap, Target,
+  ArrowRight, CheckCircle, Clock, Target,
   TrendingUp, Users, AlertCircle, ChevronRight, Trophy, Lock,
-  FileText, Lightbulb, Map,
+  FileText, Lightbulb, X,
 } from 'lucide-react';
 import clsx from 'clsx';
 import {
   generateTimeline, calculateScore, recommendedDilution, sectorBenchmarkDilution,
   nextRoundValuation, getRaisupRecommendation, getObjectiveMessage, formatAmount,
-  getGlobalProgress,
   type Profile, type TimelineStage, type TimelineResult,
 } from '../services/generateTimeline';
 
@@ -149,10 +148,37 @@ const ProbaBadge: React.FC<{ value: number; factors?: string[] }> = ({ value, fa
   );
 };
 
+// ─── Condition checker ─────────────────────────────────────────────────────────
+
+function isConditionMet(condition: string, profile: Profile): boolean {
+  const c = condition.toLowerCase();
+  const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const p = profile as any;
+
+  if (c.includes('premiers revenus')) return mrr > 0;
+  if (c.includes('mrr')) return mrr > 0;
+  if (c.includes('cto')) return !!(profile.hasCTO);
+  if (c.includes('pitch deck') || c.includes('executive summary')) return !!(profile.deckFileName);
+  if (c.includes('churn < 5')) return (p.churnRate ?? 100) < 5;
+  if (c.includes('équipe') && /\d/.test(c)) return (p.teamSize ?? 0) >= 8;
+  if (c.includes('arr')) return mrr * 12 >= 1_000_000;
+  if (c.includes('pays')) return (p.targetMarkets?.length ?? 0) >= 2;
+  if (c.includes('ltv/cac') || c.includes('unit economics')) return (p.ltvCacRatio ?? 0) > 3;
+  if (c.includes('cash flow opérationnel positif')) return (profile.runway ?? 0) >= 24;
+  return false;
+}
+
 // ─── Step card ─────────────────────────────────────────────────────────────────
 
-const StepCard: React.FC<{ step: TimelineStage; profile: Profile; score: ReturnType<typeof calculateScore> }> = ({
-  step, profile, score,
+const StepCard: React.FC<{
+  step: TimelineStage;
+  profile: Profile;
+  score: ReturnType<typeof calculateScore>;
+  isFuture?: boolean;
+  isNearFuture?: boolean;
+}> = ({
+  step, profile, score, isFuture = false, isNearFuture = false,
 }) => {
   const isCurrent = step.status === 'current';
   const isObjective = step.isObjective;
@@ -214,12 +240,18 @@ const StepCard: React.FC<{ step: TimelineStage; profile: Profile; score: ReturnT
     );
   }
 
+  const cardStyle: React.CSSProperties = isCurrent
+    ? { borderLeft: '4px solid #F4B8CC' }
+    : isFuture && !isNearFuture
+    ? { opacity: 0.6 }
+    : isNearFuture
+    ? { opacity: 0.85 }
+    : {};
+
   return (
-    <div className={clsx(
-      'rounded-2xl bg-white border shadow-sm transition-shadow hover:shadow-md relative',
-      isCurrent ? 'border-gray-100' : 'border-gray-100',
-    )}
-      style={isCurrent ? { borderLeft: '4px solid #F4B8CC' } : {}}
+    <div
+      className="rounded-2xl bg-white border border-gray-100 shadow-sm transition-shadow hover:shadow-md relative"
+      style={cardStyle}
     >
       {isCurrent && (
         <div className="absolute -top-3 left-4">
@@ -283,12 +315,17 @@ const StepCard: React.FC<{ step: TimelineStage; profile: Profile; score: ReturnT
           <div className="bg-gray-50 rounded-xl p-4 mb-4">
             <p className="text-xs font-semibold text-gray-600 mb-2">Ce qu'il faut atteindre avant cette étape</p>
             <ul className="space-y-1.5">
-              {step.conditions.map(c => (
-                <li key={c} className="flex items-start gap-2 text-xs text-gray-500">
-                  <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" style={{ color: '#F4B8CC' }} />
-                  {c}
-                </li>
-              ))}
+              {step.conditions.map(c => {
+                const met = isConditionMet(c, profile);
+                return (
+                  <li key={c} className="flex items-start gap-2 text-xs">
+                    {met
+                      ? <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-green-500" />
+                      : <X className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-red-400" />}
+                    <span className={met ? 'text-gray-700 line-through decoration-green-400' : 'text-gray-500'}>{c}</span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
@@ -406,6 +443,33 @@ const Sidebar: React.FC<{
   );
 };
 
+// ─── Dilution ring gauge ───────────────────────────────────────────────────────
+
+const DilutionGauge: React.FC<{ value: number; max?: number; size?: number }> = ({ value, max = 30, size = 120 }) => {
+  const [anim, setAnim] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setAnim(value), 400); return () => clearTimeout(t); }, [value]);
+  const r = (size - 12) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.min(anim / max, 1);
+  const color = pct < 0.5 ? '#22c55e' : pct < 0.75 ? '#FFB96D' : '#EF4444';
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F0FDF4" strokeWidth={10} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={10}
+          strokeDasharray={circ} strokeLinecap="round"
+          strokeDashoffset={circ - pct * circ}
+          style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)' }}
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className="font-black leading-none" style={{ fontSize: size * 0.24, color }}>{anim}%</span>
+        <span className="text-gray-400 font-medium" style={{ fontSize: size * 0.11 }}>dilution</span>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 const FinancialJourney: React.FC = () => {
@@ -414,14 +478,23 @@ const FinancialJourney: React.FC = () => {
   const { isPremium } = useUserProfile();
   const isPaid = isPremium;
 
+  const [profileTick, setProfileTick] = useState(0);
+  useEffect(() => {
+    const h = () => setProfileTick(t => t + 1);
+    window.addEventListener('raisup:profile-updated', h);
+    return () => window.removeEventListener('raisup:profile-updated', h);
+  }, []);
+
   const profile = useMemo<Profile>(() => {
     try {
       const a = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
       const b = JSON.parse(localStorage.getItem('raisupOnboardingData') || '{}');
       return { ...b, ...a };
     } catch { return {}; }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileTick]);
 
+  // Même calculateScore que DashboardWelcome (/dashboard/score)
   const score = useMemo(() => calculateScore(profile), [profile]);
   const timeline = useMemo(() => generateTimeline(profile), [profile]);
 
@@ -431,14 +504,6 @@ const FinancialJourney: React.FC = () => {
 
   const startupName = profile.startupName || profile.projectName || 'Votre startup';
   const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
-
-  // Score display helpers
-  const scoreColor = score.total >= 70 ? '#22C55E' : score.total >= 50 ? '#FFB96D' : '#FFB3B3';
-  const scorePhrase = score.total >= 70
-    ? 'Vous êtes sur la bonne trajectoire'
-    : score.total >= 50
-    ? 'Dossier à renforcer avant de pitcher'
-    : 'Des ajustements importants sont nécessaires';
 
   // Animated timeline line
   useEffect(() => {
@@ -468,103 +533,72 @@ const FinancialJourney: React.FC = () => {
   const runwayColor = runway >= 12 ? '#22C55E' : runway >= 6 ? '#FFB96D' : '#FFB3B3';
   const runwayBorder = runway >= 12 ? '#22C55E' : runway >= 6 ? '#FFB96D' : '#EF4444';
 
-  // Stage labels for progress bar
-  const stageLabels = timeline.stages.map(s => s.label).filter(l => l !== '→' && l !== '✓');
-
-  const tabs = [
-    { id: 'journey',   label: 'Ligne du temps', Icon: Map,         link: '/dashboard/financial-journey' },
-    { id: 'valuation', label: 'Ma Valorisation', Icon: TrendingUp, link: '/dashboard/valuation' },
-  ];
+  // Index of current stage for visual distinction
+  const currentStageIndex = timeline.stages.findIndex(s => s.status === 'current');
 
   return (
     <div className="min-h-full" style={{ backgroundColor: '#F8F8F8' }}>
 
-      {/* ── Onglets de navigation ─────────────────────────────────────────── */}
-      <div className="bg-white px-6" style={{ borderBottom: '1px solid #F3F4F6' }}>
-        <div className="max-w-7xl mx-auto flex gap-8">
-          {tabs.map(({ id, label, link }) => (
-            <NavLink
-              key={id}
-              to={link}
-              end
-              className={({ isActive }) =>
-                `pb-3 pt-4 text-[14px] transition-colors duration-150 ${
-                  isActive
-                    ? 'font-semibold text-gray-900 border-b-2 -mb-px'
-                    : 'font-normal text-gray-400 hover:text-gray-600'
-                }`
-              }
-              style={({ isActive }) => isActive ? { borderBottomColor: '#F4B8CC' } : {}}
-            >
-              {label}
-            </NavLink>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Bandeau objectif final ──────────────────────────────────────────── */}
-      <div style={{ backgroundColor: '#0A0A0A' }} className="px-6 py-5">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
-
-          {/* Gauche : objectif */}
-          <div>
+      {/* ── Header card ─────────────────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <div
+          className="rounded-2xl px-6 py-5 grid grid-cols-1 lg:grid-cols-4 gap-6 items-center"
+          style={{ backgroundColor: '#0A0A0A' }}
+        >
+          {/* Col 1 : objectif */}
+          <div className="lg:col-span-1">
             <p className="text-[11px] font-bold tracking-widest uppercase mb-2" style={{ color: '#F4B8CC' }}>
               OBJECTIF FINAL
             </p>
-            <h1 className="text-[24px] font-black text-white leading-tight mb-1">
+            <h1 className="text-[20px] font-black text-white leading-tight mb-1">
               {timeline.finalObjective}
             </h1>
-            <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
               Valo visée <span className="text-white font-semibold">{formatAmount(timeline.finalGoalValuation)}</span>
               {' · '}Horizon <span className="text-white font-semibold">{timeline.estimatedTotalDuration} mois</span>
             </p>
           </div>
 
-          {/* Centre : barre de progression */}
-          <div>
-            <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+          {/* Col 2 : barre de progression */}
+          <div className="lg:col-span-1">
+            <p className="text-[11px] font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              {startupName} · Étape 1/{timeline.stages.length - 1}
+            </p>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
               <div
                 className="h-full rounded-full transition-all duration-1000"
                 style={{ width: `${timeline.globalProgress}%`, backgroundColor: '#F4B8CC' }}
               />
             </div>
-            <p className="text-[12px] text-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              Étape 1 sur {timeline.stages.length - 1} · {startupName}
+            <p className="text-[11px] mt-1.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              {timeline.globalProgress}% accompli
             </p>
           </div>
 
-          {/* Droite : score */}
-          <div className="flex items-center justify-center lg:justify-end gap-3">
+          {/* Col 3 : Score Raisup */}
+          <div className="flex items-center gap-3 justify-center lg:justify-start">
             <CircleGauge score={score.total} size={52} />
             <div>
-              <p className="text-white font-bold text-[18px] leading-none">{score.total}</p>
-              <p className="text-[12px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Score Raisup</p>
+              <p className="text-white font-black text-[22px] leading-none">{score.total}</p>
+              <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Score Raisup</p>
+            </div>
+          </div>
+
+          {/* Col 4 : Dilution max recommandée */}
+          <div className="flex items-center gap-3 justify-center lg:justify-end">
+            <DilutionGauge value={dilution} max={30} size={52} />
+            <div>
+              <p className="text-white font-black text-[22px] leading-none">{dilution}%</p>
+              <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Dilution max</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── 3 KPIs stratégiques ─────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* ── KPIs stratégiques ──────────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-4">
 
-          {/* Dilution */}
-          <FadeSlide delay={0}>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5" style={{ borderLeft: '4px solid #D8FFBD' }}>
-              <div className="flex items-center gap-1.5 mb-1">
-                <Target className="h-3.5 w-3.5 text-gray-400" />
-                <p className="text-xs font-medium text-gray-400">Dilution max recommandée</p>
-              </div>
-              <p className="text-3xl font-black text-gray-900 mb-1">{dilution}%</p>
-              <p className="text-xs text-gray-400">
-                Secteur {profile.sector ?? 'tech'} : {benchmarkDilution}% en moyenne
-              </p>
-              <div className="mt-3 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${dilution}%`, backgroundColor: '#D8FFBD' }} />
-              </div>
-            </div>
-          </FadeSlide>
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Valorisation prochaine levée */}
           <FadeSlide delay={100}>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5" style={{ borderLeft: '4px solid #ABC5FE' }}>
@@ -586,7 +620,7 @@ const FinancialJourney: React.FC = () => {
           </FadeSlide>
 
           {/* Runway */}
-          <FadeSlide delay={200}>
+          <FadeSlide delay={150}>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5" style={{ borderLeft: `4px solid ${runwayBorder}` }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <Clock className="h-3.5 w-3.5 text-gray-400" />
@@ -612,7 +646,7 @@ const FinancialJourney: React.FC = () => {
       </div>
 
       {/* ── Timeline + Sidebar ──────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-6 pb-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="flex gap-8 items-start">
 
           {/* Timeline */}
@@ -639,6 +673,9 @@ const FinancialJourney: React.FC = () => {
                 {timeline.stages.map((step, i) => {
                   const isObjective = step.isObjective;
                   const isCurrent = step.status === 'current';
+                  const distanceFromCurrent = i - currentStageIndex;
+                  const isNearFuture = distanceFromCurrent === 1;
+                  const isFarFuture = distanceFromCurrent > 1 && !isObjective;
                   // Blur future steps if not paid (after index 1)
                   const isLocked = !isPaid && i > 1;
 
@@ -668,7 +705,7 @@ const FinancialJourney: React.FC = () => {
                         <FadeSlide from={i % 2 === 1 ? 'right' : 'left'} delay={i * 100}>
                           <div className="relative rounded-2xl overflow-hidden">
                             <div className="opacity-30 pointer-events-none select-none">
-                              <StepCard step={step} profile={profile} score={score} />
+                              <StepCard step={step} profile={profile} score={score} isFuture isNearFuture={isNearFuture} />
                             </div>
                             <div className="absolute inset-0 backdrop-blur-[3px] bg-white/40 flex items-center justify-center rounded-2xl">
                               <div className="text-center p-6">
@@ -689,7 +726,13 @@ const FinancialJourney: React.FC = () => {
                         </FadeSlide>
                       ) : (
                         <FadeSlide from={i % 2 === 1 ? 'right' : 'left'} delay={i * 100}>
-                          <StepCard step={step} profile={profile} score={score} />
+                          <StepCard
+                            step={step}
+                            profile={profile}
+                            score={score}
+                            isFuture={isFarFuture}
+                            isNearFuture={isNearFuture}
+                          />
                         </FadeSlide>
                       )}
                     </div>
@@ -714,7 +757,7 @@ const FinancialJourney: React.FC = () => {
       </div>
 
       {/* ── Barre de progression globale ────────────────────────────────────── */}
-      <div ref={progressRef} className="max-w-7xl mx-auto px-6 pb-16">
+      <div ref={progressRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-bold text-gray-900">Votre progression vers {formatAmount(timeline.finalGoalValuation)}</h3>

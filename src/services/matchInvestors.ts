@@ -139,7 +139,7 @@ export function matchInvestors(startup: TestStartup, topN = 5): MatchOutput {
   const nonDilutive = allResults
     .filter(r => r.investor.type === 'non-dilutif' && r.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+    .slice(0, topN);
 
   return { dilutive, nonDilutive };
 }

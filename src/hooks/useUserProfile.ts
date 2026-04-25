@@ -259,9 +259,22 @@ function buildKPIs(p: Partial<UserProfile>): ProfileKPI[] {
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 
+/** Dispatch this whenever you write profile data to localStorage (same-tab reactivity). */
+export function notifyProfileUpdated() {
+  window.dispatchEvent(new CustomEvent('raisup:profile-updated'));
+}
+
 export function useUserProfile() {
   const { user } = useAuth();
   const [dbData, setDbData] = useState<Partial<UserProfile> | null>(null);
+  const [localTick, setLocalTick] = useState(0);
+
+  // Re-read localStorage whenever another component saves the profile
+  useEffect(() => {
+    const handler = () => setLocalTick(t => t + 1);
+    window.addEventListener('raisup:profile-updated', handler);
+    return () => window.removeEventListener('raisup:profile-updated', handler);
+  }, []);
 
   useEffect(() => {
     const raw = localStorage.getItem('raisup_profile');
@@ -363,7 +376,8 @@ export function useUserProfile() {
       stage,
       profileCompletion,
     };
-  }, [user, dbData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, dbData, localTick]);
 
   const score = useMemo(() => calcScore(profile), [profile]);
   const kpis = useMemo(() => buildKPIs(profile), [profile]);
