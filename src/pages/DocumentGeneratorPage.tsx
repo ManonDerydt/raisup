@@ -556,22 +556,34 @@ const DocumentGeneratorPage: React.FC = () => {
       <div className={clsx('mx-auto transition-all duration-300', currentStep === 'customization' ? 'max-w-6xl' : 'max-w-5xl')}>
 
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+        <div className="mb-8 rounded-2xl px-6 py-5 flex items-center justify-between gap-4 flex-wrap"
+          style={{ backgroundColor: '#0A0A0A' }}>
           <div>
-            <h1 className={clsx('text-2xl font-bold', darkMode ? 'text-white' : 'text-gray-900')}>
-              Générateur de Documents IA
+            <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: '#F4B8CC' }}>
+              GÉNÉRATEUR IA
+            </p>
+            <h1 className="text-[22px] font-black text-white leading-tight">
+              Générateur de Documents
             </h1>
-            <p className={clsx('text-sm mt-1', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-              Créez votre Pitch Deck, Business Plan et Executive Summary en quelques minutes
+            <p className="text-[13px] mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Pitch Deck · Business Plan · Executive Summary — générés en quelques minutes
             </p>
           </div>
-          {prefilled && (
+          <div className="flex items-center gap-3 flex-wrap shrink-0">
+            {prefilled && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold"
+                style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
+                <Zap className="h-3.5 w-3.5" />
+                Pré-rempli depuis votre profil
+              </div>
+            )}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-semibold"
-              style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
-              <Zap className="h-3.5 w-3.5" />
-              Pré-rempli depuis votre profil
+              style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>
+              {STEPS.findIndex(s => s.id === currentStep) + 1 > 0
+                ? `Étape ${Math.min(STEPS.findIndex(s => s.id === currentStep) + 1, STEPS.length)}/${STEPS.length}`
+                : 'Génération'}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Step bar */}

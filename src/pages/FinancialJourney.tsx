@@ -30,6 +30,66 @@ function useInView(threshold = 0.1) {
   return { ref, visible };
 }
 
+// ─── Valo timeline ────────────────────────────────────────────────────────────
+
+interface RoundStep {
+  stage: string; stageLabel: string;
+  preMoneyValo: number; raise: number;
+  dilution: number; founderShareAfter: number; founderValueAfter: number;
+  isCurrent: boolean;
+}
+
+function getValoTimeline(currentStage: string, fundraisingGoal: number | null, founderSharePct: number): RoundStep[] {
+  const STAGES = ['pre-seed', 'seed', 'serie-a', 'serie-b'];
+  const LABELS: Record<string, string> = { 'pre-seed': 'Pre-seed', seed: 'Seed', 'serie-a': 'Série A', 'serie-b': 'Série B' };
+  const DEFAULTS: Record<string, { valo: number; raise: number; dilution: number }> = {
+    'pre-seed': { valo: 500_000,  raise: 300_000,   dilution: 20 },
+    seed:       { valo: 2_000_000, raise: 1_000_000, dilution: 25 },
+    'serie-a':  { valo: 8_000_000, raise: 3_000_000, dilution: 22 },
+    'serie-b':  { valo: 25_000_000, raise: 8_000_000, dilution: 18 },
+  };
+  const defaults = { ...DEFAULTS };
+  if (fundraisingGoal && DEFAULTS[currentStage]) {
+    defaults[currentStage] = { ...DEFAULTS[currentStage], raise: fundraisingGoal,
+      valo: Math.round(fundraisingGoal / (DEFAULTS[currentStage].dilution / 100)) };
+  }
+  let shareLeft = founderSharePct;
+  return STAGES.map(stage => {
+    const d = defaults[stage];
+    shareLeft = shareLeft * (1 - d.dilution / 100);
+    const postMoney = d.valo + d.raise;
+    return { stage, stageLabel: LABELS[stage], preMoneyValo: d.valo, raise: d.raise,
+      dilution: d.dilution, founderShareAfter: Math.round(shareLeft * 10) / 10,
+      founderValueAfter: Math.round(postMoney * shareLeft / 100), isCurrent: stage === currentStage };
+  });
+}
+
+// ─── Ring gauge ────────────────────────────────────────────────────────────────
+
+function RingGauge({ pct, size = 140, color, bg = '#F3F4F6', label, sublabel }: {
+  pct: number; size?: number; color: string; bg?: string; label: string; sublabel?: string;
+}) {
+  const r = (size - 14) / 2;
+  const circ = 2 * Math.PI * r;
+  const [anim, setAnim] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setAnim(pct), 250); return () => clearTimeout(t); }, [pct]);
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={bg} strokeWidth={12} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={12}
+          strokeDasharray={circ} strokeLinecap="round"
+          strokeDashoffset={circ - (anim / 100) * circ}
+          style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)' }} />
+      </svg>
+      <div className="absolute flex flex-col items-center leading-none">
+        <span className="font-black" style={{ fontSize: size * 0.22, color }}>{label}</span>
+        {sublabel && <span className="text-gray-400" style={{ fontSize: size * 0.1 }}>{sublabel}</span>}
+      </div>
+    </div>
+  );
+}
+
 // ─── FadeSlide ─────────────────────────────────────────────────────────────────
 
 const FadeSlide: React.FC<{
@@ -177,8 +237,9 @@ const StepCard: React.FC<{
   score: ReturnType<typeof calculateScore>;
   isFuture?: boolean;
   isNearFuture?: boolean;
+  roundData?: RoundStep;
 }> = ({
-  step, profile, score, isFuture = false, isNearFuture = false,
+  step, profile, score, isFuture = false, isNearFuture = false, roundData,
 }) => {
   const isCurrent = step.status === 'current';
   const isObjective = step.isObjective;
@@ -341,6 +402,44 @@ const StepCard: React.FC<{
                 newI={step.capitalAfter.new}
               />
             )}
+          </div>
+        )}
+
+        {/* Valorisation & parts fondateur */}
+        {roundData && (
+          <div className="mt-4 rounded-xl overflow-hidden border border-gray-100">
+            <div className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-400 bg-gray-50">
+              Valorisation & parts fondateur à ce stade
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100">
+              <div className="px-4 py-3">
+                <p className="text-[10px] text-gray-400 mb-0.5">Valo pre-money</p>
+                <p className="text-[14px] font-black text-gray-900">{formatAmount(roundData.preMoneyValo)}</p>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-[10px] text-gray-400 mb-0.5">Levée</p>
+                <p className="text-[14px] font-black" style={{ color: '#1A3A8F' }}>{formatAmount(roundData.raise)}</p>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-[10px] text-gray-400 mb-0.5">Dilution ronde</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[14px] font-black" style={{ color: '#C4728A' }}>−{roundData.dilution}%</p>
+                </div>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-[10px] text-gray-400 mb-0.5">Vos parts restantes</p>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black shrink-0"
+                    style={{
+                      backgroundColor: roundData.founderShareAfter >= 50 ? '#D8FFBD' : roundData.founderShareAfter >= 30 ? '#FFE8C2' : '#FFB3B3',
+                      color: roundData.founderShareAfter >= 50 ? '#2D6A00' : roundData.founderShareAfter >= 30 ? '#92520A' : '#8F1A1A',
+                    }}>
+                    {roundData.founderShareAfter}%
+                  </div>
+                  <p className="text-[13px] font-bold text-gray-700">{formatAmount(roundData.founderValueAfter)}</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -530,6 +629,18 @@ const FinancialJourney: React.FC = () => {
   const benchmarkDilution = sectorBenchmarkDilution(profile.sector ?? '');
   const nextValo = nextRoundValuation(profile, timeline);
   const runway = profile.runway ?? 0;
+
+  const founderSharePct = (profile as Record<string,unknown>).founderShare as number ?? 80;
+  const STAGE_ID_MAP: Record<string, string> = {
+    now: profile.stage ?? 'pre-seed',
+    seed: 'seed', serieA: 'serie-a', serieB: 'serie-b', serieC: 'serie-b',
+  };
+  // Non-dilutif part = 100% - dilution (approximation du mix)
+  const nonDilutifPct = Math.max(10, 100 - dilution * 3); // dilution max 30% → non-dilutif ~10%+
+  const valoTimeline = useMemo(
+    () => getValoTimeline(profile.stage ?? 'seed', (profile as Record<string,unknown>).fundraisingGoal as number ?? null, founderSharePct),
+    [profile.stage, profile, founderSharePct],
+  );
   const runwayColor = runway >= 12 ? '#22C55E' : runway >= 6 ? '#FFB96D' : '#FFB3B3';
   const runwayBorder = runway >= 12 ? '#22C55E' : runway >= 6 ? '#FFB96D' : '#EF4444';
 
@@ -586,7 +697,7 @@ const FinancialJourney: React.FC = () => {
 
           {/* Col 4 : Dilution max recommandée */}
           <div className="flex items-center gap-3 justify-center lg:justify-end">
-            <DilutionGauge value={dilution} max={30} size={52} />
+            <DilutionGauge value={dilution} max={30} size={72} />
             <div>
               <p className="text-white font-black text-[22px] leading-none">{dilution}%</p>
               <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Dilution max</p>
@@ -644,6 +755,138 @@ const FinancialJourney: React.FC = () => {
           </FadeSlide>
         </div>
       </div>
+
+      {false && /* sections standalone supprimées — données maintenant dans chaque bloc stade */ (
+      <><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+        <FadeSlide delay={80}>
+          <div className="bg-white rounded-2xl p-7 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-6">
+              <div>
+                <p className="text-[18px] font-bold text-gray-900">Mix de financement recommandé</p>
+                <p className="text-[13px] mt-0.5 text-gray-500">Dilution max conseillée : <strong>{dilution}%</strong> · Benchmark {profile.sector ?? 'secteur'} : {benchmarkDilution}%</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Dilutif */}
+              <div className="flex flex-col items-center gap-4 p-6 rounded-2xl border" style={{ backgroundColor: '#F0F4FF', borderColor: '#ABC5FE' }}>
+                <p className="text-[13px] font-bold uppercase tracking-widest" style={{ color: '#1A3A8F' }}>Dilutif · Equity</p>
+                <RingGauge pct={dilution} size={160} color="#1A3A8F" bg="#DBEAFE" label={`${dilution}%`} sublabel="dilution max" />
+                <div className="text-center space-y-1">
+                  <p className="text-[12px] text-gray-500">VCs · Angels · Family Offices</p>
+                  <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+                    {['Smart money', 'Réseau', 'Décision rapide'].map(t => (
+                      <span key={t} className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: '#ABC5FE', color: '#1A3A8F' }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* Non-dilutif */}
+              <div className="flex flex-col items-center gap-4 p-6 rounded-2xl border" style={{ backgroundColor: '#F0FFF4', borderColor: '#D8FFBD' }}>
+                <p className="text-[13px] font-bold uppercase tracking-widest" style={{ color: '#2D6A00' }}>Non-dilutif · Subventions</p>
+                <RingGauge pct={Math.min(nonDilutifPct, 100)} size={160} color="#2D6A00" bg="#DCFCE7" label={`${Math.round(nonDilutifPct)}%`} sublabel="sans dilution" />
+                <div className="text-center space-y-1">
+                  <p className="text-[12px] text-gray-500">BPI · CIR · Subventions EU</p>
+                  <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+                    {['Sans dilution', 'Cumulable', 'Remboursable ou non'].map(t => (
+                      <span key={t} className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </FadeSlide>
+      </div>
+
+      {/* ── Valorisation & parts fondateur par stade ─────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <FadeSlide delay={120}>
+          <div className="bg-white rounded-2xl p-7 shadow-sm">
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+              <div>
+                <p className="text-[18px] font-bold text-gray-900">Valorisation & parts fondateur par stade</p>
+                <p className="text-[13px] mt-0.5 text-gray-500">Part initiale : <strong>{founderSharePct}%</strong> · Dilutions moyennes marché</p>
+              </div>
+              <span className="text-[11px] font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>Estimation indicative</span>
+            </div>
+
+            {/* Desktop */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #F3F4F6' }}>
+                    {['Stade', 'Valo pre-money', 'Levée', 'Dilution ronde', 'Parts fondateur', 'Valeur de vos parts'].map(h => (
+                      <th key={h} className="pb-3 pr-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-left">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {valoTimeline.map((row, i) => (
+                    <tr key={row.stage} style={{
+                      backgroundColor: row.isCurrent ? '#FFF5F8' : 'transparent',
+                      borderLeft: row.isCurrent ? '4px solid #F4B8CC' : '4px solid transparent',
+                      borderBottom: '1px solid #F9FAFB',
+                    }}>
+                      <td className="py-4 pr-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[14px] font-bold ${row.isCurrent ? 'text-gray-900' : i < valoTimeline.findIndex(r => r.isCurrent) ? 'text-gray-400' : 'text-gray-700'}`}>{row.stageLabel}</span>
+                          {row.isCurrent && <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F4B8CC', color: '#0A0A0A' }}>Vous êtes ici</span>}
+                        </div>
+                      </td>
+                      <td className="py-4 pr-4 text-[14px] font-semibold text-gray-700">{formatAmount(row.preMoneyValo)}</td>
+                      <td className="py-4 pr-4"><span className="text-[14px] font-bold" style={{ color: '#1A3A8F' }}>{formatAmount(row.raise)}</span></td>
+                      <td className="py-4 pr-4">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-gray-100" style={{ maxWidth: 60 }}>
+                            <div className="h-full rounded-full" style={{ width: `${row.dilution * 2}%`, backgroundColor: '#F4B8CC' }} />
+                          </div>
+                          <span className="text-[13px] font-bold" style={{ color: '#C4728A' }}>−{row.dilution}%</span>
+                        </div>
+                      </td>
+                      <td className="py-4 pr-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-black"
+                            style={{ backgroundColor: row.founderShareAfter >= 50 ? '#D8FFBD' : row.founderShareAfter >= 30 ? '#FFE8C2' : '#FFB3B3', color: row.founderShareAfter >= 50 ? '#2D6A00' : row.founderShareAfter >= 30 ? '#92520A' : '#8F1A1A' }}>
+                            {row.founderShareAfter}%
+                          </div>
+                          <div className="h-2 rounded-full overflow-hidden bg-gray-100" style={{ width: 70 }}>
+                            <div className="h-full rounded-full" style={{ width: `${row.founderShareAfter}%`, backgroundColor: row.founderShareAfter >= 50 ? '#2D6A00' : row.founderShareAfter >= 30 ? '#F59E0B' : '#EF4444' }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 text-[15px] font-black" style={{ color: row.isCurrent ? '#C4728A' : '#0A0A0A' }}>{formatAmount(row.founderValueAfter)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile */}
+            <div className="md:hidden space-y-3">
+              {valoTimeline.map(row => (
+                <div key={row.stage} className="rounded-xl p-4 border" style={{ borderColor: row.isCurrent ? '#F4B8CC' : '#F3F4F6', backgroundColor: row.isCurrent ? '#FFF5F8' : '#F9FAFB' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[14px] font-bold text-gray-900">{row.stageLabel}</span>
+                    {row.isCurrent && <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F4B8CC', color: '#0A0A0A' }}>Vous êtes ici</span>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[12px]">
+                    <div><p className="text-gray-400">Valo pre-money</p><p className="font-bold text-gray-900">{formatAmount(row.preMoneyValo)}</p></div>
+                    <div><p className="text-gray-400">Levée</p><p className="font-bold" style={{ color: '#1A3A8F' }}>{formatAmount(row.raise)}</p></div>
+                    <div><p className="text-gray-400">Dilution</p><p className="font-bold" style={{ color: '#C4728A' }}>−{row.dilution}%</p></div>
+                    <div><p className="text-gray-400">Parts restantes</p><p className="font-bold text-gray-900">{row.founderShareAfter}%</p></div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-[11px] text-gray-400">Valeur de vos parts</p>
+                    <p className="text-[20px] font-black" style={{ color: row.isCurrent ? '#C4728A' : '#0A0A0A' }}>{formatAmount(row.founderValueAfter)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-4">* Dilutions basées sur les moyennes marché. Vos vraies conditions dépendent de la négociation.</p>
+          </div>
+        </FadeSlide>
+      </div>
+      </>)}
 
       {/* ── Timeline + Sidebar ──────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
@@ -705,8 +948,8 @@ const FinancialJourney: React.FC = () => {
                         <FadeSlide from={i % 2 === 1 ? 'right' : 'left'} delay={i * 100}>
                           <div className="relative rounded-2xl overflow-hidden">
                             <div className="opacity-30 pointer-events-none select-none">
-                              <StepCard step={step} profile={profile} score={score} isFuture isNearFuture={isNearFuture} />
-                            </div>
+                              <StepCard step={step} profile={profile} score={score} isFuture isNearFuture={isNearFuture}
+                                roundData={valoTimeline.find(r => r.stage === STAGE_ID_MAP[step.id])} /></div>
                             <div className="absolute inset-0 backdrop-blur-[3px] bg-white/40 flex items-center justify-center rounded-2xl">
                               <div className="text-center p-6">
                                 <Lock className="h-6 w-6 mx-auto mb-2 text-gray-500" />
@@ -732,6 +975,7 @@ const FinancialJourney: React.FC = () => {
                             score={score}
                             isFuture={isFarFuture}
                             isNearFuture={isNearFuture}
+                            roundData={valoTimeline.find(r => r.stage === STAGE_ID_MAP[step.id])}
                           />
                         </FadeSlide>
                       )}

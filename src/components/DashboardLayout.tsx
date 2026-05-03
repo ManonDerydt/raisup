@@ -16,7 +16,8 @@ import {
   TrendingUp,
   Star,
   Calculator,
-  Settings
+  Settings,
+  Send,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../hooks/useAuth';
@@ -129,7 +130,7 @@ const DashboardLayout: React.FC = () => {
   const analyticsNavItems = [
     // { name: 'KPIs', icon: BarChart2, href: '/dashboard/kpis', soon: true },
     { name: 'Score Raisup', icon: Star, href: '/dashboard/score' },
-    // { name: 'Investor Update', icon: Send, href: '/dashboard/investor-update', soon: true },
+    { name: 'Investor Update', icon: Send, href: '/dashboard/investor-update' },
     { name: 'Paramètres', icon: Settings, href: '/dashboard/settings' },
   ];
   

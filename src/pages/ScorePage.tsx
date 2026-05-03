@@ -116,12 +116,24 @@ const ScorePage: React.FC = () => {
     <div className={clsx('py-8 px-4 sm:px-6 lg:px-8 min-h-full', darkMode ? 'bg-gray-900' : 'bg-gray-50')}>
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* Title */}
-        <div>
-          <h1 className={clsx('text-2xl font-bold', darkMode ? 'text-white' : 'text-gray-900')}>Score Raisup</h1>
-          <p className={clsx('text-sm mt-1', darkMode ? 'text-gray-400' : 'text-gray-500')}>
-            Évaluation de la solidité de votre dossier investisseur
-          </p>
+        {/* Header card */}
+        <div className="rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          style={{ backgroundColor: '#0A0A0A' }}>
+          <div>
+            <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: '#F4B8CC' }}>
+              SCORE RAISUP
+            </p>
+            <h1 className="text-[22px] font-black text-white leading-tight">Solidité de votre dossier investisseur</h1>
+            <p className="text-[13px] mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              {interpretation}
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="text-right">
+              <p className="text-[40px] font-black leading-none" style={{ color: total >= 70 ? '#D8FFBD' : total >= 40 ? '#FFB96D' : '#FFB3B3' }}>{total}</p>
+              <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>/100</p>
+            </div>
+          </div>
         </div>
 
         {/* Score + interpretation */}

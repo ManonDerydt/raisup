@@ -365,6 +365,7 @@ interface DocScore {
   max: number;
   status: 'excellent' | 'bon' | 'à améliorer' | 'non généré';
   recommendation: string;
+  improvements: string[];
   cta: string;
   ctaLink: string;
 }
@@ -401,6 +402,33 @@ function getDocScores(p: Profile): DocScore[] {
     teaserScore >= 50 ? 'Ajoutez votre objectif de levée et vos premiers KPIs pour compléter le teaser.' :
     'Renseignez votre startup name, secteur et stade pour générer un teaser percutant en 2 minutes.';
 
+  // Bullet points d'amélioration dynamiques par document
+  const bpImprovements: string[] = [];
+  if (!p.problem || (p.problem?.length ?? 0) < 20) bpImprovements.push('Décrire le problème résolu en détail');
+  if (!p.solution || (p.solution?.length ?? 0) < 20) bpImprovements.push('Détailler votre solution unique');
+  if (!p.competitiveAdvantage || (p.competitiveAdvantage?.length ?? 0) < 20) bpImprovements.push('Préciser votre avantage concurrentiel');
+  if (!p.businessModel) bpImprovements.push('Définir votre modèle économique');
+  if (!p.moat || (p.moat?.length ?? 0) < 10) bpImprovements.push('Expliquer vos barrières à l\'entrée (moat)');
+  if (!p.ambition || (p.ambition?.length ?? 0) < 10) bpImprovements.push('Renseigner votre ambition à 5 ans');
+  if (bpScore >= 75) bpImprovements.push('Ajouter projections financières sur 3 ans');
+
+  const deckImprovements: string[] = [];
+  if (!deckHasFile) deckImprovements.push('Générer le deck depuis le générateur IA');
+  if (!p.problem) deckImprovements.push('Compléter la slide Problème');
+  if (!p.solution) deckImprovements.push('Compléter la slide Solution');
+  if (!(p as Record<string,unknown>).team || ((p as Record<string,unknown>).team as unknown[])?.length === 0) deckImprovements.push('Ajouter les bios de l\'équipe fondatrice');
+  if (!(p as Record<string,unknown>).mrr && !(p as Record<string,unknown>).currentRevenue) deckImprovements.push('Ajouter une slide Traction avec vos métriques');
+  if (!p.fundraisingGoal) deckImprovements.push('Préciser l\'utilisation des fonds');
+  if (deckScore >= 80) deckImprovements.push('Faire relire par 2 investisseurs avant envoi');
+
+  const teaserImprovements: string[] = [];
+  if (!p.startupName) teaserImprovements.push('Renseigner le nom de votre startup');
+  if (!p.sector) teaserImprovements.push('Définir votre secteur d\'activité');
+  if (!p.problem) teaserImprovements.push('Décrire le problème résolu');
+  if (!p.fundraisingGoal) teaserImprovements.push('Indiquer le montant recherché');
+  if (!p.solution) teaserImprovements.push('Préciser votre solution en 1 phrase');
+  if (teaserScore >= 80) teaserImprovements.push('Personnaliser l\'objet email par investisseur');
+
   return [
     {
       key: 'bp',
@@ -410,8 +438,9 @@ function getDocScores(p: Profile): DocScore[] {
       max: 100,
       status: bpStatus,
       recommendation: bpReco,
+      improvements: bpImprovements.slice(0, 4),
       cta: bpScore > 0 ? 'Voir / améliorer' : 'Générer',
-      ctaLink: '/dashboard/documents',
+      ctaLink: '/dashboard/documents/editor/bp',
     },
     {
       key: 'deck',
@@ -421,8 +450,9 @@ function getDocScores(p: Profile): DocScore[] {
       max: 100,
       status: deckStatus,
       recommendation: deckReco,
+      improvements: deckImprovements.slice(0, 4),
       cta: deckHasFile ? 'Voir / améliorer' : 'Générer le deck',
-      ctaLink: '/dashboard/documents/generate_deck',
+      ctaLink: '/dashboard/documents/editor/deck',
     },
     {
       key: 'teaser',
@@ -432,8 +462,9 @@ function getDocScores(p: Profile): DocScore[] {
       max: 100,
       status: teaserStatus,
       recommendation: teaserReco,
+      improvements: teaserImprovements.slice(0, 4),
       cta: teaserScore > 0 ? 'Voir / améliorer' : 'Générer',
-      ctaLink: '/dashboard/documents',
+      ctaLink: '/dashboard/documents/editor/teaser',
     },
   ];
 }
@@ -805,17 +836,17 @@ const StatusDropdown: React.FC<{
 };
 
 // Score mini-gauge
-const MiniScore: React.FC<{ score: number }> = ({ score }) => {
-  const color = score >= 70 ? '#D8FFBD' : score >= 50 ? '#ABC5FE' : score >= 30 ? '#FFB96D' : '#FFB3B3';
-  const textColor = score >= 70 ? '#2D6A00' : score >= 50 ? '#1A3A8F' : score >= 30 ? '#92520A' : '#8F1A1A';
-  const size = 40;
+const MiniScore: React.FC<{ score: number; darkBg?: boolean; size?: number }> = ({ score, darkBg = false, size = 40 }) => {
+  const trackColor = darkBg ? 'rgba(255,255,255,0.12)' : '#F3F4F6';
+  const arcColor = score >= 70 ? '#D8FFBD' : score >= 50 ? '#F4B8CC' : score >= 30 ? '#FFB96D' : '#FFB3B3';
+  const textColor = darkBg ? '#FFFFFF' : (score >= 70 ? '#2D6A00' : score >= 50 ? '#C4728A' : score >= 30 ? '#92520A' : '#8F1A1A');
   const r = (size - 6) / 2;
   const circ = 2 * Math.PI * r;
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F3F4F6" strokeWidth="5" />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="5"
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={trackColor} strokeWidth="5" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={arcColor} strokeWidth="5"
           strokeDasharray={circ} strokeLinecap="round"
           strokeDashoffset={circ - (score / 100) * circ}
           style={{ transition: 'stroke-dashoffset 1s ease' }} />
@@ -859,6 +890,13 @@ const Dashboard: React.FC = () => {
   const matches = useMemo(() => matchInvestors(profile), [profile]);
 
   // ── Pipeline dilutif
+  const [checkedMissions, setCheckedMissions] = useState<Set<string>>(new Set());
+  const toggleMission = (id: string) => setCheckedMissions(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
   const [pipeline, setPipeline] = useState<PipelineItem[]>(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('raisup_pipeline') || '[]');
@@ -910,6 +948,102 @@ const Dashboard: React.FC = () => {
   const partnerStructure = useMemo(() => getPartnerStructure(), []);
   const lastMonday = useMemo(() => getLastMonday(), []);
 
+  // Pipeline stats — déclarés AVANT les missions (TDZ)
+  const contacted = pipeline.filter(p => p.status !== 'À contacter').length;
+  const totalND = ndPipeline.reduce((s, d) => s + d.montant, 0);
+  const accordedND = ndPipeline.filter(d => d.status === 'Accordé ✓').reduce((s, d) => s + d.montant, 0);
+  const inDiscussion = pipeline.filter(p => p.status === 'En discussion').length;
+  const rdvCount = pipeline.filter(p => p.status === 'RDV prévu').length;
+  const totalGoal = pipeline.reduce((s, p) => s + (p.ticketTarget ?? 0), 0);
+
+  // Missions de la semaine — variées, avec cases à cocher
+  const missionsDelasSemaine = useMemo(() => {
+    const m: { id: string; label: string; date: string; color: string; text: string; category: string }[] = [];
+    const mrr = (profile.mrr ?? profile.currentRevenue ?? 0) as number;
+    const growth = ((profile as Record<string, unknown>).momGrowth ?? (profile as Record<string, unknown>).growthMoM ?? 10) as number;
+    const today = new Date();
+    const endOfWeek = new Date(today); endOfWeek.setDate(today.getDate() + 7);
+
+    // 1 — Relances urgentes (> 14j sans contact)
+    pipeline.filter(p => {
+      if (!p.lastContact || ['À contacter','Closé ✓','Refus'].includes(p.status)) return false;
+      return Math.floor((Date.now() - new Date(p.lastContact).getTime()) / 86_400_000) > 14;
+    }).slice(0, 3).forEach(p =>
+      m.push({ id: `relance-${p.id}`, label: `Relancer ${p.name}`, date: 'Urgent', color: '#FFB3B3', text: '#8F1A1A', category: 'Investisseur' })
+    );
+
+    // 2 — Deadlines ND < 7j
+    ndPipeline.filter(d => {
+      if (!d.deadline) return false;
+      const days = Math.floor((new Date(d.deadline).getTime() - Date.now()) / 86_400_000);
+      return days >= 0 && days <= 7;
+    }).forEach(d =>
+      m.push({ id: `nd-urgent-${d.id}`, label: `Deadline : dossier ${d.name}`, date: new Date(d.deadline!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }), color: '#FFB96D', text: '#7A3D00', category: 'Financement' })
+    );
+
+    // 3 — Préparer RDV investisseur prévu
+    pipeline.filter(p => p.status === 'RDV prévu').slice(0, 2).forEach(p =>
+      m.push({ id: `rdv-${p.id}`, label: `Préparer RDV avec ${p.name}`, date: 'Cette semaine', color: '#CDB4FF', text: '#3D0D8F', category: 'Investisseur' })
+    );
+
+    // 4 — Premiers contacts à initier
+    pipeline.filter(p => p.status === 'À contacter').slice(0, 2).forEach(p =>
+      m.push({ id: `contact-${p.id}`, label: `Contacter ${p.name} — ${p.matchScore}% match`, date: 'Cette semaine', color: '#FFD6E5', text: '#C4728A', category: 'Investisseur' })
+    );
+
+    // 5 — Objectif MRR avec date
+    if (mrr === 0 || (profile as Record<string,unknown>).isPreRevenue) {
+      m.push({ id: 'first-mrr', label: 'Signer votre 1er contrat client', date: 'Priorité', color: '#FFB3B3', text: '#8F1A1A', category: 'Croissance' });
+    } else if (mrr < 5_000) {
+      const months5k = growth > 0 ? Math.ceil(Math.log(5_000 / mrr) / Math.log(1 + growth / 100)) : null;
+      const d5k = new Date(today);
+      if (months5k) d5k.setMonth(today.getMonth() + months5k);
+      m.push({ id: 'mrr-5k', label: `Atteindre 5K€ MRR (actuel : ${formatAmount(mrr)})`, date: months5k ? d5k.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : 'Objectif', color: '#CDB4FF', text: '#3D0D8F', category: 'Croissance' });
+    } else if (mrr < 50_000) {
+      const months50k = growth > 0 ? Math.ceil(Math.log(50_000 / mrr) / Math.log(1 + growth / 100)) : null;
+      const d2 = new Date(today);
+      if (months50k) d2.setMonth(today.getMonth() + months50k);
+      m.push({ id: 'mrr-50k', label: `Atteindre 50K€ MRR (actuel : ${formatAmount(mrr)})`, date: months50k ? d2.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : 'Objectif', color: '#ABC5FE', text: '#1A3A8F', category: 'Croissance' });
+    }
+
+    // 6 — Investor update mensuel
+    if (contacted > 0) {
+      const lastUpdate = localStorage.getItem('raisup_last_investor_update');
+      const daysSince = lastUpdate ? Math.floor((Date.now() - new Date(lastUpdate).getTime()) / 86_400_000) : 999;
+      if (daysSince > 25)
+        m.push({ id: 'investor-update', label: 'Envoyer votre Investor Update mensuel', date: 'Ce mois', color: '#D8FFBD', text: '#2D6A00', category: 'Communication' });
+    }
+
+    // 7 — Documents à générer / améliorer
+    docScores.filter(d => d.score < 60).slice(0, 2).forEach(d =>
+      m.push({ id: `doc-${d.key}`, label: `Améliorer votre ${d.label} (${d.score}/100)`, date: 'Cette semaine', color: '#FFE8C2', text: '#92520A', category: 'Documents' })
+    );
+
+    // 8 — Score Raisup à améliorer
+    if (score.total < 60)
+      m.push({ id: 'score', label: `Améliorer votre score Raisup (${score.total}/100)`, date: 'Priorité', color: '#FFE8C2', text: '#92520A', category: 'Profil' });
+
+    // 9 — Deadlines ND du mois
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    ndPipeline.filter(d => {
+      if (!d.deadline) return false;
+      const dl = new Date(d.deadline);
+      return dl > endOfWeek && dl <= endOfMonth;
+    }).slice(0, 2).forEach(d =>
+      m.push({ id: `nd-month-${d.id}`, label: `Préparer dossier ${d.name}`, date: new Date(d.deadline!).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }), color: '#D8FFBD', text: '#2D6A00', category: 'Financement' })
+    );
+
+    // 10 — Mettre à jour les KPIs
+    const lastKPI = localStorage.getItem('raisup_last_kpi_update');
+    const daysSinceKPI = lastKPI ? Math.floor((Date.now() - new Date(lastKPI).getTime()) / 86_400_000) : 999;
+    if (daysSinceKPI > 30)
+      m.push({ id: 'kpi', label: 'Mettre à jour vos KPIs du mois', date: 'Ce mois', color: '#ABC5FE', text: '#1A3A8F', category: 'Suivi' });
+
+    if (m.length === 0)
+      m.push({ id: 'default', label: 'Toutes vos missions sont à jour 🎉', date: 'Bravo !', color: '#D8FFBD', text: '#2D6A00', category: '' });
+
+    return m.slice(0, 10);
+  }, [pipeline, ndPipeline, profile, docScores, score.total, contacted]);
   // ── Display helpers
   const firstName = profile.firstName || profile.founderName || user?.user_metadata?.given_name || user?.email?.split('@')[0] || 'Fondateur';
   const initials = (firstName[0] ?? 'F').toUpperCase();
@@ -920,22 +1054,12 @@ const Dashboard: React.FC = () => {
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   const todayCapitalized = today.charAt(0).toUpperCase() + today.slice(1);
 
-  // Pipeline stats
-  const contacted = pipeline.filter(p => p.status !== 'À contacter').length;
-  const totalND = ndPipeline.reduce((s, d) => s + d.montant, 0);
-  const accordedND = ndPipeline.filter(d => d.status === 'Accordé ✓').reduce((s, d) => s + d.montant, 0);
-  const inDiscussion = pipeline.filter(p => p.status === 'En discussion').length;
-  const rdvCount = pipeline.filter(p => p.status === 'RDV prévu').length;
-  const totalGoal = pipeline.reduce((s, p) => s + (p.ticketTarget ?? 0), 0);
-
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F8F8F8' }}>
 
       {/* ── SECTION 1 — HEADER ─────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-5">
-        <div className="max-w-7xl mx-auto">
-
-          {/* Ligne principale */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <div className="rounded-2xl px-6 py-5" style={{ backgroundColor: '#0A0A0A' }}>
           <div className="flex items-center gap-5 flex-wrap">
 
             {/* Avatar */}
@@ -947,14 +1071,14 @@ const Dashboard: React.FC = () => {
             {/* Identité */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-[22px] font-bold text-gray-900">Bonjour {firstName}</h1>
-                <span className="text-[14px] text-gray-400">{startupName}</span>
+                <h1 className="text-[22px] font-bold text-white">Bonjour {firstName}</h1>
+                <span className="text-[14px]" style={{ color: 'rgba(255,255,255,0.45)' }}>{startupName}</span>
                 <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full"
                   style={{ backgroundColor: badge.bg, color: badge.color }}>
                   {badge.label}
                 </span>
               </div>
-              <p className="text-[13px] text-gray-400 mt-0.5">{todayCapitalized}</p>
+              <p className="text-[13px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{todayCapitalized}</p>
             </div>
 
             {/* Runway badge */}
@@ -977,11 +1101,13 @@ const Dashboard: React.FC = () => {
 
             {/* Score compact */}
             <button onClick={() => navigate('/dashboard/welcome')}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">
-              <MiniScore score={score.total} />
+              className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+              <MiniScore score={score.total} darkBg size={52} />
               <div className="text-left">
-                <p className="text-[11px] text-gray-400 leading-none">Score Raisup</p>
-                <p className="text-[11px] font-semibold text-gray-700 mt-0.5 leading-none">Voir l'analyse →</p>
+                <p className="text-[11px] leading-none" style={{ color: 'rgba(255,255,255,0.4)' }}>Score Raisup</p>
+                <p className="text-[20px] font-black leading-tight text-white">{score.total}<span className="text-[12px] font-normal ml-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>/100</span></p>
+                <p className="text-[11px] font-semibold leading-none" style={{ color: '#F4B8CC' }}>Voir l'analyse →</p>
               </div>
             </button>
           </div>
@@ -1000,8 +1126,8 @@ const Dashboard: React.FC = () => {
                 className={({ isActive }) =>
                   `text-[12px] font-semibold px-3.5 py-1.5 rounded-full border transition-all ${
                     isActive
-                      ? 'bg-gray-900 text-white border-gray-900'
-                      : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                      ? 'border-white bg-white/10 text-white'
+                      : 'border-white/40 text-white/80 hover:border-white hover:text-white'
                   }`
                 }
               >
@@ -1014,99 +1140,7 @@ const Dashboard: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
-        {/* ── SECTION 2 — ACTIONS DU JOUR ──────────────────────────────────── */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="text-[18px] font-bold text-gray-900">Vos 3 actions prioritaires aujourd'hui</h2>
-              <p className="text-[13px] text-gray-400 mt-0.5">{todayCapitalized}</p>
-            </div>
-            <Sparkles className="h-5 w-5" style={{ color: '#F4B8CC' }} />
-          </div>
-          <div className="space-y-3">
-            {todayActions.length > 0
-              ? todayActions.map((action, i) => <ActionCard key={action.priority} action={action} index={i} />)
-              : (
-                <div className="text-center py-8 text-gray-400">
-                  <p className="text-[14px] font-medium">Aucune action urgente identifiée.</p>
-                  <p className="text-[13px] mt-1">Complétez votre profil pour des recommandations personnalisées.</p>
-                  <button onClick={() => navigate('/onboarding/raisup')}
-                    className="mt-3 text-[13px] font-bold px-4 py-2 rounded-full text-white border-0 cursor-pointer"
-                    style={{ backgroundColor: '#0A0A0A' }}>
-                    Compléter mon profil →
-                  </button>
-                </div>
-              )}
-          </div>
-        </div>
-
-        {/* ── SECTION 3 — DOCUMENTS ────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="text-[18px] font-bold text-gray-900">Vos documents investisseur</h2>
-              <p className="text-[13px] text-gray-400 mt-0.5">Business Plan · Pitch Deck · Teaser — notes et recommandations</p>
-            </div>
-            <button onClick={() => navigate('/dashboard/documents')}
-              className="text-[12px] font-bold" style={{ color: '#C4728A' }}>
-              Gérer les documents →
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {docScores.map(doc => {
-              const style = docStatusStyle[doc.status];
-              const pct = doc.score;
-              return (
-                <div key={doc.key} className="rounded-2xl border p-5 flex flex-col gap-4"
-                  style={{ borderColor: style.border, backgroundColor: style.bg + '33' }}>
-                  {/* En-tête */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                        style={{ backgroundColor: style.bg, color: style.text }}>
-                        {doc.icon}
-                      </div>
-                      <div>
-                        <p className="text-[14px] font-bold text-gray-900">{doc.label}</p>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: style.bg, color: style.text }}>
-                          {doc.status}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Score circulaire */}
-                    <div className="shrink-0 text-right">
-                      <p className="text-[26px] font-black leading-none" style={{ color: style.text }}>{pct}</p>
-                      <p className="text-[10px] text-gray-400">/100</p>
-                    </div>
-                  </div>
-
-                  {/* Barre de score */}
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#E5E7EB' }}>
-                    <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${pct}%`, backgroundColor: style.text }} />
-                  </div>
-
-                  {/* Recommandation */}
-                  <div className="rounded-xl p-3" style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}>
-                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Recommandation</p>
-                    <p className="text-[12px] text-gray-700 leading-relaxed">{doc.recommendation}</p>
-                  </div>
-
-                  {/* CTA */}
-                  <button
-                    onClick={() => navigate(isPaid || doc.key !== 'deck' ? doc.ctaLink : '/pricing')}
-                    className="w-full py-2 rounded-xl text-[13px] font-bold text-center transition-colors hover:opacity-90"
-                    style={{ backgroundColor: style.text, color: '#fff' }}>
-                    {!isPaid && doc.key === 'deck' ? <><Lock className="h-3.5 w-3.5 inline mr-1" />Débloquer</> : `${doc.cta} →`}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── SECTION 4 — TIMELINE ─────────────────────────────────────────── */}
+        {/* ── SECTION 2 — TIMELINE ─────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-6">
             <Clock className="h-5 w-5" style={{ color: '#C4728A' }} />
@@ -1126,12 +1160,10 @@ const Dashboard: React.FC = () => {
               const isLast = i === timelineSteps.length - 1;
               return (
                 <div key={step.id} className="flex-1 flex flex-col items-center relative min-w-0">
-                  {/* Ligne de connexion */}
                   {!isLast && (
                     <div className="absolute top-4 left-1/2 w-full h-0.5 z-0"
                       style={{ backgroundColor: step.done ? '#F4B8CC' : '#E5E7EB' }} />
                   )}
-                  {/* Cercle */}
                   <div className="relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all"
                     style={{
                       backgroundColor: step.done ? '#F4B8CC' : step.current ? '#0A0A0A' : '#F9FAFB',
@@ -1143,7 +1175,6 @@ const Dashboard: React.FC = () => {
                         ? <Circle className="h-3 w-3 fill-white" style={{ color: '#fff' }} />
                         : <Circle className="h-3 w-3" style={{ color: '#D1D5DB' }} />}
                   </div>
-                  {/* Label */}
                   <p className="text-[10px] font-bold mt-2 text-center px-1 leading-tight"
                     style={{ color: step.current ? '#0A0A0A' : step.done ? '#C4728A' : '#9CA3AF' }}>
                     {step.label}
@@ -1189,7 +1220,6 @@ const Dashboard: React.FC = () => {
             ))}
           </div>
 
-          {/* CTA selon étape courante */}
           {timelineSteps.find(s => s.current) && (
             <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap">
               <p className="text-[13px] font-medium text-gray-600">
@@ -1211,297 +1241,236 @@ const Dashboard: React.FC = () => {
           )}
         </div>
 
-        {/* ── SECTION 5 — PIPELINE DILUTIF ─────────────────────────────────── */}
+        {/* ── SECTION 3 — DOCUMENTS ────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-[18px] font-bold text-gray-900">Pipeline investisseurs</h2>
+              <h2 className="text-[18px] font-bold text-gray-900">Vos documents investisseur</h2>
+              <p className="text-[13px] text-gray-400 mt-0.5">Business Plan · Pitch Deck · Teaser — notes et recommandations</p>
+            </div>
+            <button onClick={() => navigate('/dashboard/documents')}
+              className="text-[12px] font-bold" style={{ color: '#C4728A' }}>
+              Gérer les documents →
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {docScores.map((doc, idx) => {
+              const pct = doc.score;
+              // Couleurs demandées : BP orange, Deck bleu clair, Teaser vert
+              const palette = [
+                { bg: '#FFFBF5', border: '#FFB96D', accent: '#FFB96D', iconBg: '#FFE8C2', tag: 'white' }, // BP → orange
+                { bg: '#F5F7FF', border: '#C7D2FE', accent: '#abc5fe', iconBg: '#dbe6ff' }, // Deck → indigo
+                { bg: '#f8f4ff', border: '#cdb4ff', accent: '#cdb4ff', iconBg: '#e7dbff' }, // Teaser → vert
+              ][idx] ?? { bg: '#F9FAFB', border: '#E5E7EB', accent: '#374151', iconBg: '#F3F4F6' };
+              return (
+                <div key={doc.key} className="rounded-2xl border p-5 flex flex-col gap-3"
+                  style={{ backgroundColor: palette.bg, borderColor: palette.border }}>
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: palette.iconBg, color: palette.accent }}>
+                        {doc.icon}
+                      </div>
+                      <div>
+                        <p className="text-[14px] font-bold text-gray-900">{doc.label}</p>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: palette.border, color: palette.tag }}>
+                          {doc.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[26px] font-black leading-none" style={{ color: palette.accent }}>{pct}</p>
+                      <p className="text-[10px] text-gray-400">/100</p>
+                    </div>
+                  </div>
+
+                  {/* Barre */}
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: palette.border + '80' }}>
+                    <div className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%`, backgroundColor: palette.accent }} />
+                  </div>
+
+                  {/* Points d'amélioration */}
+                  {doc.improvements.length > 0 && (
+                    <ul className="space-y-1.5">
+                      {doc.improvements.map((tip, i) => (
+                        <li key={i} className="flex items-start gap-2 text-[12px] text-gray-600">
+                          <span className="mt-0.5 text-[10px] font-black shrink-0" style={{ color: palette.accent }}>→</span>
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <button
+                    onClick={() => navigate(isPaid || doc.key !== 'deck' ? doc.ctaLink : '/pricing')}
+                    className="mt-auto w-full py-2 rounded-xl text-[12px] font-bold text-center transition-colors hover:opacity-90"
+                    style={{ backgroundColor: palette.accent, color: '#fff' }}>
+                    {!isPaid && doc.key === 'deck' ? <><Lock className="h-3.5 w-3.5 inline mr-1" />Débloquer</> : `${doc.cta} →`}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── MONTANTS SÉCURISÉS ───────────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl px-6 py-5 grid grid-cols-1 sm:grid-cols-3 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 shadow-sm">
+          <div className="pb-4 sm:pb-0 sm:pr-6">
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: '#C4728A' }}>
+              Levée visée
+            </p>
+            <p className="text-[28px] font-black text-gray-900 leading-none">
+              {formatAmount(profile.fundraisingGoal ?? totalGoal ?? 0)}
+            </p>
+            <p className="text-[12px] mt-1 text-gray-400">
+              {pipeline.length} investisseur{pipeline.length > 1 ? 's' : ''} dans le pipeline
+            </p>
+          </div>
+          <div className="py-4 sm:py-0 sm:px-6">
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: '#1A3A8F' }}>
+              En discussion / RDV
+            </p>
+            <p className="text-[28px] font-black leading-none" style={{ color: inDiscussion + rdvCount > 0 ? '#1A3A8F' : '#9CA3AF' }}>
+              {inDiscussion + rdvCount}
+            </p>
+            <p className="text-[12px] mt-1 text-gray-400">
+              {inDiscussion} en discussion · {rdvCount} RDV prévu{rdvCount > 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="pt-4 sm:pt-0 sm:pl-6">
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: '#2D6A00' }}>
+              Non-dilutif sécurisé
+            </p>
+            <p className="text-[28px] font-black leading-none"
+              style={{ color: accordedND > 0 ? '#2D6A00' : '#9CA3AF' }}>
+              {formatAmount(accordedND)}
+            </p>
+            <p className="text-[12px] mt-1 text-gray-400">
+              {accordedND > 0
+                ? `${ndPipeline.filter(d => d.status === 'Accordé ✓').length} dossier(s) accordé(s)`
+                : `${formatAmount(totalND)} potentiel identifié`}
+            </p>
+          </div>
+        </div>
+
+        {/* ── MISSIONS DE LA SEMAINE ───────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-5">
+            <Sparkles className="h-4 w-4" style={{ color: '#C4728A' }} />
+            <h2 className="text-[18px] font-bold text-gray-900">Missions de la semaine</h2>
+            <span className="ml-auto text-[11px] text-gray-400">
+              {checkedMissions.size}/{missionsDelasSemaine.length} accomplies
+            </span>
+          </div>
+          {/* Progress bar */}
+          <div className="h-1.5 rounded-full overflow-hidden mb-5" style={{ backgroundColor: '#F3F4F6' }}>
+            <div className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${missionsDelasSemaine.length > 0 ? (checkedMissions.size / missionsDelasSemaine.length) * 100 : 0}%`, backgroundColor: '#F4B8CC' }} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {missionsDelasSemaine.map(m => {
+              const done = checkedMissions.has(m.id);
+              return (
+                <button key={m.id} onClick={() => toggleMission(m.id)}
+                  className="flex items-center gap-3 p-3 rounded-xl text-left transition-all"
+                  style={{
+                    backgroundColor: done ? '#F9FAFB' : m.color + '25',
+                    borderLeft: `3px solid ${done ? '#E5E7EB' : m.color}`,
+                    opacity: done ? 0.6 : 1,
+                  }}>
+                  {/* Checkbox */}
+                  <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
+                    style={{
+                      borderColor: done ? '#D1D5DB' : m.color,
+                      backgroundColor: done ? '#D1D5DB' : 'transparent',
+                    }}>
+                    {done && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-[13px] font-semibold leading-tight ${done ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                      {m.label}
+                    </p>
+                    {m.category && <p className="text-[10px] text-gray-400 mt-0.5">{m.category}</p>}
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                    style={{ backgroundColor: done ? '#F3F4F6' : m.color, color: done ? '#9CA3AF' : m.text }}>
+                    {m.date}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── INTERLOCUTEURS ────────────────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-[18px] font-bold text-gray-900">Mes interlocuteurs</h2>
               <p className="text-[13px] text-gray-400 mt-0.5">
-                {contacted} contacté{contacted > 1 ? 's' : ''} sur {pipeline.length} matché{pipeline.length > 1 ? 's' : ''}
+                {contacted} contacté{contacted > 1 ? 's' : ''} · {inDiscussion} en discussion · {rdvCount} RDV
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => navigate('/dashboard/fundraising')}
-                className="text-[12px] font-bold" style={{ color: '#C4728A' }}>
-                Matchs recommandés →
-              </button>
-              <button className="text-[12px] font-semibold px-3 py-1.5 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
-                + Ajouter
-              </button>
-            </div>
+            <button onClick={() => navigate('/dashboard/fundraising')}
+              className="text-[12px] font-bold" style={{ color: '#C4728A' }}>
+              Voir tous →
+            </button>
           </div>
-
-          {/* Barre de progression */}
-          <div className="h-2 rounded-full mt-3 mb-5 overflow-hidden" style={{ backgroundColor: '#F3F4F6' }}>
-            <div className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${pipeline.length > 0 ? (contacted / pipeline.length) * 100 : 0}%`, backgroundColor: '#F4B8CC' }} />
-          </div>
-
           {pipeline.length === 0 ? (
-            <div className="text-center py-8">
-              {isPaid ? (
-                <>
-                  <p className="text-[14px] text-gray-500 mb-3">Votre pipeline est vide — ajoutez vos premiers investisseurs</p>
-                  <button onClick={() => navigate('/dashboard/fundraising')}
-                    className="text-[13px] font-bold px-4 py-2 rounded-full text-white border-0 cursor-pointer"
-                    style={{ backgroundColor: '#0A0A0A' }}>
-                    + Commencer mon pipeline
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-[14px] text-gray-500 mb-3">Débloquez vos {matches.length} matchs investisseurs pour commencer votre pipeline</p>
-                  <button onClick={() => navigate('/pricing?from=pipeline')}
-                    className="text-[13px] font-bold px-4 py-2 rounded-full border-0 cursor-pointer"
-                    style={{ backgroundColor: '#F4B8CC', color: '#0A0A0A' }}>
-                    Débloquer mes matchs →
-                  </button>
-                </>
-              )}
+            <div className="text-center py-6 text-gray-400">
+              <p className="text-[13px]">Aucun investisseur dans le pipeline.</p>
+              <button onClick={() => navigate('/dashboard/fundraising')}
+                className="mt-3 text-[12px] font-bold px-4 py-1.5 rounded-full text-white"
+                style={{ backgroundColor: '#0A0A0A' }}>
+                Trouver mes matchs →
+              </button>
             </div>
           ) : (
             <>
-              {/* Tableau desktop */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      {['Investisseur', 'Type', 'Ticket visé', 'Statut', 'Dernier contact', 'Prochaine action'].map(h => (
-                        <th key={h} className="pb-3 pr-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {pipeline.slice(0, 5).map(inv => {
-                      const tc = typeColor[inv.type] ?? { bg: '#F3F4F6', text: '#6B7280' };
-                      const ticketMin = formatAmount((profile.fundraisingGoal ?? 500_000) * 0.3);
-                      const ticketMax = formatAmount((profile.fundraisingGoal ?? 500_000) * 0.6);
-                      const daysSince = inv.lastContact
-                        ? Math.floor((Date.now() - new Date(inv.lastContact).getTime()) / 86_400_000)
-                        : null;
-                      return (
-                        <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="py-3 pr-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-black flex-shrink-0"
-                                style={{ backgroundColor: tc.bg, color: tc.text }}>
-                                {inv.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                              </div>
-                              <span className="text-[13px] font-bold text-gray-900">{inv.name}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-                              style={{ backgroundColor: tc.bg, color: tc.text }}>
-                              {inv.type}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4 text-[13px] text-gray-500">{ticketMin}–{ticketMax}</td>
-                          <td className="py-3 pr-4">
-                            <StatusDropdown
-                              status={inv.status}
-                              options={PIPELINE_STATUSES}
-                              onChange={s => updatePipelineStatus(inv.id, s)}
-                              config={statusConfig}
-                            />
-                          </td>
-                          <td className="py-3 pr-4 text-[12px] text-gray-400">
-                            {inv.lastContact
-                              ? <span className={daysSince !== null && daysSince > 14 ? 'text-orange-500 font-semibold' : ''}>
-                                  {daysSince}j
-                                </span>
-                              : '—'}
-                          </td>
-                          <td className="py-3 text-[12px] text-gray-400 max-w-[180px] truncate">{inv.nextAction}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              {/* En-têtes */}
+              <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1.5fr] gap-3 px-3 pb-2 border-b border-gray-100">
+                {['Investisseur', 'Type', 'Ticket visé', 'Statut'].map(h => (
+                  <p key={h} className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{h}</p>
+                ))}
               </div>
-
-              {/* Cards mobile */}
-              <div className="md:hidden space-y-3">
-                {pipeline.slice(0, 5).map(inv => {
-                  const tc = typeColor[inv.type] ?? { bg: '#F3F4F6', text: '#6B7280' };
-                  return (
-                    <div key={inv.id} className="p-3 rounded-xl border border-gray-100 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-black flex-shrink-0"
+              <div className="space-y-1 mt-1">
+              {pipeline.slice(0, 6).map(inv => {
+                const tc = typeColor[inv.type] ?? { bg: '#F3F4F6', text: '#6B7280' };
+                const ticketMin = formatAmount((profile.fundraisingGoal ?? 500_000) * 0.3);
+                const ticketMax = formatAmount((profile.fundraisingGoal ?? 500_000) * 0.6);
+                return (
+                  <div key={inv.id} className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1.5fr] gap-3 items-center p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black shrink-0"
                         style={{ backgroundColor: tc.bg, color: tc.text }}>
                         {inv.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-gray-900 truncate">{inv.name}</p>
-                        <p className="text-[11px] text-gray-400 truncate mt-0.5">{inv.nextAction}</p>
-                      </div>
-                      <StatusDropdown status={inv.status} options={PIPELINE_STATUSES}
-                        onChange={s => updatePipelineStatus(inv.id, s)} config={statusConfig} />
+                      <p className="text-[13px] font-semibold text-gray-900 truncate">{inv.name}</p>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Ligne total */}
-              <div className="mt-4 px-3 py-2.5 rounded-xl flex items-center gap-4 text-[12px] text-gray-500 flex-wrap"
-                style={{ backgroundColor: '#F8F8F8' }}>
-                <span>Total pipeline : <b className="text-gray-800">{formatAmount(totalGoal)}</b> visé</span>
-                <span className="text-gray-300">·</span>
-                <span><b className="text-gray-800">{inDiscussion}</b> en discussion</span>
-                <span className="text-gray-300">·</span>
-                <span><b className="text-gray-800">{rdvCount}</b> RDV prévu{rdvCount > 1 ? 's' : ''}</span>
-                {pipeline.length > 5 && (
-                  <>
-                    <span className="text-gray-300">·</span>
-                    <button onClick={() => navigate('/dashboard/fundraising')}
-                      className="font-semibold text-gray-600 hover:text-gray-900 bg-transparent border-0 cursor-pointer p-0">
-                      Voir tout le pipeline ({pipeline.length}) →
-                    </button>
-                  </>
-                )}
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full self-start sm:self-auto w-fit"
+                      style={{ backgroundColor: tc.bg, color: tc.text }}>{inv.type}</span>
+                    <p className="text-[12px] text-gray-500 hidden sm:block">{ticketMin}–{ticketMax}</p>
+                    <StatusDropdown
+                      status={inv.status}
+                      options={PIPELINE_STATUSES}
+                      onChange={s => updatePipelineStatus(inv.id, s)}
+                      config={statusConfig}
+                    />
+                  </div>
+                );
+              })}
+              {pipeline.length > 6 && (
+                <button onClick={() => navigate('/dashboard/fundraising')}
+                  className="w-full text-center text-[12px] text-gray-400 hover:text-gray-700 py-2 transition-colors">
+                  +{pipeline.length - 6} autres →
+                </button>
+              )}
               </div>
             </>
           )}
-        </div>
-
-        {/* ── SECTION 4 — PIPELINE NON-DILUTIF ─────────────────────────────── */}
-        <div className="rounded-2xl p-6 shadow-sm" style={{ backgroundColor: '#F6FFF4', border: '1px solid #D8FFBD' }}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-[18px] font-bold text-gray-900">Financements non-dilutifs</h2>
-              <p className="text-[18px] font-black mt-0.5" style={{ color: '#2D6A00' }}>
-                {formatAmount(totalND)} potentiel
-              </p>
-            </div>
-            <button className="text-[12px] font-semibold px-3 py-1.5 rounded-full border border-gray-300 text-gray-700 hover:bg-white transition-colors bg-white">
-              + Ajouter
-            </button>
-          </div>
-
-          <div className="text-[12px] font-medium px-3 py-2 rounded-lg mb-4"
-            style={{ backgroundColor: '#ECFFF0', border: '1px solid #D8FFBD', color: '#2D6A00' }}>
-            Sans dilution · Cumulable avec le dilutif · Identifiés selon votre profil et votre pays
-          </div>
-
-          {/* Tableau desktop */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-green-100">
-                  {['Dispositif', 'Organisme', 'Montant', 'Statut', 'Deadline', 'Prochaine étape', ''].map(h => (
-                    <th key={h} className="pb-3 pr-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-green-50">
-                {ndPipeline.map(d => {
-                  const cfg = nonDilutifStatusConfig[d.status] ?? { bg: '#F3F4F6', text: '#6B7280' };
-                  const daysToDeadline = d.deadline
-                    ? Math.floor((new Date(d.deadline).getTime() - Date.now()) / 86_400_000)
-                    : null;
-                  const deadlineUrgent = daysToDeadline !== null && daysToDeadline < 21 && daysToDeadline > 0;
-                  return (
-                    <tr key={d.id} className="hover:bg-green-50/30 transition-colors">
-                      <td className="py-3 pr-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0"
-                            style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
-                            {d.initiales}
-                          </div>
-                          <span className="text-[13px] font-bold text-gray-900">{d.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 pr-4 text-[12px] text-gray-500">{d.organisme}</td>
-                      <td className="py-3 pr-4 text-[13px] font-bold" style={{ color: '#2D6A00' }}>{formatAmount(d.montant)}</td>
-                      <td className="py-3 pr-4">
-                        <StatusDropdown
-                          status={d.status}
-                          options={ND_STATUSES}
-                          onChange={s => updateNdStatus(d.id, s)}
-                          config={nonDilutifStatusConfig}
-                        />
-                      </td>
-                      <td className="py-3 pr-4">
-                        {d.deadline ? (
-                          <span className={`text-[12px] font-${deadlineUrgent ? 'bold' : 'normal'}`}
-                            style={{ color: deadlineUrgent ? '#F97316' : '#6B7280' }}>
-                            {deadlineUrgent && '⏰ '}
-                            {new Date(d.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                          </span>
-                        ) : <span className="text-[12px] text-gray-300">—</span>}
-                      </td>
-                      <td className="py-3 pr-4 text-[11px] text-gray-400 max-w-[180px]">{d.nextStep}</td>
-                      <td className="py-3">
-                        <button
-                          onClick={() => navigate(isPaid ? '/dashboard/non-dilutif' : '/pricing')}
-                          className="text-[11px] font-bold px-2.5 py-1 rounded-full border-0 cursor-pointer whitespace-nowrap"
-                          style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
-                          {isPaid ? 'Dossier →' : <><Lock className="h-3 w-3 inline mr-1" />Débloquer</>}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Cards mobile */}
-          <div className="md:hidden space-y-3">
-            {ndPipeline.map(d => (
-              <div key={d.id} className="bg-white p-3 rounded-xl border border-green-100 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0"
-                  style={{ backgroundColor: '#D8FFBD', color: '#2D6A00' }}>
-                  {d.initiales}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-gray-900 truncate">{d.name}</p>
-                  <p className="text-[12px] font-bold mt-0.5" style={{ color: '#2D6A00' }}>{formatAmount(d.montant)}</p>
-                </div>
-                <StatusDropdown status={d.status} options={ND_STATUSES}
-                  onChange={s => updateNdStatus(d.id, s)} config={nonDilutifStatusConfig} />
-              </div>
-            ))}
-          </div>
-
-          {/* Total */}
-          <div className="mt-4 px-3 py-2.5 rounded-xl flex items-center gap-4 text-[12px] flex-wrap"
-            style={{ backgroundColor: '#ECFFF0', border: '1px solid #D8FFBD', color: '#2D6A00' }}>
-            <span>Total potentiel : <b>{formatAmount(totalND)}</b></span>
-            <span className="opacity-40">·</span>
-            <span><b>{ndPipeline.filter(d => d.status === 'Éligible' || d.status === 'À étudier').length}</b> dossiers éligibles</span>
-            <span className="opacity-40">·</span>
-            <span><b>{ndPipeline.filter(d => d.status === 'Dossier en cours' || d.status === 'Déposé' || d.status === 'En instruction').length}</b> en cours</span>
-          </div>
-        </div>
-
-        {/* ── SECTION — ACCOMPAGNEMENT PARTENAIRES ──────────────────────────── */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-5">
-            <Users className="h-5 w-5" style={{ color: '#C4728A' }} />
-            <div>
-              <h2 className="text-[18px] font-bold text-gray-900">Structure d'accompagnement</h2>
-              <p className="text-[13px] text-gray-400 mt-0.5">Les 4 partenaires clés pour maximiser vos chances de lever</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {partnerStructure.map(p => (
-              <div key={p.id} className="rounded-2xl p-5 flex flex-col gap-3"
-                style={{ backgroundColor: p.bg, border: `1.5px solid ${p.color}22` }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: p.color + '20', color: p.color }}>
-                    {p.icon}
-                  </div>
-                  <p className="text-[14px] font-bold text-gray-900">{p.role}</p>
-                </div>
-                <p className="text-[12px] text-gray-600 leading-relaxed">{p.description}</p>
-                <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-                  <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: p.color }} />
-                  <p className="text-[11px] font-semibold" style={{ color: p.color }}>{p.whenNeeded}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* ── SECTION — ACTUALITÉS MARCHÉ ───────────────────────────────────── */}
@@ -1567,73 +1536,7 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* ── SECTION 5 — RÉSUMÉ RAPIDE ─────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-6">
-
-          {/* Card 1 — Progression levée */}
-          <div className="rounded-xl p-4" style={{ backgroundColor: '#F8F8F8' }}>
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Progression levée</p>
-            <p className="text-[22px] font-black text-gray-900">
-              {pipeline.length > 0 ? Math.round((contacted / pipeline.length) * 100) : 0}%
-            </p>
-            <p className="text-[12px] text-gray-400 mt-0.5">{contacted} / {pipeline.length} investisseurs contactés</p>
-            <div className="h-1.5 rounded-full mt-3 overflow-hidden" style={{ backgroundColor: '#E5E7EB' }}>
-              <div className="h-full rounded-full"
-                style={{ width: `${pipeline.length > 0 ? (contacted / pipeline.length) * 100 : 0}%`, backgroundColor: '#F4B8CC' }} />
-            </div>
-          </div>
-
-          {/* Card 2 — Non-dilutif sécurisé */}
-          <div className="rounded-xl p-4" style={{ backgroundColor: '#F8F8F8' }}>
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Non-dilutif sécurisé</p>
-            <p className="text-[22px] font-black" style={{ color: accordedND > 0 ? '#2D6A00' : '#9CA3AF' }}>
-              {formatAmount(accordedND)}
-            </p>
-            <p className="text-[12px] text-gray-400 mt-0.5">
-              {accordedND > 0
-                ? `${ndPipeline.filter(d => d.status === 'Accordé ✓').length} dossier${ndPipeline.filter(d => d.status === 'Accordé ✓').length > 1 ? 's' : ''} accordé${ndPipeline.filter(d => d.status === 'Accordé ✓').length > 1 ? 's' : ''}`
-                : 'Aucun dossier accordé encore'}
-            </p>
-          </div>
-
-          {/* Card 3 — Prochain objectif */}
-          <div className="rounded-xl p-4" style={{ backgroundColor: '#F8F8F8' }}>
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Prochain objectif</p>
-            {(() => {
-              const mrr = (profile.mrr ?? profile.currentRevenue ?? 0) as number;
-              if (mrr === 0 || profile.isPreRevenue) {
-                return (
-                  <>
-                    <p className="text-[15px] font-black text-gray-900">Signer le 1er contrat</p>
-                    <p className="text-[12px] text-gray-400 mt-0.5">Priorité absolue avant la levée</p>
-                  </>
-                );
-              }
-              if (mrr < 5_000) {
-                return (
-                  <>
-                    <p className="text-[15px] font-black text-gray-900">Atteindre 5K€ MRR</p>
-                    <p className="text-[12px] text-gray-400 mt-0.5">Actuel : {formatAmount(mrr)}</p>
-                  </>
-                );
-              }
-              if (mrr < 50_000) {
-                return (
-                  <>
-                    <p className="text-[15px] font-black text-gray-900">Atteindre 50K€ MRR</p>
-                    <p className="text-[12px] text-gray-400 mt-0.5">Actuel : {formatAmount(mrr)}</p>
-                  </>
-                );
-              }
-              return (
-                <>
-                  <p className="text-[15px] font-black text-gray-900">Closer la levée</p>
-                  <p className="text-[12px] text-gray-400 mt-0.5">Objectif : {formatAmount(profile.fundraisingGoal)}</p>
-                </>
-              );
-            })()}
-          </div>
-        </div>
+        <div className="h-4" />
 
       </div>
     </div>

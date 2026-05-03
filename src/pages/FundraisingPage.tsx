@@ -313,6 +313,7 @@ export default function FundraisingPage() {
   const successChance = getFundraisingSuccessChance(profile, score.total, dilutiveMatches.length);
 
   const mix = getMixRecommendation(profile);
+
   const stageInfo = getStageLabel(profile.stage);
   const sectorStyle = getSectorStyle(profile.sector);
   const mrrBadge = getMRRBadge(profile.mrr, profile.isPreRevenue);
@@ -583,7 +584,117 @@ export default function FundraisingPage() {
           </div>
         )}
 
-        {/* ────────────────────────────────────────────────────────────────────── */}
+        {false && hasProfile && (
+          <div className="bg-white rounded-2xl p-7 shadow-sm">
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+              <div>
+                <p className="text-[18px] font-bold" style={{ color: '#0A0A0A' }}>Valorisation & parts fondateur par stade</p>
+                <p className="text-[13px] mt-0.5" style={{ color: '#6B7280' }}>
+                  Simulation basée sur dilutions moyennes de marché · Part initiale : {founderSharePct}%
+                </p>
+              </div>
+              <span className="text-[11px] font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: '#F3F4F6', color: '#374151' }}>
+                Estimation indicative
+              </span>
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #F3F4F6' }}>
+                    {['Stade', 'Valo pre-money', 'Levée', 'Dilution ronde', 'Parts fondateur', 'Valeur parts'].map(h => (
+                      <th key={h} className="pb-3 pr-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-left">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {valoTimeline.map((row, i) => (
+                    <tr key={row.stage}
+                      className="transition-colors"
+                      style={{
+                        backgroundColor: row.isCurrent ? '#FFF5F8' : 'transparent',
+                        borderLeft: row.isCurrent ? '3px solid #F4B8CC' : '3px solid transparent',
+                        borderBottom: '1px solid #F9FAFB',
+                      }}>
+                      <td className="py-4 pr-4">
+                        <div className="flex items-center gap-2">
+                          {row.isCurrent && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F4B8CC', color: '#0A0A0A' }}>
+                              Vous êtes ici
+                            </span>
+                          )}
+                          <span className={`text-[14px] font-bold ${row.isCurrent ? 'text-gray-900' : i < valoTimeline.findIndex(r => r.isCurrent) ? 'text-gray-400' : 'text-gray-700'}`}>
+                            {row.stageLabel}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-4 pr-4 text-[14px] font-semibold text-gray-700">{fmtMoney(row.preMoneyValo)}</td>
+                      <td className="py-4 pr-4">
+                        <span className="text-[14px] font-bold" style={{ color: '#1A3A8F' }}>{fmtMoney(row.raise)}</span>
+                      </td>
+                      <td className="py-4 pr-4">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#F3F4F6', maxWidth: 60 }}>
+                            <div className="h-full rounded-full" style={{ width: `${row.dilution * 2}%`, backgroundColor: '#F4B8CC' }} />
+                          </div>
+                          <span className="text-[13px] font-bold" style={{ color: '#C4728A' }}>−{row.dilution}%</span>
+                        </div>
+                      </td>
+                      <td className="py-4 pr-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black"
+                            style={{
+                              backgroundColor: row.founderShareAfter >= 50 ? '#D8FFBD' : row.founderShareAfter >= 30 ? '#FFE8C2' : '#FFB3B3',
+                              color: row.founderShareAfter >= 50 ? '#2D6A00' : row.founderShareAfter >= 30 ? '#92520A' : '#8F1A1A',
+                            }}>
+                            {row.founderShareAfter}%
+                          </div>
+                          <div className="flex-1 h-2 rounded-full overflow-hidden bg-gray-100" style={{ maxWidth: 80 }}>
+                            <div className="h-full rounded-full transition-all duration-500"
+                              style={{ width: `${row.founderShareAfter}%`, backgroundColor: row.founderShareAfter >= 50 ? '#2D6A00' : row.founderShareAfter >= 30 ? '#F59E0B' : '#EF4444' }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 text-[14px] font-bold" style={{ color: '#0A0A0A' }}>
+                        {fmtMoney(row.founderValueAfter)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {valoTimeline.map(row => (
+                <div key={row.stage} className="rounded-xl p-4 border"
+                  style={{ borderColor: row.isCurrent ? '#F4B8CC' : '#F3F4F6', backgroundColor: row.isCurrent ? '#FFF5F8' : '#F9FAFB' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[14px] font-bold text-gray-900">{row.stageLabel}</span>
+                    {row.isCurrent && <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ backgroundColor: '#F4B8CC', color: '#0A0A0A' }}>Vous êtes ici</span>}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[12px]">
+                    <div><p className="text-gray-400">Valo pre-money</p><p className="font-bold text-gray-900">{fmtMoney(row.preMoneyValo)}</p></div>
+                    <div><p className="text-gray-400">Levée</p><p className="font-bold" style={{ color: '#1A3A8F' }}>{fmtMoney(row.raise)}</p></div>
+                    <div><p className="text-gray-400">Dilution</p><p className="font-bold" style={{ color: '#C4728A' }}>−{row.dilution}%</p></div>
+                    <div><p className="text-gray-400">Parts restantes</p><p className="font-bold text-gray-900">{row.founderShareAfter}%</p></div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-[11px] text-gray-400">Valeur de vos parts</p>
+                    <p className="text-[18px] font-black text-gray-900">{fmtMoney(row.founderValueAfter)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Note de bas */}
+            <p className="text-[11px] text-gray-400 mt-4">
+              * Dilutions basées sur les moyennes marché. Vos vraies conditions dépendent de la négociation.
+            </p>
+          </div>
+        )}
+
         {/* CHANGEMENT 4 — Onglets Dilutif / Non-dilutif                          */}
         {/* ────────────────────────────────────────────────────────────────────── */}
         {hasProfile && (

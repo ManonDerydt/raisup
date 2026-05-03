@@ -43,6 +43,7 @@ import RaisupOnboardingForm from './pages/RaisupOnboardingForm';
 import RaisupSuccessPage from './pages/RaisupSuccessPage';
 import LoadingStrategy from './pages/LoadingStrategy';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import DocumentEditorPage from './pages/DocumentEditorPage';
 import ValuationPage from './pages/ValuationPage';
 import AgencyOnboarding from './pages/AgencyOnboarding';
 import AgencySuccessPage from './pages/AgencySuccessPage';
@@ -90,6 +91,7 @@ function App() {
           <Route path="documents" element={<DocumentsPage />}>
             <Route path="generate_deck" element={<PitchDeckGenerator />} />
           </Route>
+          <Route path="documents/editor/:type" element={<DocumentEditorPage />} />
 
           <Route path="generate" element={<DocumentGeneratorPage />} />
           <Route path="fundraising" element={<FundraisingPage />} />
