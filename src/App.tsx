@@ -48,6 +48,7 @@ import ValuationPage from './pages/ValuationPage';
 import AgencyOnboarding from './pages/AgencyOnboarding';
 import AgencySuccessPage from './pages/AgencySuccessPage';
 import ProfilePage from './pages/ProfilePage';
+import MonthlyReportPage from './pages/MonthlyReportPage';
 
 function App() {
   return (
@@ -102,6 +103,7 @@ function App() {
           <Route path="valuation" element={<ValuationPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="monthly-report" element={<MonthlyReportPage />} />
         </Route>
 
         <Route path="/dashboard/b2b" element={<RequireB2B><B2BDashboardLayout /></RequireB2B>}>

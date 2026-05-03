@@ -18,6 +18,7 @@ import {
   Calculator,
   Settings,
   Send,
+  FileBarChart,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../hooks/useAuth';
@@ -127,10 +128,14 @@ const DashboardLayout: React.FC = () => {
     { name: 'Levée de fonds', icon: DollarSign, href: '/dashboard/fundraising' },
   ];
 
+  const today = new Date();
+  const isReportPeriod = today.getDate() >= 25;
+
   const analyticsNavItems = [
     // { name: 'KPIs', icon: BarChart2, href: '/dashboard/kpis', soon: true },
     { name: 'Score Raisup', icon: Star, href: '/dashboard/score' },
     { name: 'Investor Update', icon: Send, href: '/dashboard/investor-update' },
+    { name: 'Reporting mensuel', icon: FileBarChart, href: '/dashboard/monthly-report', badge: isReportPeriod ? 'À faire' : null },
     { name: 'Paramètres', icon: Settings, href: '/dashboard/settings' },
   ];
   
@@ -234,7 +239,12 @@ const DashboardLayout: React.FC = () => {
                   )}
                 >
                   <item.icon className="h-5 w-5 flex-shrink-0" />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {'badge' in item && item.badge && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-pink-100 text-pink-600 font-medium leading-none">
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

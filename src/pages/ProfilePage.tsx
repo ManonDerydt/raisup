@@ -245,7 +245,8 @@ const ProfilePage: React.FC = () => {
 
     const { data: saved, error } = await supabase
       .from('profiles')
-      .insert({
+      .upsert({
+        ...(user?.id ? { user_id: user.id } : {}),
         startup_name: data.startupName || '',
         founder_name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
         one_liner: data.oneLiner || '',
@@ -278,7 +279,7 @@ const ProfilePage: React.FC = () => {
         sector_experience: data.sectorExperience || '',
         team_size: data.teamSize || 0,
         existing_funding: data.existingFunding || data.previousFunding || [],
-      })
+      }, { onConflict: 'user_id' })
       .select()
       .single();
 

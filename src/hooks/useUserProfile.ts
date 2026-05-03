@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '../lib/supabase';
+import { calculateScore, ScoreResult } from '../services/calculateScore';
 
 // ─── Profile shape ─────────────────────────────────────────────────────────────
 
@@ -62,15 +63,7 @@ export interface UserProfile {
   profileCompletion: number; // 0-100
 }
 
-export interface RaisupScore {
-  total: number;
-  pitch: number;
-  traction: number;
-  team: number;
-  market: number;
-  defensibility: number;
-  financialCoherence: number;
-}
+export type RaisupScore = ScoreResult;
 
 export interface ProfileKPI {
   id: string;
@@ -115,76 +108,6 @@ function calcProfileCompletion(p: Partial<UserProfile>): number {
   return Math.round((done / checks.length) * 100);
 }
 
-function calcScore(p: Partial<UserProfile>): RaisupScore {
-  const mrr = p.mrr ?? 0;
-
-  // Pitch (0-25) — même algo que DashboardWelcome
-  let pitch = 0;
-  if ((p.problem?.length ?? 0) > 50) pitch += 7; else if ((p.problem?.length ?? 0) > 20) pitch += 4;
-  if ((p.solution?.length ?? 0) > 50) pitch += 7; else if ((p.solution?.length ?? 0) > 20) pitch += 4;
-  if ((p.competitiveAdvantage?.length ?? 0) > 30) pitch += 6; else if ((p.competitiveAdvantage?.length ?? 0) > 10) pitch += 3;
-  if ((p.description?.length ?? 0) > 50) pitch += 5; else if ((p.description?.length ?? 0) > 20) pitch += 2;
-
-  // Traction (0-25)
-  let traction = 0;
-  if (!p.isPreRevenue && mrr > 0) {
-    traction += mrr >= 50_000 ? 9 : mrr >= 10_000 ? 7 : mrr >= 1_000 ? 4 : 2;
-  }
-  if (p.momGrowth) traction += p.momGrowth >= 20 ? 7 : p.momGrowth >= 10 ? 5 : p.momGrowth >= 5 ? 3 : 1;
-  if (p.activeClients) traction += p.activeClients >= 100 ? 5 : p.activeClients >= 20 ? 3 : 1;
-  if (p.runway) traction += p.runway >= 12 ? 4 : p.runway >= 6 ? 2 : 0;
-
-  // Team (0-25)
-  let team = 0;
-  const teamArr = p.team ?? [];
-  if (p.hasCTO || teamArr.some(m => m.role.includes('CTO'))) team += 5;
-  if (teamArr.some(m => m.hadExit)) team += 7;
-  else if (teamArr.some(m => m.hasPreviousStartup)) team += 5;
-  if (teamArr.length >= 2) team += 4;
-  const bestExp = teamArr.find(m => m.experience.includes('10') || m.experience.includes('expert'));
-  if (bestExp) team += 4;
-  else if (teamArr.some(m => m.experience.includes('3') || m.experience.includes('5'))) team += 2;
-  if ((p.teamSize ?? 0) >= 3) team += 4;
-
-  // Market (0-25)
-  let market = 0;
-  if (p.businessModel) market += 5;
-  if (p.sector) market += 5;
-  if (p.clientType) market += 5;
-  if (p.ambition) market += 5;
-  if (p.fundingPreference) market += 5;
-
-  // Défendabilité (0-10) — proxy via competitiveAdvantage
-  let defensibility = 0;
-  if ((p.competitiveAdvantage?.length ?? 0) > 50) defensibility += 5;
-  else if ((p.competitiveAdvantage?.length ?? 0) > 20) defensibility += 2;
-  if ((p.businessModel ?? '').toLowerCase().includes('saas')) defensibility += 3;
-  if (teamArr.some(m => m.hadExit)) defensibility += 2;
-
-  // Cohérence financière (0-10)
-  let financialCoherence = 0;
-  const goal = p.fundraisingGoal ?? 0;
-  const stageStr = '';
-  if (goal > 0 && mrr === 0 && goal <= 500000) financialCoherence += 4;
-  else if (goal > 0 && mrr > 0) financialCoherence += 4;
-  if ((p.runway ?? 0) >= 6) financialCoherence += 3;
-  if (p.burnRate && p.burnRate > 0) financialCoherence += 3;
-  if (goal > 2000000 && mrr === 0 && stageStr.includes('pre')) financialCoherence = Math.max(0, financialCoherence - 4);
-
-  const total =
-    Math.min(25, pitch) + Math.min(25, traction) + Math.min(25, team) +
-    Math.min(25, market) + Math.min(10, defensibility) + Math.min(10, financialCoherence);
-
-  return {
-    total,
-    pitch: Math.min(25, pitch),
-    traction: Math.min(25, traction),
-    team: Math.min(25, team),
-    market: Math.min(25, market),
-    defensibility: Math.min(10, defensibility),
-    financialCoherence: Math.min(10, financialCoherence),
-  };
-}
 
 // Generate a plausible 6-month synthetic history for a single current value
 function syntheticHistory(currentValue: number, label: string): { month: string; value: number }[] {
@@ -277,42 +200,38 @@ export function useUserProfile() {
   }, []);
 
   useEffect(() => {
-    const raw = localStorage.getItem('raisup_profile');
-    if (!raw) return;
-    try {
-      const p = JSON.parse(raw);
-      const supabaseId = p.supabase_id;
-      if (!supabaseId) return;
-      supabase.from('profiles').select('*').eq('id', supabaseId).single().then(({ data }) => {
-        if (!data) return;
-        setDbData({
-          startupName: data.startup_name,
-          ambition: data.ambition,
-          businessModel: data.business_model,
-          sector: data.sector,
-          clientType: data.client_type,
-          country: data.country,
-          region: data.region,
-          city: data.city,
-          mrr: data.mrr,
-          momGrowth: data.growth_mom,
-          activeClients: data.active_clients,
-          runway: data.runway,
-          burnRate: data.burn_rate,
-          fundraisingGoal: data.fundraising_goal,
-          maxDilution: data.max_dilution,
-          fundingPreference: data.funding_preference,
-          finalGoalValuation: data.final_goal_valuation,
-          fundingTimeline: data.fundraising_timeline,
-          hasCTO: data.has_cto,
-          problem: data.problem,
-          solution: data.solution,
-          competitiveAdvantage: data.competitive_advantage,
-          teamSize: data.team_size,
-        });
+    // Use auth user.id directly — works on any browser without relying on localStorage
+    const userId = user?.id;
+    if (!userId) return;
+    supabase.from('profiles').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(1).single().then(({ data }) => {
+      if (!data) return;
+      setDbData({
+        startupName: data.startup_name,
+        ambition: data.ambition,
+        businessModel: data.business_model,
+        sector: data.sector,
+        clientType: data.client_type,
+        country: data.country,
+        region: data.region,
+        city: data.city,
+        mrr: data.mrr,
+        momGrowth: data.growth_mom,
+        activeClients: data.active_clients,
+        runway: data.runway,
+        burnRate: data.burn_rate,
+        fundraisingGoal: data.fundraising_goal,
+        maxDilution: data.max_dilution,
+        fundingPreference: data.funding_preference,
+        finalGoalValuation: data.final_goal_valuation,
+        fundingTimeline: data.fundraising_timeline,
+        hasCTO: data.has_cto,
+        problem: data.problem,
+        solution: data.solution,
+        competitiveAdvantage: data.competitive_advantage,
+        teamSize: data.team_size,
       });
-    } catch { /* ignore */ }
-  }, []);
+    });
+  }, [user?.id]);
 
   const profile = useMemo<UserProfile>(() => {
     let stored: Partial<UserProfile> = {};
@@ -379,7 +298,7 @@ export function useUserProfile() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, dbData, localTick]);
 
-  const score = useMemo(() => calcScore(profile), [profile]);
+  const score = useMemo(() => calculateScore(profile), [profile]);
   const kpis = useMemo(() => buildKPIs(profile), [profile]);
   // Tout utilisateur authentifié est considéré premium (demo)
   // Sinon : fallback sur les clés localStorage posées par PricingPage

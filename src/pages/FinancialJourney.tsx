@@ -8,10 +8,11 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import {
-  generateTimeline, calculateScore, recommendedDilution, sectorBenchmarkDilution,
+  generateTimeline, recommendedDilution, sectorBenchmarkDilution,
   nextRoundValuation, getRaisupRecommendation, getObjectiveMessage, formatAmount,
   type Profile, type TimelineStage, type TimelineResult,
 } from '../services/generateTimeline';
+import { calculateScore } from '../services/calculateScore';
 
 // ─── useInView ─────────────────────────────────────────────────────────────────
 
@@ -113,31 +114,6 @@ const FadeSlide: React.FC<{
   );
 };
 
-// ─── Animated circle gauge ─────────────────────────────────────────────────────
-
-const CircleGauge: React.FC<{ score: number; size?: number }> = ({ score, size = 80 }) => {
-  const [anim, setAnim] = useState(0);
-  useEffect(() => { const t = setTimeout(() => setAnim(score), 300); return () => clearTimeout(t); }, [score]);
-  const r = (size - 10) / 2;
-  const circ = 2 * Math.PI * r;
-  const color = score >= 70 ? '#22c55e' : score >= 50 ? '#FFB96D' : '#FFB3B3';
-  return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(244,184,204,0.15)" strokeWidth="8" />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F4B8CC" strokeWidth="8"
-          strokeDasharray={circ} strokeLinecap="round"
-          strokeDashoffset={circ - (anim / 100) * circ}
-          style={{ transition: 'stroke-dashoffset 1.4s cubic-bezier(0.4,0,0.2,1)' }}
-        />
-      </svg>
-      <div className="absolute flex flex-col items-center">
-        <span className="text-white font-black leading-none" style={{ fontSize: size * 0.22 }}>{score}</span>
-        <span className="text-gray-500" style={{ fontSize: size * 0.12 }}>/100</span>
-      </div>
-    </div>
-  );
-};
 
 // ─── Mix bar ───────────────────────────────────────────────────────────────────
 
@@ -207,6 +183,56 @@ const ProbaBadge: React.FC<{ value: number; factors?: string[] }> = ({ value, fa
     </div>
   );
 };
+
+// ─── Profile readiness check ──────────────────────────────────────────────────
+
+const KNOWN_SECTORS = ['saas', 'fintech', 'healthtech', 'deeptech', 'greentech', 'ia', 'marketplace', 'e-commerce', 'edtech', 'proptech', 'insurtech', 'cybersécurité', 'numérique', 'b2b', 'b2c'];
+const KNOWN_STAGES  = ['pre-seed', 'seed', 'série a', 'série b', 'série c', 'serie-a', 'series-a', 'idéation', 'mvp', 'croissance'];
+
+function isProfileReady(profile: Profile): { ready: boolean; missing: string[] } {
+  const missing: string[] = [];
+  const sector = (profile.sector ?? '').toLowerCase().trim();
+  const stage  = (profile.stage  ?? '').toLowerCase().trim();
+  const goal   = profile.fundraisingGoal ?? profile.fundingNeeded ?? 0;
+
+  if (!sector || !KNOWN_SECTORS.some(s => sector.includes(s)))
+    missing.push('Secteur d\'activité valide (ex : SaaS B2B, Fintech, HealthTech…)');
+  if (!stage || !KNOWN_STAGES.some(s => stage.includes(s)))
+    missing.push('Stade de développement valide (ex : Pre-seed, Seed, Série A…)');
+  if (!goal || goal <= 0)
+    missing.push('Objectif de levée (montant en €)');
+
+  return { ready: missing.length === 0, missing };
+}
+
+// ─── Stage recommendation note ────────────────────────────────────────────────
+
+function getStageRecommendationNote(step: TimelineStage, profile: Profile, scoreTotal: number): { recommended: boolean; reason: string } {
+  const mrr   = profile.mrr ?? 0;
+  const runway = profile.runway ?? 0;
+  const conditionsMet = (step.conditions ?? []).filter(c => isConditionMet(c, profile)).length;
+  const conditionsTotal = (step.conditions ?? []).length;
+  const prob  = step.probability ?? 50;
+
+  if (step.status === 'current') return { recommended: true, reason: '' };
+
+  // Pas encore recommandé
+  if (prob < 40) {
+    if (scoreTotal < 30)
+      return { recommended: false, reason: `Score Raisup trop faible (${scoreTotal}/100 — minimum 40 recommandé). Complétez votre profil et documentez votre traction.` };
+    if (mrr === 0)
+      return { recommended: false, reason: 'Aucun revenu actuel. Obtenez vos premiers clients payants avant de pitcher pour cette levée.' };
+    if (runway < 6)
+      return { recommended: false, reason: `Runway critique (${runway} mois). Sécurisez d'abord un financement pont.` };
+    return { recommended: false, reason: `${conditionsMet}/${conditionsTotal} conditions remplies. Atteignez les jalons ci-dessous avant de pitcher.` };
+  }
+
+  // Recommandé
+  if (prob >= 70)
+    return { recommended: true, reason: `Profil aligné (${prob}% de probabilité). ${conditionsMet === conditionsTotal ? 'Toutes les conditions sont remplies.' : `${conditionsMet}/${conditionsTotal} conditions remplies — restez sur votre lancée.`}` };
+
+  return { recommended: true, reason: `Probabilité modérée (${prob}%). ${conditionsTotal - conditionsMet} condition${conditionsTotal - conditionsMet > 1 ? 's' : ''} à compléter pour maximiser vos chances.` };
+}
 
 // ─── Condition checker ─────────────────────────────────────────────────────────
 
@@ -391,6 +417,23 @@ const StepCard: React.FC<{
           </div>
         )}
 
+        {/* Note recommandation */}
+        {!isCurrent && (() => {
+          const note = getStageRecommendationNote(step, profile, score.total);
+          if (!note.reason) return null;
+          return (
+            <div className="rounded-xl p-3 mb-4 flex items-start gap-2"
+              style={{ backgroundColor: note.recommended ? '#F0FFF4' : '#FFF8F0', border: `1px solid ${note.recommended ? '#86EFAC' : '#FFB96D'}` }}>
+              {note.recommended
+                ? <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-green-500" />
+                : <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-orange-400" />}
+              <p className="text-xs leading-snug" style={{ color: note.recommended ? '#166534' : '#7A3D00' }}>
+                {note.reason}
+              </p>
+            </div>
+          );
+        })()}
+
         {/* Mix + Capital */}
         {step.mix && !isCurrent && (
           <div className="space-y-3 mb-4">
@@ -574,27 +617,9 @@ const DilutionGauge: React.FC<{ value: number; max?: number; size?: number }> = 
 const FinancialJourney: React.FC = () => {
   const navigate = useNavigate();
 
-  const { isPremium } = useUserProfile();
+  const { isPremium, profile: hookProfile, score } = useUserProfile();
   const isPaid = isPremium;
-
-  const [profileTick, setProfileTick] = useState(0);
-  useEffect(() => {
-    const h = () => setProfileTick(t => t + 1);
-    window.addEventListener('raisup:profile-updated', h);
-    return () => window.removeEventListener('raisup:profile-updated', h);
-  }, []);
-
-  const profile = useMemo<Profile>(() => {
-    try {
-      const a = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
-      const b = JSON.parse(localStorage.getItem('raisupOnboardingData') || '{}');
-      return { ...b, ...a };
-    } catch { return {}; }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profileTick]);
-
-  // Même calculateScore que DashboardWelcome (/dashboard/score)
-  const score = useMemo(() => calculateScore(profile), [profile]);
+  const profile = hookProfile as unknown as Profile;
   const timeline = useMemo(() => generateTimeline(profile), [profile]);
 
   const [lineHeight, setLineHeight] = useState(0);
@@ -602,7 +627,6 @@ const FinancialJourney: React.FC = () => {
   const { ref: progressRef, visible: progressVisible } = useInView(0.3);
 
   const startupName = profile.startupName || profile.projectName || 'Votre startup';
-  const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
 
   // Animated timeline line
   useEffect(() => {
@@ -647,6 +671,39 @@ const FinancialJourney: React.FC = () => {
   // Index of current stage for visual distinction
   const currentStageIndex = timeline.stages.findIndex(s => s.status === 'current');
 
+  // Gate : profil insuffisant
+  const readiness = isProfileReady(profile);
+  if (!readiness.ready) {
+    return (
+      <div className="min-h-full flex items-center justify-center px-4 py-16" style={{ backgroundColor: '#F8F8F8' }}>
+        <div className="max-w-md w-full bg-white rounded-2xl border border-orange-200 p-10 shadow-sm">
+          <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-5">
+            <AlertCircle className="h-7 w-7 text-orange-400" />
+          </div>
+          <h2 className="text-xl font-black text-gray-900 text-center mb-2">Profil incomplet</h2>
+          <p className="text-sm text-gray-500 text-center mb-6">
+            Le parcours financier nécessite des données réelles pour générer des projections fiables.
+          </p>
+          <ul className="space-y-2 mb-8">
+            {readiness.missing.map(m => (
+              <li key={m} className="flex items-start gap-2 text-sm">
+                <X className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <span className="text-gray-700">{m}</span>
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={() => navigate('/dashboard/welcome')}
+            className="w-full py-3 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition"
+            style={{ backgroundColor: '#0A0A0A' }}
+          >
+            Compléter mon profil →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-full" style={{ backgroundColor: '#F8F8F8' }}>
 
@@ -686,16 +743,7 @@ const FinancialJourney: React.FC = () => {
             </p>
           </div>
 
-          {/* Col 3 : Score Raisup */}
-          <div className="flex items-center gap-3 justify-center lg:justify-start">
-            <CircleGauge score={score.total} size={52} />
-            <div>
-              <p className="text-white font-black text-[22px] leading-none">{score.total}</p>
-              <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>Score Raisup</p>
-            </div>
-          </div>
-
-          {/* Col 4 : Dilution max recommandée */}
+          {/* Col 3 : Dilution max recommandée */}
           <div className="flex items-center gap-3 justify-center lg:justify-end">
             <DilutionGauge value={dilution} max={30} size={72} />
             <div>
@@ -926,9 +974,7 @@ const FinancialJourney: React.FC = () => {
                     ? 'ring-4 ring-rose-100 animate-pulse'
                     : isObjective
                     ? ''
-                    : step.status === 'completed'
-                    ? 'bg-green-500 text-white'
-                    : '';
+                    : 'bg-green-500 text-white';
 
                   return (
                     <div key={step.id} className="relative pl-16">

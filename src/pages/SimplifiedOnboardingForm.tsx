@@ -839,7 +839,21 @@ function AuthModal({ defaultEmail, onSuccess, onClose }: AuthModalProps) {
     setLoading(true);
     if (mode === 'signup') {
       const { error: err } = await signUp(email, password);
-      if (err) { setError(err.message); setLoading(false); return; }
+      if (err) {
+        const msg = err.message.toLowerCase();
+        if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('user already')) {
+          setError('Un compte existe déjà avec cet email. Connectez-vous ci-dessous.');
+          setMode('login');
+        } else if (msg.includes('invalid email')) {
+          setError('Adresse email invalide.');
+        } else if (msg.includes('weak password') || msg.includes('password')) {
+          setError('Mot de passe trop faible — minimum 6 caractères.');
+        } else {
+          setError(err.message);
+        }
+        setLoading(false);
+        return;
+      }
       setSuccess('Compte créé — vérifiez votre email pour confirmer, puis accédez à vos résultats.');
       setTimeout(onSuccess, 1800);
     } else {
@@ -1078,6 +1092,7 @@ const SimplifiedOnboardingForm: React.FC = () => {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [form, setForm] = useState<OnboardingFormData>(() => {
     try {
       const saved = localStorage.getItem('raisup_onboarding_v2');
@@ -1329,10 +1344,21 @@ const SimplifiedOnboardingForm: React.FC = () => {
     }
   };
 
-  const goNext = () => setStep(s => Math.min(6, s + 1));
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
+
+  const goNext = () => {
+    if (step === 1) {
+      if (!isValidEmail(form.email)) {
+        setEmailError('Adresse email invalide.');
+        return;
+      }
+      setEmailError(null);
+    }
+    setStep(s => Math.min(6, s + 1));
+  };
   const goBack = () => setStep(s => Math.max(1, s - 1));
 
-  const step1Valid = !!(form.firstName && form.lastName && form.email && form.city);
+  const step1Valid = !!(form.firstName && form.lastName && form.email && form.city && isValidEmail(form.email));
   const step2Valid = !!(form.oneLiner.length > 10 && form.startupName && form.sector && form.businessModel && form.clientType);
 
   const progress = (step / 6) * 100;
@@ -1421,7 +1447,21 @@ const SimplifiedOnboardingForm: React.FC = () => {
 
                 <div>
                   <Label><Mail className="inline h-3.5 w-3.5 text-gray-400 mr-1" />Email professionnel</Label>
-                  <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="vous@startup.com" />
+                  <Input
+                    type="email"
+                    value={form.email}
+                    onChange={e => { set('email', e.target.value); setEmailError(null); }}
+                    onBlur={e => {
+                      if (e.target.value && !isValidEmail(e.target.value))
+                        setEmailError('Adresse email invalide.');
+                    }}
+                    placeholder="vous@startup.com"
+                  />
+                  {emailError && (
+                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />{emailError}
+                    </p>
+                  )}
                 </div>
 
                 <div>

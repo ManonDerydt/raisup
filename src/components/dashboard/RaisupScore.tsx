@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
-import { RaisupScore as ScoreType } from '../../hooks/useUserProfile';
+import { ScoreResult as ScoreType } from '../../services/calculateScore';
 
 const PINK = '#F4B8CC';
 
@@ -86,15 +86,8 @@ interface Props {
 }
 
 const RaisupScore: React.FC<Props> = ({ darkMode, score }) => {
-  const { total, pitch, traction, team, market } = score;
+  const { total, pilier1_fintech, pilier2_tech, pilier3_marche, pilier4_risque, pilier5_liquidite } = score;
   const text = getScoreText(total);
-
-  const subAnalyses = {
-    pitch: pitch < 10 ? 'Problème et solution à mieux définir' : pitch < 18 ? 'Pitch correct, affinez votre différenciation' : 'Pitch convaincant',
-    traction: traction < 10 ? 'Aucune traction visible — priorité clients' : traction < 18 ? 'Traction correcte — continuez' : 'Traction solide',
-    team: team < 10 ? 'Équipe légère — renforcez les compétences clés' : team < 18 ? 'Équipe en construction' : 'Équipe complète',
-    market: market < 10 ? 'Marché et modèle à clarifier' : market < 18 ? 'Vision marché à affiner' : 'Vision marché claire',
-  };
 
   return (
     <div className={clsx('rounded-xl border p-6', darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200')}>
@@ -122,10 +115,11 @@ const RaisupScore: React.FC<Props> = ({ darkMode, score }) => {
 
         {/* Sub-scores */}
         <div className="flex-1 w-full space-y-4">
-          <SubScore label="Pitch"    value={pitch}    max={25} darkMode={darkMode} analysis={subAnalyses.pitch} />
-          <SubScore label="Traction" value={traction} max={25} darkMode={darkMode} analysis={subAnalyses.traction} />
-          <SubScore label="Équipe"   value={team}     max={25} darkMode={darkMode} analysis={subAnalyses.team} />
-          <SubScore label="Marché"   value={market}   max={25} darkMode={darkMode} analysis={subAnalyses.market} />
+          <SubScore label="Fintech & Data"      value={pilier1_fintech}   max={25} darkMode={darkMode} analysis={pilier1_fintech < 10 ? 'Métriques financières à documenter' : pilier1_fintech < 18 ? 'Traction en cours' : 'Métriques solides'} />
+          <SubScore label="Tech & IP"           value={pilier2_tech}      max={20} darkMode={darkMode} analysis={pilier2_tech < 8 ? 'Avantage tech à préciser' : pilier2_tech < 15 ? 'Tech correcte' : 'Moat technologique fort'} />
+          <SubScore label="Marché & Momentum"   value={pilier3_marche}    max={20} darkMode={darkMode} analysis={pilier3_marche < 8 ? 'TAM à documenter' : pilier3_marche < 15 ? 'Vision marché à affiner' : 'Marché bien documenté'} />
+          <SubScore label="Risque & Conformité" value={pilier4_risque}    max={20} darkMode={darkMode} analysis={pilier4_risque < 8 ? 'Risques structurels à adresser' : pilier4_risque < 15 ? 'Quelques risques à réduire' : 'Profil de risque maîtrisé'} />
+          <SubScore label="Liquidité & Exit"    value={pilier5_liquidite} max={15} darkMode={darkMode} analysis={pilier5_liquidite < 5 ? 'Stratégie de sortie à définir' : pilier5_liquidite < 10 ? 'Exit à préciser' : 'Stratégie solide'} />
 
           <div className={clsx('text-xs pt-2 border-t', darkMode ? 'border-gray-700 text-gray-500' : 'border-gray-100 text-gray-400')}>
             Score calculé depuis votre profil onboarding · Complétez-le pour améliorer votre score

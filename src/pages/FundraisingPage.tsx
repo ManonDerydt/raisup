@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { matchInvestors, formatTicket, investorTypeLabel, scoreBadgeColor } from '../services/matchInvestors';
 import type { MatchResult } from '../services/matchInvestors';
-import { Download, Monitor, TrendingUp, Shield, Users, ChevronRight } from 'lucide-react';
+import { Download, Monitor, TrendingUp, Shield, Users, ChevronRight, AlertTriangle } from 'lucide-react';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -309,6 +309,8 @@ export default function FundraisingPage() {
 
   const hasProfile = !!(profile.sector || profile.stage);
   const isIncomplete = !profile.sector || !profile.fundraisingGoal;
+  const isReady = !!(profile.sector && profile.stage && profile.fundraisingGoal) && score.total >= 20;
+  const qualifiedMatches = dilutiveMatches.filter(r => r.score >= 50);
 
   const successChance = getFundraisingSuccessChance(profile, score.total, dilutiveMatches.length);
 
@@ -484,9 +486,37 @@ export default function FundraisingPage() {
         )}
 
         {/* ────────────────────────────────────────────────────────────────────── */}
+        {/* ── Dossier pas prêt ───────────────────────────────────────────────── */}
+        {!isReady && (
+          <div style={{ backgroundColor: '#FFF8F0', border: '1.5px solid #FFB96D', borderRadius: 16, padding: 28 }}>
+            <div className="flex items-start gap-4">
+              <div style={{ backgroundColor: '#FFE8C2', borderRadius: 12, padding: 10, flexShrink: 0 }}>
+                <AlertTriangle style={{ width: 22, height: 22, color: '#7A3D00' }} />
+              </div>
+              <div>
+                <p className="font-bold text-[16px]" style={{ color: '#7A3D00' }}>Dossier insuffisant pour matcher des investisseurs</p>
+                <p className="text-[13px] mt-2" style={{ color: '#92520A' }}>
+                  Pour obtenir des suggestions personnalisées, complétez :
+                </p>
+                <ul className="mt-3 space-y-1.5">
+                  {!profile.sector && <li className="text-[13px] flex items-center gap-2" style={{ color: '#7A3D00' }}><span>→</span> Secteur d'activité</li>}
+                  {!profile.stage && <li className="text-[13px] flex items-center gap-2" style={{ color: '#7A3D00' }}><span>→</span> Stade de développement</li>}
+                  {!profile.fundraisingGoal && <li className="text-[13px] flex items-center gap-2" style={{ color: '#7A3D00' }}><span>→</span> Objectif de levée</li>}
+                  {score.total < 20 && <li className="text-[13px] flex items-center gap-2" style={{ color: '#7A3D00' }}><span>→</span> Score Raisup trop faible ({score.total}/100 — minimum 20)</li>}
+                </ul>
+                <button onClick={() => window.location.href = '/dashboard/welcome'}
+                  className="mt-4 px-4 py-2 rounded-full text-[13px] font-semibold text-white"
+                  style={{ backgroundColor: '#0A0A0A' }}>
+                  Compléter mon profil →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* CHANGEMENT 3 — Jauge Mix de financement                               */}
         {/* ────────────────────────────────────────────────────────────────────── */}
-        {hasProfile && (
+        {isReady && hasProfile && (
           <div
             ref={gaugeRef}
             style={{
@@ -697,7 +727,7 @@ export default function FundraisingPage() {
 
         {/* CHANGEMENT 4 — Onglets Dilutif / Non-dilutif                          */}
         {/* ────────────────────────────────────────────────────────────────────── */}
-        {hasProfile && (
+        {isReady && hasProfile && (
           <div className="space-y-6">
             {/* Tab switcher */}
             <div className="flex justify-center">
@@ -754,15 +784,17 @@ export default function FundraisingPage() {
             {/* ── Tab content */}
             {activeTab === 'dilutif' && (
               <div className="space-y-4">
-                {dilutiveMatches.length === 0 ? (
+                {qualifiedMatches.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
                     <p className="text-4xl mb-3">🔍</p>
-                    <p className="font-bold text-gray-700">Aucun match trouvé</p>
-                    <p className="text-[13px] text-gray-500 mt-1">Complétez votre secteur, stade et objectif.</p>
+                    <p className="font-bold text-gray-700">Aucun investisseur compatible pour l'instant</p>
+                    <p className="text-[13px] text-gray-500 mt-2 max-w-xs mx-auto">
+                      Aucun investisseur dans notre base ne correspond exactement à votre secteur, stade et ticket. Affinez votre profil ou élargissez votre objectif de levée.
+                    </p>
                   </div>
                 ) : (
                   <>
-                    {displayedDilutive.map((match, i) => (
+                    {(isPremium ? qualifiedMatches : qualifiedMatches.slice(0, 3)).map((match, i) => (
                       <InvestorCard key={match.investor.id} match={match} isLocked={false} delay={i * 80} />
                     ))}
 

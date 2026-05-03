@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { calculateScore as calculateScoreService, getScoreLevel, ScoreResult } from '../services/calculateScore';
+import { matchInvestors as matchInvestorsService, MatchResult } from '../services/matchInvestors';
 import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '../hooks/useUserProfile';
 import jsPDF from 'jspdf';
@@ -125,29 +126,28 @@ function getStageBadge(stage?: string): { bg: string; color: string; label: stri
 // getLevel is imported as getScoreLevel from ../services/calculateScore
 
 
-// ─── Investors ────────────────────────────────────────────────────────────────
+// ─── Investor matching ────────────────────────────────────────────────────────
 
-const INVESTORS_DB = [
-  { name: 'Partech',        type: 'VC',     stages: ['seed', 'mvp', 'croissance', 'série'],   sectors: ['SaaS B2B', 'IA & Data', 'Fintech', 'Marketplace'] },
-  { name: 'Kima Ventures',  type: 'VC',     stages: ['pre', 'seed', 'idéat', 'prototype'],    sectors: ['Fintech', 'SaaS B2B', 'E-commerce', 'Marketplace'] },
-  { name: 'Alven',          type: 'VC',     stages: ['seed', 'mvp', 'série'],                 sectors: ['SaaS B2B', 'IA & Data', 'Marketplace', 'Deeptech'] },
-  { name: 'Idinvest',       type: 'VC',     stages: ['seed', 'mvp', 'série', 'croissance'],   sectors: ['Healthtech', 'Deeptech', 'SaaS B2B', 'Legaltech'] },
-  { name: 'Otium Capital',  type: 'Family', stages: ['pre', 'seed', 'prototype', 'idéat'],    sectors: ['E-commerce', 'Marketplace', 'SaaS B2B', 'Foodtech'] },
-  { name: 'Serena Capital', type: 'VC',     stages: ['seed', 'série', 'croissance'],          sectors: ['SaaS B2B', 'Fintech', 'IA & Data', 'Proptech'] },
-  { name: 'XAnge',          type: 'VC',     stages: ['seed', 'prototype', 'mvp'],             sectors: ['Healthtech', 'Edtech', 'SaaS B2B', 'Greentech'] },
-  { name: 'Breega',         type: 'VC',     stages: ['seed', 'mvp', 'série'],                 sectors: ['Fintech', 'SaaS B2B', 'Marketplace', 'E-commerce'] },
-];
+function normalizeStage(stage: string): 'pre-seed' | 'seed' | 'series-a' | 'series-b' {
+  const s = stage.toLowerCase();
+  if (s.includes('série a') || s.includes('serie-a') || s.includes('series-a')) return 'series-a';
+  if (s.includes('série b') || s.includes('serie-b') || s.includes('series-b')) return 'series-b';
+  if (s.includes('seed') || s.includes('mvp') || s.includes('croissance')) return 'seed';
+  return 'pre-seed';
+}
 
-function matchInvestors(p: Profile) {
-  const stage = (p.stage ?? '').toLowerCase();
-  const sector = p.sector ?? '';
-  const scored = INVESTORS_DB.map(inv => {
-    let score = 60;
-    if (inv.stages.some(s => stage.includes(s))) score += 20;
-    if (inv.sectors.includes(sector)) score += 15;
-    return { ...inv, match: Math.min(99, score + Math.floor(Math.random() * 5)) };
-  });
-  return scored.sort((a, b) => b.match - a.match);
+function buildStartupForMatching(p: Profile) {
+  return {
+    id: p.email || 'user',
+    name: p.startupName || p.projectName || 'Ma startup',
+    sector: p.sector || '',
+    stage: normalizeStage(p.stage ?? 'pre-seed'),
+    fundingAmount: p.fundraisingGoal ?? p.fundingNeeded ?? 0,
+    mrr: p.mrr ?? 0,
+    location: p.city || p.region || p.country || 'France',
+    description: p.description || '',
+    emoji: '🚀',
+  };
 }
 
 // ─── Non-dilutive (profile-based) ─────────────────────────────────────────────
@@ -1464,19 +1464,16 @@ const DashboardWelcome: React.FC = () => {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [editProfile, setEditProfile] = useState<Partial<Profile>>({});
 
-  const { isPremium } = useUserProfile();
+  const { isPremium, user } = useUserProfile();
   const isPaid = isPremium;
 
   const [dbProfile, setDbProfile] = useState<Partial<Profile> | null>(null);
 
   useEffect(() => {
-    const raw = localStorage.getItem('raisup_profile');
-    if (!raw) return;
-    try {
-      const p = JSON.parse(raw);
-      const supabaseId = p.supabase_id;
-      if (!supabaseId) return;
-      supabase.from('profiles').select('*').eq('id', supabaseId).single().then(({ data }) => {
+    if (!user?.id) return;
+    supabase.from('profiles').select('*').eq('user_id', user.id)
+      .order('created_at', { ascending: false }).limit(1).single()
+      .then(({ data }) => {
         if (!data) return;
         setDbProfile({
           startupName: data.startup_name,
@@ -1505,8 +1502,7 @@ const DashboardWelcome: React.FC = () => {
           teamSize: data.team_size,
         });
       });
-    } catch { /* ignore */ }
-  }, []);
+  }, [user?.id]);
 
   const profile = useMemo<Profile>(() => {
     try {
@@ -1522,11 +1518,30 @@ const DashboardWelcome: React.FC = () => {
       const stored = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
       localStorage.setItem('raisup_profile', JSON.stringify({ ...stored, [key]: value }));
     } catch { /* ignore */ }
-  }, []);
+    if (user?.id) {
+      const colMap: Record<string, string> = {
+        startupName: 'startup_name', oneLiner: 'one_liner', ambition: 'ambition',
+        businessModel: 'business_model', sector: 'sector', clientType: 'client_type',
+        country: 'country', region: 'region', city: 'city', mrr: 'mrr',
+        momGrowth: 'growth_mom', activeClients: 'active_clients', runway: 'runway',
+        burnRate: 'burn_rate', fundraisingGoal: 'fundraising_goal',
+        maxDilution: 'max_dilution', fundingPreference: 'funding_preference',
+        finalGoalValuation: 'final_goal_valuation', fundingTimeline: 'fundraising_timeline',
+        hasCTO: 'has_cto', problem: 'problem', solution: 'solution',
+        competitiveAdvantage: 'competitive_advantage', teamSize: 'team_size',
+      };
+      const col = colMap[key as string];
+      if (col) supabase.from('profiles').update({ [col]: value }).eq('user_id', user.id);
+    }
+  }, [user?.id]);
 
   const score = useMemo(() => calculateScoreService(profile), [profile]);
   const level = useMemo(() => getScoreLevel(score.total), [score]);
-  const investors = useMemo(() => matchInvestors(profile), [profile]);
+  const investors = useMemo((): MatchResult[] => {
+    if (!profile.sector || !profile.stage || !profile.fundraisingGoal) return [];
+    const startup = buildStartupForMatching(profile);
+    return matchInvestorsService(startup, 10).dilutive.filter(r => r.score >= 50);
+  }, [profile]);
   const vigilances = useMemo(() => getVigilances(profile), [profile]);
   const opportunities = useMemo(() => getOpportunities(profile), [profile]);
   const actions = useMemo(() => getNextActions(profile, score, isPaid), [profile, score, isPaid]);
@@ -1543,7 +1558,7 @@ const DashboardWelcome: React.FC = () => {
   const teamCount = profile.team?.length ?? profile.foundersCount ?? 1;
   const totalNdPotential = ndFunding.reduce((sum, d) => sum + d.montant, 0);
   const avgMatch = investors.length > 0
-    ? Math.round(investors.reduce((sum, inv) => sum + inv.match, 0) / investors.length)
+    ? Math.round(investors.reduce((sum, inv) => sum + inv.score, 0) / investors.length)
     : 0;
 
   // Build team avatars
@@ -1668,7 +1683,7 @@ const DashboardWelcome: React.FC = () => {
                 {badge.label}
               </span>
               <button
-                onClick={() => setShowProfileEdit(true)}
+                onClick={() => navigate('/onboarding/raisup?from=dashboard')}
                 className="self-start text-[12px] font-semibold border rounded-full px-3 py-1 transition-colors"
                 style={{ borderColor: '#F4B8CC', color: '#C4728A', backgroundColor: '#FFF5F8' }}
               >
@@ -1914,35 +1929,42 @@ const DashboardWelcome: React.FC = () => {
 
               <div className="relative">
                 <div style={!isPaid ? { filter: 'blur(4px)', pointerEvents: 'none', userSelect: 'none' } : {}}>
-                  <div className="space-y-2">
-                    {investors.slice(0, 3).map((inv, i) => (
-                      <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg"
-                        style={{ backgroundColor: '#F0F5FF' }}>
-                        <div className="flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-black"
-                          style={{ width: 32, height: 32, backgroundColor: '#ABC5FE', color: '#1A3A8F' }}>
-                          {inv.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                  {investors.length === 0 ? (
+                    <div className="py-4 text-center">
+                      <p className="text-[12px] text-gray-400 font-medium">Aucun investisseur compatible</p>
+                      <p className="text-[11px] text-gray-300 mt-1">Complétez votre secteur et stade pour obtenir des matchs</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {investors.slice(0, 3).map((inv, i) => (
+                        <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg"
+                          style={{ backgroundColor: '#F0F5FF' }}>
+                          <div className="flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-black"
+                            style={{ width: 32, height: 32, backgroundColor: '#ABC5FE', color: '#1A3A8F' }}>
+                            {inv.investor.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-bold text-gray-900 truncate">{inv.investor.name}</p>
+                            <p className="text-[12px] text-gray-400 truncate">{inv.whyMatch}</p>
+                          </div>
+                          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                            style={{
+                              backgroundColor: inv.score >= 85 ? '#D8FFBD' : inv.score >= 60 ? '#FFE8C2' : '#F3F4F6',
+                              color: inv.score >= 85 ? '#2D6A00' : inv.score >= 60 ? '#92520A' : '#374151',
+                            }}>
+                            {inv.score}%
+                          </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-bold text-gray-900 truncate">{inv.name}</p>
-                          <p className="text-[12px] text-gray-400">{inv.type}</p>
-                        </div>
-                        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                          style={{
-                            backgroundColor: inv.match >= 85 ? '#D8FFBD' : inv.match >= 75 ? '#FFE8C2' : '#F3F4F6',
-                            color: inv.match >= 85 ? '#2D6A00' : inv.match >= 75 ? '#92520A' : '#374151',
-                          }}>
-                          {inv.match}%
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {!isPaid && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                     <Lock className="h-4 w-4 text-gray-500" />
                     <p className="text-[12px] text-gray-700 font-semibold text-center leading-tight">
-                      Débloquez vos {investors.length} matchs investisseurs
+                      Débloquez vos {investors.length > 0 ? investors.length : ''} matchs investisseurs
                     </p>
                     <button
                       onClick={() => navigate('/pricing?from=welcome&type=dilutif')}

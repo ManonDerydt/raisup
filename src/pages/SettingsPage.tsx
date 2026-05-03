@@ -6,8 +6,9 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import clsx from 'clsx';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 import { notifyProfileUpdated } from '../hooks/useUserProfile';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 // ─── Avatar ────────────────────────────────────────────────────────────────────
 
@@ -158,19 +159,53 @@ const SettingsPage: React.FC = () => {
     setDarkMode(document.documentElement.classList.contains('dark'));
   }, []);
 
-  // Notifications
-  const [notifications, setNotifications] = useState({
+  // Notifications — persistées dans Supabase
+  const DEFAULT_NOTIFS = {
     email: { updates: true, investorMessages: true, documentGeneration: true, weeklyDigest: false },
     sms:   { investorMessages: true, importantUpdates: false },
     app:   { allNotifications: true, soundAlerts: false },
-  });
+  };
+  const [notifications, setNotifications] = useState(DEFAULT_NOTIFS);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from('profiles').select('notification_prefs').eq('user_id', user.id).single()
+      .then(({ data }) => {
+        if (data?.notification_prefs) {
+          try { setNotifications({ ...DEFAULT_NOTIFS, ...(data.notification_prefs as typeof DEFAULT_NOTIFS) }); } catch { /* ignore */ }
+        }
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const toggleNotification = (cat: 'email' | 'sms' | 'app', key: string, val: boolean) => {
-    setNotifications(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: val } }));
+    const updated = { ...notifications, [cat]: { ...notifications[cat], [key]: val } };
+    setNotifications(updated);
+    if (user?.id) supabase.from('profiles').update({ notification_prefs: updated }).eq('user_id', user.id);
   };
 
-  // Save profile → localStorage
-  const handleSave = (e: React.FormEvent) => {
+  // Suppression compte
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (!user?.id) return;
+    setDeleteLoading(true);
+    // Supprimer les données utilisateur
+    await Promise.all([
+      supabase.from('profiles').delete().eq('user_id', user.id),
+      supabase.from('pipeline_dilutif').delete().eq('user_id', user.id),
+      supabase.from('pipeline_non_dilutif').delete().eq('user_id', user.id),
+      supabase.from('kpi_history').delete().eq('user_id', user.id),
+      supabase.from('score_history').delete().eq('user_id', user.id),
+    ]);
+    localStorage.clear();
+    await signOut();
+    navigate('/');
+  };
+
+  // Save profile → localStorage + Supabase
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (isAgency) {
@@ -178,7 +213,7 @@ const SettingsPage: React.FC = () => {
         localStorage.setItem('raisup_agency_profile', JSON.stringify({
           ...existing,
           responsable: `${profile.firstName} ${profile.lastName}`.trim(),
-          email: existing.email, // email not editable
+          email: existing.email,
           name: profile.company,
           type: profile.position,
         }));
@@ -192,6 +227,13 @@ const SettingsPage: React.FC = () => {
           startupName: profile.company,
           position:  profile.position,
         }));
+        if (user?.id) {
+          await supabase.from('profiles').upsert({
+            user_id: user.id,
+            founder_name: `${profile.firstName} ${profile.lastName}`.trim(),
+            startup_name: profile.company || '',
+          }, { onConflict: 'user_id' });
+        }
       }
       setEditMode(false);
       setSaveSuccess(true);
@@ -546,22 +588,41 @@ const SettingsPage: React.FC = () => {
                       <h3 className={clsx('font-medium', dm ? 'text-white' : 'text-gray-900')}>Authentification à deux facteurs</h3>
                       <p className={clsx('text-sm mt-1', dm ? 'text-gray-400' : 'text-gray-500')}>Ajoute une couche de sécurité supplémentaire</p>
                     </div>
-                    <Toggle value={false} onChange={() => {}} />
+                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">Bientôt disponible</span>
                   </div>
                 </div>
 
                 {/* Danger zone */}
-                <div className={clsx('p-5 rounded-xl border border-red-200', dm ? 'bg-red-900/10' : 'bg-red-50')}>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className={clsx('font-medium', dm ? 'text-red-300' : 'text-red-700')}>Supprimer mon compte</h3>
-                      <p className={clsx('text-sm mt-1', dm ? 'text-red-400/70' : 'text-red-500')}>Suppression définitive de toutes vos données</p>
+                {!showDeleteConfirm ? (
+                  <div className={clsx('p-5 rounded-xl border border-red-200', dm ? 'bg-red-900/10' : 'bg-red-50')}>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className={clsx('font-medium', dm ? 'text-red-300' : 'text-red-700')}>Supprimer mon compte</h3>
+                        <p className={clsx('text-sm mt-1', dm ? 'text-red-400/70' : 'text-red-500')}>Suppression définitive de toutes vos données</p>
+                      </div>
+                      <button onClick={() => setShowDeleteConfirm(true)} className="px-3 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">
+                        Supprimer
+                      </button>
                     </div>
-                    <button className="px-3 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors">
-                      Supprimer
-                    </button>
                   </div>
-                </div>
+                ) : (
+                  <div className={clsx('p-5 rounded-xl border-2 border-red-500', dm ? 'bg-red-900/20' : 'bg-red-50')}>
+                    <h3 className={clsx('font-semibold mb-2', dm ? 'text-red-300' : 'text-red-700')}>Confirmer la suppression</h3>
+                    <p className={clsx('text-sm mb-4', dm ? 'text-red-400' : 'text-red-600')}>
+                      Cette action supprimera définitivement votre profil, pipeline, KPIs et historique de score. Irréversible.
+                    </p>
+                    <div className="flex gap-3">
+                      <button onClick={handleDeleteAccount} disabled={deleteLoading}
+                        className="px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors">
+                        {deleteLoading ? 'Suppression…' : 'Oui, supprimer définitivement'}
+                      </button>
+                      <button onClick={() => setShowDeleteConfirm(false)}
+                        className={clsx('px-4 py-2 text-sm font-medium rounded-lg transition-colors', dm ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-600 border border-gray-200')}>
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               {/* ── Notifications ──────────────────────────────────────────── */}
@@ -627,12 +688,15 @@ const SettingsPage: React.FC = () => {
                       <p className={clsx('mt-1 text-sm', dm ? 'text-gray-300' : 'text-gray-700')}>99 €/mois · Facturation mensuelle</p>
                       <p className={clsx('text-xs mt-1', dm ? 'text-gray-400' : 'text-gray-500')}>Prochaine facturation : 15 mai 2026</p>
                     </div>
-                    <button className={clsx(
-                      'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
-                      dm ? 'bg-gray-600 text-white hover:bg-gray-500' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-                    )}>
+                    <Link
+                      to="/pricing"
+                      className={clsx(
+                        'px-3 py-1.5 text-sm font-medium rounded-lg transition-colors inline-block',
+                        dm ? 'bg-gray-600 text-white hover:bg-gray-500' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                      )}
+                    >
                       Changer de plan
-                    </button>
+                    </Link>
                   </div>
 
                   <div className={clsx('mt-4 pt-4 border-t', dm ? 'border-gray-600' : 'border-gray-200')}>

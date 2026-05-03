@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Sparkles, ArrowRight, ArrowLeft, Check, Search, Building2, Mail, X } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import clsx from 'clsx';
@@ -127,6 +127,8 @@ type AgencyResult = { id: string; name: string; type: string; email: string };
 
 const RaisupOnboardingForm: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fromDashboard = searchParams.get('from') === 'dashboard';
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<RaisupFormData>(() => {
@@ -248,7 +250,11 @@ const RaisupOnboardingForm: React.FC = () => {
       }
     }
     setSubmitting(false);
-    navigate(`/onboarding/raisup/success?saved=${saved}`);
+    if (fromDashboard) {
+      navigate('/dashboard/score');
+    } else {
+      navigate(`/onboarding/raisup/success?saved=${saved}`);
+    }
   };
 
   const progress = (step / steps.length) * 100;
@@ -257,9 +263,22 @@ const RaisupOnboardingForm: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-2xl">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="h-5 w-5 text-secondary-lighter" />
-            <span className="font-semibold text-gray-900">Raisup</span>
+          <div className="flex items-center gap-3">
+            {fromDashboard && (
+              <button
+                onClick={() => navigate('/dashboard/score')}
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Retour au score
+              </button>
+            )}
+            {!fromDashboard && (
+              <div className="flex items-center space-x-2">
+                <Sparkles className="h-5 w-5 text-secondary-lighter" />
+                <span className="font-semibold text-gray-900">Raisup</span>
+              </div>
+            )}
           </div>
           <span className="text-sm text-gray-500">Étape {step} sur {steps.length}</span>
         </div>

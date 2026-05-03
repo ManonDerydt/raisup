@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import {
   Lock, AlertTriangle, Sparkles, ChevronDown,
@@ -8,6 +8,8 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { calculateScore as calculateScoreOfficial } from '../services/calculateScore';
+import { supabase } from '../lib/supabase';
+import { matchInvestors as matchInvestorsService } from '../services/matchInvestors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -180,26 +182,45 @@ function calculateScore(p: Profile): ExtendedScore {
 
 // ─── Investors ────────────────────────────────────────────────────────────────
 
-const INVESTORS_DB = [
-  { id: 'partech',  name: 'Partech',        type: 'VC',     stages: ['seed', 'mvp', 'croissance', 'série'],  sectors: ['SaaS B2B', 'IA & Data', 'Fintech', 'Marketplace'] },
-  { id: 'kima',     name: 'Kima Ventures',  type: 'VC',     stages: ['pre', 'seed', 'idéat', 'prototype'],   sectors: ['Fintech', 'SaaS B2B', 'E-commerce', 'Marketplace'] },
-  { id: 'alven',    name: 'Alven',          type: 'VC',     stages: ['seed', 'mvp', 'série'],                sectors: ['SaaS B2B', 'IA & Data', 'Marketplace', 'Deeptech'] },
-  { id: 'idinvest', name: 'Idinvest',       type: 'VC',     stages: ['seed', 'mvp', 'série', 'croissance'], sectors: ['Healthtech', 'Deeptech', 'SaaS B2B', 'Legaltech'] },
-  { id: 'otium',    name: 'Otium Capital',  type: 'Family', stages: ['pre', 'seed', 'prototype', 'idéat'],  sectors: ['E-commerce', 'Marketplace', 'SaaS B2B', 'Foodtech'] },
-  { id: 'serena',   name: 'Serena Capital', type: 'VC',     stages: ['seed', 'série', 'croissance'],        sectors: ['SaaS B2B', 'Fintech', 'IA & Data', 'Proptech'] },
-  { id: 'xange',    name: 'XAnge',          type: 'VC',     stages: ['seed', 'prototype', 'mvp'],           sectors: ['Healthtech', 'Edtech', 'SaaS B2B', 'Greentech'] },
-  { id: 'breega',   name: 'Breega',         type: 'VC',     stages: ['seed', 'mvp', 'série'],               sectors: ['Fintech', 'SaaS B2B', 'Marketplace', 'E-commerce'] },
-];
+function normalizeSector(sector: string): string {
+  const map: Record<string, string> = {
+    'SaaS B2B': 'SaaS', 'IA & Data': 'IA', 'Fintech': 'FinTech',
+    'Healthtech': 'HealthTech', 'Deeptech': 'DeepTech', 'Greentech': 'GreenTech',
+    'E-commerce': 'Marketplace', 'Marketplace': 'Marketplace',
+  };
+  return map[sector] ?? sector;
+}
+
+function normalizeStageForMatch(stage: string): 'pre-seed' | 'seed' | 'series-a' | 'series-b' {
+  const s = (stage ?? '').toLowerCase();
+  if (s.includes('série a') || s.includes('serie-a') || s.includes('series-a')) return 'series-a';
+  if (s.includes('série b') || s.includes('serie-b') || s.includes('series-b')) return 'series-b';
+  if (s.includes('seed') || s.includes('mvp') || s.includes('croissance')) return 'seed';
+  return 'pre-seed';
+}
 
 function matchInvestors(p: Profile) {
-  const stage = (p.stage ?? '').toLowerCase();
-  const sector = p.sector ?? '';
-  return INVESTORS_DB.map(inv => {
-    let score = 60;
-    if (inv.stages.some(s => stage.includes(s))) score += 20;
-    if (inv.sectors.includes(sector)) score += 15;
-    return { ...inv, match: Math.min(99, score + Math.floor(Math.random() * 5)) };
-  }).sort((a, b) => b.match - a.match);
+  if (!p.sector && !p.stage) return [];
+  const result = matchInvestorsService({
+    id: 'user',
+    name: p.startupName || 'Ma startup',
+    sector: normalizeSector(p.sector ?? ''),
+    stage: normalizeStageForMatch(p.stage ?? ''),
+    fundingAmount: p.fundraisingGoal ?? p.fundingNeeded ?? 0,
+    mrr: p.mrr ?? 0,
+    location: p.country || 'France',
+    description: p.problem || '',
+    emoji: '🚀',
+  }, 10);
+  return result.dilutive
+    .filter(r => r.score >= 50)
+    .map(r => ({
+      id: r.investor.id,
+      name: r.investor.name,
+      type: r.investor.type,
+      match: r.score,
+      ticketTarget: p.fundraisingGoal ?? null,
+    }));
 }
 
 // ─── Non-dilutif pipeline generator ──────────────────────────────────────────
@@ -210,7 +231,7 @@ function generateNonDilutifPipeline(profile: Profile): NonDilutifPipelineItem[] 
   const deep = ['deeptech', 'ia', 'healthtech', 'ia & data', 'intelligence artificielle'];
   const eu = [...deep, 'greentech'];
   const euCountries = ['France', 'Irlande', 'Belgique', 'Allemagne'];
-  const burn = (profile as Record<string, number>).burnRate ?? 5_000;
+  const burn = profile.burnRate ?? 5_000;
 
   if (profile.country === 'France') {
     items.push({ id: 'bft', name: 'Bourse French Tech', organisme: 'BPI France', montant: 90_000, initiales: 'BPI', status: 'Éligible', deadline: null, nextStep: 'Créer votre espace BPI et déposer le dossier en ligne' });
@@ -250,6 +271,8 @@ function getTodayActions(
   nonDilutifPipeline: NonDilutifPipelineItem[],
   score: ExtendedScore,
   isPaid: boolean,
+  hasDeck: boolean,
+  lastKpiDate: string | null,
 ): TodayAction[] {
   const actions: TodayAction[] = [];
   const runway = profile.runway ?? null;
@@ -328,7 +351,7 @@ function getTodayActions(
   }
 
   // 6 — Deck non généré
-  if (!localStorage.getItem('raisup_deck_generated') && actions.length < 3) {
+  if (!hasDeck && actions.length < 3) {
     actions.push({
       priority: 6, urgency: 'medium', emoji: '📄',
       title: 'Générez votre pitch deck personnalisé',
@@ -341,8 +364,7 @@ function getTodayActions(
   }
 
   // 7 — KPIs non mis à jour
-  const lastKPI = localStorage.getItem('raisup_last_kpi_update');
-  const daysSinceKPI = lastKPI ? Math.floor((Date.now() - new Date(lastKPI).getTime()) / 86_400_000) : 999;
+  const daysSinceKPI = lastKpiDate ? Math.floor((Date.now() - new Date(lastKpiDate).getTime()) / 86_400_000) : 999;
   if (daysSinceKPI > 30 && actions.length < 3) {
     actions.push({
       priority: 7, urgency: 'low', emoji: '📊',
@@ -370,35 +392,37 @@ interface DocScore {
   ctaLink: string;
 }
 
-function getDocScores(p: Profile): DocScore[] {
+function getDocScores(p: Profile, hasDeckFile = false, hasBP = false, hasTeaser = false): DocScore[] {
   const bpFields = [
     p.problem, p.solution, p.ambition, p.competitiveAdvantage,
     p.businessModel, p.moat, p.sector, p.clientType,
   ];
   const bpFilled = bpFields.filter(f => f && (f as string).length > 10).length;
-  const bpScore = Math.round((bpFilled / bpFields.length) * 100);
+  const bpBaseScore = Math.round((bpFilled / bpFields.length) * 100);
+  const bpScore = hasBP ? Math.max(bpBaseScore, 80) : bpBaseScore;
   const bpStatus: DocScore['status'] = bpScore >= 75 ? 'excellent' : bpScore >= 50 ? 'bon' : bpScore > 0 ? 'à améliorer' : 'non généré';
   const bpReco =
-    bpScore >= 75 ? 'Votre BP est solide. Ajoutez des projections financières sur 3 ans pour convaincre les VCs.' :
+    hasBP ? 'Business plan généré. Ajoutez des projections financières sur 3 ans pour convaincre les VCs.' :
     bpScore >= 50 ? 'Développez votre avantage concurrentiel et votre modèle de revenus pour renforcer le BP.' :
     'Renseignez votre problème, solution et ambition pour générer un BP de qualité.';
 
   const pitchFields = [p.problem, p.solution, p.startupName, p.sector, p.stage, p.fundraisingGoal];
   const pitchFilled = pitchFields.filter(f => f !== undefined && f !== null && f !== '').length;
-  const deckHasFile = !!(p.deckFileName);
+  const deckHasFile = hasDeckFile || !!(p.deckFileName);
   const deckScore = deckHasFile ? Math.min(100, Math.round((pitchFilled / pitchFields.length) * 70) + 30) : Math.round((pitchFilled / pitchFields.length) * 70);
   const deckStatus: DocScore['status'] = deckScore >= 80 ? 'excellent' : deckScore >= 55 ? 'bon' : deckScore > 0 ? 'à améliorer' : 'non généré';
   const deckReco =
-    deckScore >= 80 ? 'Deck complet. Faites-le relire par 2 investisseurs avant envoi pour calibrer les slides clés.' :
+    deckHasFile ? 'Deck généré. Faites-le relire par 2 investisseurs avant envoi pour calibrer les slides clés.' :
     deckScore >= 55 ? 'Ajoutez une slide traction avec vos métriques clés et une slide équipe avec les bios.' :
     'Générez votre deck depuis votre profil — 8 minutes suffisent pour un document investisseur prêt à envoyer.';
 
   const teaserFields = [p.startupName, p.sector, p.stage, p.problem, p.solution, p.fundraisingGoal];
   const teaserFilled = teaserFields.filter(f => f !== undefined && f !== null && f !== '').length;
-  const teaserScore = Math.round((teaserFilled / teaserFields.length) * 100);
+  const teaserBaseScore = Math.round((teaserFilled / teaserFields.length) * 100);
+  const teaserScore = hasTeaser ? Math.max(teaserBaseScore, 80) : teaserBaseScore;
   const teaserStatus: DocScore['status'] = teaserScore >= 80 ? 'excellent' : teaserScore >= 50 ? 'bon' : teaserScore > 0 ? 'à améliorer' : 'non généré';
   const teaserReco =
-    teaserScore >= 80 ? 'Teaser prêt. Personnalisez l\'objet de l\'email selon le profil de chaque investisseur.' :
+    hasTeaser ? 'Teaser généré. Personnalisez l\'objet de l\'email selon le profil de chaque investisseur.' :
     teaserScore >= 50 ? 'Ajoutez votre objectif de levée et vos premiers KPIs pour compléter le teaser.' :
     'Renseignez votre startup name, secteur et stade pour générer un teaser percutant en 2 minutes.';
 
@@ -491,10 +515,11 @@ function getTimelineSteps(
   s: ExtendedScore,
   pipeline: PipelineItem[],
   ndPipeline: NonDilutifPipelineItem[],
+  hasDeck: boolean,
 ): TimelineStep[] {
   const profileComplete = !!(p.sector && p.stage && (p.fundraisingGoal ?? p.fundingNeeded));
   const scorePassing = s.total >= 60;
-  const hasDoc = !!(p.deckFileName) || !!(localStorage.getItem('raisup_deck_generated'));
+  const hasDoc = !!(p.deckFileName) || hasDeck;
   const hasInvestors = pipeline.length > 0;
   const hasContacted = pipeline.some(i => i.status !== 'À contacter');
   const hasDiscussion = pipeline.some(i => i.status === 'En discussion' || i.status === 'RDV prévu');
@@ -871,79 +896,173 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // ── Data from localStorage
-  const profile = useMemo<Profile>(() => {
-    try {
-      const a = JSON.parse(localStorage.getItem('raisup_profile') || '{}');
-      const b = JSON.parse(localStorage.getItem('raisupOnboardingData') || '{}');
-      return { ...b, ...a };
-    } catch { return {}; }
-  }, []);
-
-  const { isPremium } = useUserProfile();
+    const { isPremium, profile, score: officialScore } = useUserProfile();
   const isPaid = isPremium;
   const score = useMemo(() => {
     const s = calculateScore(profile);
-    // total = score officiel (même formule que DashboardWelcome / Score Raisup)
-    return { ...s, total: calculateScoreOfficial(profile).total };
-  }, [profile]);
+    return { ...s, total: officialScore.total };
+  }, [profile, officialScore.total]);
   const matches = useMemo(() => matchInvestors(profile), [profile]);
 
-  // ── Pipeline dilutif
+  // ── Missions
   const [checkedMissions, setCheckedMissions] = useState<Set<string>>(new Set());
-  const toggleMission = (id: string) => setCheckedMissions(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
 
-  const [pipeline, setPipeline] = useState<PipelineItem[]>(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('raisup_pipeline') || '[]');
-      if (stored.length > 0) return stored;
-      return matches.slice(0, 5).map(m => ({
-        id: m.id,
-        name: m.name,
-        type: m.type,
-        ticketTarget: profile.fundraisingGoal ?? null,
-        status: 'À contacter',
-        lastContact: null,
-        nextAction: `Envoyer le premier email à ${m.name}`,
-        matchScore: m.match,
-        notes: '',
-      }));
-    } catch { return []; }
-  });
+  const toggleMission = useCallback((id: string) => {
+    setCheckedMissions(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      if (user?.id) {
+        supabase.from('profiles')
+          .update({ checked_missions: JSON.stringify([...next]) })
+          .eq('user_id', user.id);
+      }
+      return next;
+    });
+  }, [user?.id]);
 
-  // ── Pipeline non-dilutif
-  const [ndPipeline, setNdPipeline] = useState<NonDilutifPipelineItem[]>(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('raisup_non_dilutif') || '[]');
-      if (stored.length > 0) return stored;
-      return generateNonDilutifPipeline(profile);
-    } catch { return []; }
-  });
+  // ── Pipeline dilutif
+  const [pipeline, setPipeline] = useState<PipelineItem[]>([]);
+  const [ndPipeline, setNdPipeline] = useState<NonDilutifPipelineItem[]>([]);
+  const [pipelineLoaded, setPipelineLoaded] = useState(false);
+  const [lastKpiDate, setLastKpiDate] = useState<string | null>(null);
+  const [lastInvestorUpdate, setLastInvestorUpdate] = useState<string | null>(null);
+  const [generatedDocs, setGeneratedDocs] = useState<Set<string>>(new Set());
 
-  // Save pipeline to localStorage on change
-  const updatePipelineStatus = (id: string, newStatus: string) => {
-    const updated = pipeline.map(p => p.id === id ? { ...p, status: newStatus, lastContact: newStatus !== 'À contacter' ? new Date().toISOString().split('T')[0] : p.lastContact } : p);
-    setPipeline(updated);
-    localStorage.setItem('raisup_pipeline', JSON.stringify(updated));
-  };
+  // Load pipelines + missions + dates from Supabase on mount
+  useEffect(() => {
+    if (!user?.id) return;
 
-  const updateNdStatus = (id: string, newStatus: string) => {
-    const updated = ndPipeline.map(d => d.id === id ? { ...d, status: newStatus } : d);
-    setNdPipeline(updated);
-    localStorage.setItem('raisup_non_dilutif', JSON.stringify(updated));
-  };
+    // Last KPI date from kpi_history
+    supabase.from('kpi_history').select('created_at').eq('user_id', user.id)
+      .order('created_at', { ascending: false }).limit(1).single()
+      .then(({ data }) => { if (data) setLastKpiDate(data.created_at); });
+
+    // Last investor update from profiles
+    supabase.from('profiles').select('last_investor_update').eq('user_id', user.id)
+      .single().then(({ data }) => {
+        if (data?.last_investor_update) setLastInvestorUpdate(data.last_investor_update as string);
+      });
+
+    // Generated documents from Supabase
+    supabase.from('documents').select('type').eq('user_id', user.id).eq('status', 'completed')
+      .then(({ data }) => {
+        if (data) setGeneratedDocs(new Set(data.map(d => d.type as string)));
+      });
+
+    // Load checked missions
+    supabase.from('profiles').select('checked_missions').eq('user_id', user.id).single()
+      .then(({ data }) => {
+        if (data?.checked_missions) {
+          try { setCheckedMissions(new Set(JSON.parse(data.checked_missions as string))); } catch { /* ignore */ }
+        }
+      });
+
+    // Load dilutif pipeline
+    supabase.from('pipeline_dilutif').select('*').eq('user_id', user.id)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setPipeline(data.map(r => ({
+            id: r.investor_id,
+            name: r.name,
+            type: r.type ?? '',
+            ticketTarget: r.ticket_target,
+            status: r.status,
+            lastContact: r.last_contact,
+            nextAction: r.next_action ?? '',
+            matchScore: r.match_score,
+            notes: r.notes ?? '',
+          })));
+        } else {
+          // Seed depuis les matches si aucune donnée
+          const initial = matches.slice(0, 5).map(m => ({
+            id: m.id, name: m.name, type: m.type,
+            ticketTarget: profile.fundraisingGoal ?? null,
+            status: 'À contacter', lastContact: null,
+            nextAction: `Envoyer le premier email à ${m.name}`,
+            matchScore: m.match, notes: '',
+          }));
+          setPipeline(initial);
+          if (initial.length > 0) {
+            supabase.from('pipeline_dilutif').upsert(
+              initial.map(p => ({
+                user_id: user.id, investor_id: p.id, name: p.name,
+                type: p.type, ticket_target: p.ticketTarget,
+                status: p.status, next_action: p.nextAction,
+                match_score: p.matchScore, notes: p.notes,
+              })),
+              { onConflict: 'user_id,investor_id' }
+            );
+          }
+        }
+        setPipelineLoaded(true);
+      });
+
+    // Load non-dilutif pipeline
+    supabase.from('pipeline_non_dilutif').select('*').eq('user_id', user.id)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setNdPipeline(data.map(r => ({
+            id: r.item_id, name: r.name, organisme: r.organisme ?? '',
+            montant: r.montant, initiales: r.initiales ?? '',
+            status: r.status, deadline: r.deadline, nextStep: r.next_step ?? '',
+          })));
+        } else {
+          const initial = generateNonDilutifPipeline(profile);
+          setNdPipeline(initial);
+          if (initial.length > 0) {
+            supabase.from('pipeline_non_dilutif').upsert(
+              initial.map(p => ({
+                user_id: user.id, item_id: p.id, name: p.name,
+                organisme: p.organisme, montant: p.montant,
+                initiales: p.initiales, status: p.status,
+                deadline: p.deadline, next_step: p.nextStep,
+              })),
+              { onConflict: 'user_id,item_id' }
+            );
+          }
+        }
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const updatePipelineStatus = useCallback((id: string, newStatus: string) => {
+    const lastContact = newStatus !== 'À contacter' ? new Date().toISOString().split('T')[0] : null;
+    setPipeline(prev => prev.map(p => p.id === id ? { ...p, status: newStatus, lastContact } : p));
+    if (user?.id) {
+      supabase.from('pipeline_dilutif')
+        .update({ status: newStatus, last_contact: lastContact, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id).eq('investor_id', id);
+    }
+    localStorage.setItem('raisup_pipeline', JSON.stringify(
+      pipeline.map(p => p.id === id ? { ...p, status: newStatus, lastContact } : p)
+    ));
+  }, [user?.id, pipeline]);
+
+  const updateNdStatus = useCallback((id: string, newStatus: string) => {
+    setNdPipeline(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d));
+    if (user?.id) {
+      supabase.from('pipeline_non_dilutif')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id).eq('item_id', id);
+    }
+    localStorage.setItem('raisup_non_dilutif', JSON.stringify(
+      ndPipeline.map(d => d.id === id ? { ...d, status: newStatus } : d)
+    ));
+  }, [user?.id, ndPipeline]);
+
+  void pipelineLoaded;
+
+  const hasDeck = !!(profile.deckFileName) || generatedDocs.has('pitch_deck');
+  const hasBusinessPlan = generatedDocs.has('business_plan');
+  const hasExecutiveSummary = generatedDocs.has('executive_summary');
 
   const todayActions = useMemo(
-    () => getTodayActions(profile, pipeline, ndPipeline, score, isPaid),
-    [profile, pipeline, ndPipeline, score, isPaid],
+    () => getTodayActions(profile, pipeline, ndPipeline, score, isPaid, hasDeck, lastKpiDate),
+    [profile, pipeline, ndPipeline, score, isPaid, hasDeck, lastKpiDate],
   );
 
-  const docScores = useMemo(() => getDocScores(profile), [profile]);
-  const timelineSteps = useMemo(() => getTimelineSteps(profile, score, pipeline, ndPipeline), [profile, score, pipeline, ndPipeline]);
+  const docScores = useMemo(() => getDocScores(profile, hasDeck, hasBusinessPlan, hasExecutiveSummary), [profile, hasDeck, hasBusinessPlan, hasExecutiveSummary]);
+  const timelineSteps = useMemo(() => getTimelineSteps(profile, score, pipeline, ndPipeline, hasDeck), [profile, score, pipeline, ndPipeline, hasDeck]);
   const marketNews = useMemo(() => getWeeklyMarketNews(profile.sector ?? ''), [profile.sector]);
   const partnerStructure = useMemo(() => getPartnerStructure(), []);
   const lastMonday = useMemo(() => getLastMonday(), []);
@@ -959,8 +1078,8 @@ const Dashboard: React.FC = () => {
   // Missions de la semaine — variées, avec cases à cocher
   const missionsDelasSemaine = useMemo(() => {
     const m: { id: string; label: string; date: string; color: string; text: string; category: string }[] = [];
-    const mrr = (profile.mrr ?? profile.currentRevenue ?? 0) as number;
-    const growth = ((profile as Record<string, unknown>).momGrowth ?? (profile as Record<string, unknown>).growthMoM ?? 10) as number;
+    const mrr = (profile.mrr ?? 0) as number;
+    const growth = (profile.momGrowth ?? 10) as number;
     const today = new Date();
     const endOfWeek = new Date(today); endOfWeek.setDate(today.getDate() + 7);
 
@@ -992,7 +1111,7 @@ const Dashboard: React.FC = () => {
     );
 
     // 5 — Objectif MRR avec date
-    if (mrr === 0 || (profile as Record<string,unknown>).isPreRevenue) {
+    if (mrr === 0 || profile.isPreRevenue) {
       m.push({ id: 'first-mrr', label: 'Signer votre 1er contrat client', date: 'Priorité', color: '#FFB3B3', text: '#8F1A1A', category: 'Croissance' });
     } else if (mrr < 5_000) {
       const months5k = growth > 0 ? Math.ceil(Math.log(5_000 / mrr) / Math.log(1 + growth / 100)) : null;
@@ -1008,8 +1127,7 @@ const Dashboard: React.FC = () => {
 
     // 6 — Investor update mensuel
     if (contacted > 0) {
-      const lastUpdate = localStorage.getItem('raisup_last_investor_update');
-      const daysSince = lastUpdate ? Math.floor((Date.now() - new Date(lastUpdate).getTime()) / 86_400_000) : 999;
+      const daysSince = lastInvestorUpdate ? Math.floor((Date.now() - new Date(lastInvestorUpdate).getTime()) / 86_400_000) : 999;
       if (daysSince > 25)
         m.push({ id: 'investor-update', label: 'Envoyer votre Investor Update mensuel', date: 'Ce mois', color: '#D8FFBD', text: '#2D6A00', category: 'Communication' });
     }
@@ -1034,8 +1152,7 @@ const Dashboard: React.FC = () => {
     );
 
     // 10 — Mettre à jour les KPIs
-    const lastKPI = localStorage.getItem('raisup_last_kpi_update');
-    const daysSinceKPI = lastKPI ? Math.floor((Date.now() - new Date(lastKPI).getTime()) / 86_400_000) : 999;
+    const daysSinceKPI = lastKpiDate ? Math.floor((Date.now() - new Date(lastKpiDate).getTime()) / 86_400_000) : 999;
     if (daysSinceKPI > 30)
       m.push({ id: 'kpi', label: 'Mettre à jour vos KPIs du mois', date: 'Ce mois', color: '#ABC5FE', text: '#1A3A8F', category: 'Suivi' });
 
@@ -1043,11 +1160,11 @@ const Dashboard: React.FC = () => {
       m.push({ id: 'default', label: 'Toutes vos missions sont à jour 🎉', date: 'Bravo !', color: '#D8FFBD', text: '#2D6A00', category: '' });
 
     return m.slice(0, 10);
-  }, [pipeline, ndPipeline, profile, docScores, score.total, contacted]);
+  }, [pipeline, ndPipeline, profile, docScores, score.total, contacted, lastKpiDate, lastInvestorUpdate]);
   // ── Display helpers
-  const firstName = profile.firstName || profile.founderName || user?.user_metadata?.given_name || user?.email?.split('@')[0] || 'Fondateur';
+  const firstName = profile.firstName || user?.user_metadata?.given_name || user?.email?.split('@')[0] || 'Fondateur';
   const initials = (firstName[0] ?? 'F').toUpperCase();
-  const startupName = profile.startupName || profile.projectName || 'Votre startup';
+  const startupName = profile.startupName || 'Votre startup';
   const badge = getStageBadge(profile.stage);
   const runway = profile.runway ?? null;
 

@@ -284,7 +284,7 @@ function getCapitalAfter(stageId: string, profile: Profile, mix: { dilutif: numb
 export function calculateStageProbability(
   stageId: string,
   profile: Profile,
-  score: ExtendedScore,
+  score: { total: number },
 ): number {
   const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
   let base = 70;
@@ -395,7 +395,7 @@ function buildStage(
   title: string,
   amount: number,
   profile: Profile,
-  score: ExtendedScore,
+  score: { total: number },
   description?: string,
 ): TimelineStage {
   const mix = getMixForStage(id, profile);
@@ -429,7 +429,7 @@ function getStagesForObjective(
   goal: number,
   finalValo: number,
   profile: Profile,
-  score: ExtendedScore,
+  score: { total: number },
 ): TimelineStage[] {
   const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
   const startupName = profile.startupName || profile.projectName || 'Votre startup';
@@ -627,7 +627,7 @@ export function nextRoundValuation(profile: Profile, timeline: TimelineResult): 
   return (nextStage.amount ?? 500_000) * multiple;
 }
 
-export function getRaisupRecommendation(profile: Profile, score: ExtendedScore, timeline: TimelineResult): string {
+export function getRaisupRecommendation(profile: Profile, score: { total: number }, timeline: TimelineResult): string {
   const runway = profile.runway ?? 12;
   const mrr = profile.mrr ?? profile.currentRevenue ?? 0;
 
